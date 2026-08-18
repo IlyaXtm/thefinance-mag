@@ -1,0 +1,17 @@
+{
+  "name": "thefinance-mag",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @thefinance/mag-web",
+    "dev": "npm run dev --workspace @thefinance/mag-web",
+    "lint": "npm run lint --workspace @thefinance/mag-web",
+    "typecheck": "npm run typecheck --workspace @thefinance/mag-web"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

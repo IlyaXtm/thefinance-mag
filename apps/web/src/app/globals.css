@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.8;
+}
+
+main {
+  padding-block: 60px;
+  padding-inline: 20px;
+}
+
+@media (min-width: 1280px) {
+  main {
+    padding-block: 96px;
+    padding-inline: 100px;
+  }
+}

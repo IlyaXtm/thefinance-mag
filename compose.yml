@@ -1,0 +1,85 @@
+name: ${COMPOSE_PROJECT_NAME:-thefinance-mag}
+
+services:
+  database:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      MARIADB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      MARIADB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD:?Set WORDPRESS_DB_ROOT_PASSWORD in .env}
+    volumes:
+      - database_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - backend
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: database:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:?Set WORDPRESS_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:?Set WORDPRESS_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD:?Set WORDPRESS_DB_PASSWORD in .env}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('DISALLOW_FILE_EDIT', true);
+        define('WP_ENVIRONMENT_TYPE', 'local');
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./wordpress/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$socket = @fsockopen(\"127.0.0.1\", 80); exit($$socket ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    networks:
+      - backend
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      WORDPRESS_GRAPHQL_URL: ${WORDPRESS_GRAPHQL_URL:-http://wordpress/graphql}
+      NEXT_PUBLIC_WORDPRESS_MEDIA_ORIGIN: ${NEXT_PUBLIC_WORDPRESS_MEDIA_ORIGIN:-https://thefinance.ir}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/mag/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - backend
+
+volumes:
+  database_data:
+  wordpress_data:
+
+networks:
+  backend:
+    internal: false
