@@ -24,11 +24,22 @@ docker compose config
 docker compose up --build
 ```
 
+The one-shot `wordpress-init` service installs WordPress and activates the
+pinned WPGraphQL/SEO plugins idempotently. After the first boot:
+
+```bash
+npm run wp:seed
+npm run wp:verify
+```
+
 Local services:
 
-- Next.js: `http://localhost:3000/mag/`
-- WordPress: `http://localhost:8080/`
+- Next.js: `http://localhost:3000/mag/` by default; set `WEB_HOST_PORT`
+  when that host port is already occupied
+- WordPress: `http://localhost:8080/` by default; `WORDPRESS_HOST_PORT` and
+  `WORDPRESS_LOCAL_URL` must be changed together when needed
 - Health check: `http://localhost:3000/mag/health`
+- GraphQL: `http://localhost:8080/graphql`
 
 The sample passwords are for local development only. Staging and production
 credentials must be supplied through the deployment environment, never Git.
@@ -40,6 +51,7 @@ npm run typecheck
 npm run lint
 npm run build
 docker compose config --quiet
+npm run wp:verify
 ```
 
 No production deployment or content import is performed by these commands.

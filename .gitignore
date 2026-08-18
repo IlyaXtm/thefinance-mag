@@ -9,5 +9,6 @@ out/
 coverage/
 *.log
 *.tsbuildinfo
+.wp-cli-cache/
 backups/*
 !backups/.gitkeep

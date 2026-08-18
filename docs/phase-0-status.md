@@ -5,11 +5,11 @@ Last verified: 2026-08-19.
 | Check | Current evidence | Status |
 |---|---|---|
 | Repository | Public repository exists but began empty | Ready for foundation |
-| V1 Rank Math GraphQL SEO | `Post.seo` is absent; `RankMathPostObjectSeo` is absent | Blocked: bridge missing/inactive |
-| V2 SEO fields and versions | Public schema cannot expose the expected fields; server access needed for versions | Partial |
+| V1 Rank Math GraphQL SEO | Production lacks `Post.seo`; local MU-plugin contract passes against pinned WordPress/WPGraphQL/Rank Math | Local pass; production pending |
+| V2 SEO fields and versions | Local `seo` title, description, canonical, and robots fields pass; server access is still needed before deployment | Local pass |
 | V3 indexability | Production is index/follow; staging returns 401 and `X-Robots-Tag: noindex` | Pass |
-| V4 mu-plugin validity | Requires WordPress/server access | Pending |
-| V5 content contract | Public schema has no market/contentType/readingTime/whyItMatters fields | New work required |
+| V4 mu-plugin validity | PHP lint and container boot pass locally; production deployment still requires access | Local pass |
+| V5 content contract | Taxonomies, optional field, reading time, SEO, and fixture query pass locally | Local pass |
 | V6 routing | `/mag` redirects to `http://thefinance.ir/mag/`; `/mag/` is classic WordPress | Defect recorded |
 | V7 design tokens | Target is `v1` navy dark; exact redesign token identifiers still required | Partial |
 | V8 Persian font | Requires redesign source and runtime inspection | Pending |
