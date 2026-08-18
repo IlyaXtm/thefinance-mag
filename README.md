@@ -65,3 +65,10 @@ npm run inventory:production
 This command only sends public HTTP `GET` requests. Detailed snapshots are
 gitignored because they contain full article bodies; the reviewed baseline is
 recorded in [`docs/production-inventory.md`](docs/production-inventory.md).
+
+## Listing data source
+
+The `v1` listing defaults to isolated fixtures while staging is unavailable.
+Set `NEXT_PUBLIC_USE_MOCK=false` to use the WordPress GraphQL contract. See
+[`docs/listing-status.md`](docs/listing-status.md) for completed and deferred
+parts of the listing slice.

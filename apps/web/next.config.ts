@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
-const mediaOrigin = process.env.NEXT_PUBLIC_WORDPRESS_MEDIA_ORIGIN;
+const mediaOrigin =
+  process.env.NEXT_PUBLIC_WORDPRESS_MEDIA_ORIGIN ?? "https://thefinance.ir";
 
 const nextConfig: NextConfig = {
   basePath: "/mag",
