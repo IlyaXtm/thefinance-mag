@@ -8,6 +8,7 @@
   "scripts": {
     "build": "npm run build --workspace @thefinance/mag-web",
     "dev": "npm run dev --workspace @thefinance/mag-web",
+    "inventory:production": "node scripts/inventory-production.mjs",
     "wp:seed": "docker compose run --rm wordpress-cli eval-file /var/www/html/wp-content/mu-plugins/thefinance-mag/fixtures/seed.php",
     "wp:verify": "./scripts/verify-content-contract.sh",
     "lint": "npm run lint --workspace @thefinance/mag-web",

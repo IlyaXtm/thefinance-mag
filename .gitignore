@@ -12,3 +12,4 @@ coverage/
 .wp-cli-cache/
 backups/*
 !backups/.gitkeep
+artifacts/production-inventory/

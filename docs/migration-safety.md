@@ -19,10 +19,12 @@ These gates apply before any staging import or production cutover.
 
 ## Baseline to reconcile
 
-The public API currently reports:
+The public API snapshot is detailed in `production-inventory.md`. It currently
+reports:
 
 - 32 posts
-- 432 media items
+- 432 media items in REST headers, but only 431 unique public records are
+  retrievable; this discrepancy must reconcile against the database
 - 3 posts assigned to the existing `اخبار` category
 
 Counts alone are insufficient. The migration manifest must compare every post

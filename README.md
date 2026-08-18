@@ -55,3 +55,13 @@ npm run wp:verify
 ```
 
 No production deployment or content import is performed by these commands.
+
+## Read-only production inventory
+
+```bash
+npm run inventory:production
+```
+
+This command only sends public HTTP `GET` requests. Detailed snapshots are
+gitignored because they contain full article bodies; the reviewed baseline is
+recorded in [`docs/production-inventory.md`](docs/production-inventory.md).
