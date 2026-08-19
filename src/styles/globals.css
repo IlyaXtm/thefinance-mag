@@ -20,3 +20,144 @@
     display: inline-block;
   }
 }
+
+/**
+ * Article body typography.
+ *
+ * Applied via a class rather than utilities because the markup comes from
+ * WordPress — we can't attach classes to it.
+ *
+ * The Persian rules that don't exist in Latin design:
+ *   - no italic anywhere (handled globally in tokens.css)
+ *   - no justify — rivers of whitespace without kashida support
+ *   - line-height 1.9 body, 1.5 headings
+ *   - 18px desktop / 17px mobile; smaller loses legibility in Persian
+ */
+@layer components {
+  .article-body {
+    font-size: 17px;
+    line-height: 1.9;
+    color: var(--text-secondary);
+    text-align: start;
+  }
+
+  @media (min-width: 768px) {
+    .article-body {
+      font-size: 18px;
+    }
+  }
+
+  .article-body > * + * {
+    margin-block-start: 1.4em;
+  }
+
+  .article-body h2 {
+    margin-block-start: 2em;
+    margin-block-end: 0.6em;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  @media (min-width: 768px) {
+    .article-body h2 {
+      font-size: 24px;
+    }
+  }
+
+  .article-body h3 {
+    margin-block-start: 1.6em;
+    margin-block-end: 0.5em;
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  @media (min-width: 768px) {
+    .article-body h3 {
+      font-size: 20px;
+    }
+  }
+
+  .article-body ul,
+  .article-body ol {
+    padding-inline-start: 1.5em;
+  }
+
+  .article-body ul { list-style: disc; }
+  .article-body ol { list-style: decimal; }
+
+  .article-body li + li {
+    margin-block-start: 0.5em;
+  }
+
+  /*
+   * Border on the inline-start side — the right in RTL. A physical `border-left`
+   * would sit on the wrong side of the quote.
+   */
+  .article-body blockquote {
+    border-inline-start: 3px solid var(--accent);
+    padding-inline-start: 1em;
+    color: var(--text-secondary);
+    font-style: normal;
+  }
+
+  /*
+   * Underlined, not colour-only. Colour alone fails for readers who can't
+   * distinguish it, and WCAG requires a non-colour cue for links in body text.
+   */
+  .article-body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .article-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-card);
+  }
+
+  .article-body figcaption {
+    margin-block-start: 0.6em;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    font-style: normal;
+  }
+
+  /* Tables scroll horizontally on mobile rather than breaking the layout. */
+  .article-body table {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+
+  .article-body th,
+  .article-body td {
+    border: 1px solid var(--border-subtle);
+    padding: 0.6em 0.8em;
+    text-align: start;
+  }
+
+  .article-body thead th {
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .article-body hr {
+    border: 0;
+    border-block-start: 1px solid var(--border-subtle);
+    margin-block: 2.5em;
+  }
+
+  .article-body strong {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}

@@ -123,8 +123,25 @@ html {
 body {
   background: var(--surface);
   color: var(--text-primary);
+
+  /*
+   * The font's own default weight is 100 (thin). Without an explicit 400,
+   * Persian body copy renders anaemic and hard to read at 17–18px.
+   */
+  font-family: var(--font-fa), Tahoma, system-ui, sans-serif;
+  font-weight: 400;
+
+  /*
+   * Persian needs more leading than Latin. 1.9 for body, 1.5 for headings.
+   */
   line-height: 1.9;
+
+  /*
+   * Never justify. Without kashida support, justified Persian produces rivers
+   * of whitespace down the column.
+   */
   text-align: start;
+
   -webkit-font-smoothing: antialiased;
 }
 
@@ -134,6 +151,18 @@ h3,
 h4 {
   line-height: 1.5;
   text-wrap: pretty;
+}
+
+/*
+ * Never italicise Persian. There is no true italic for Persian faces and the
+ * browser synthesises a slant that looks broken. Emphasis is weight or colour.
+ */
+em,
+i,
+blockquote,
+figcaption,
+cite {
+  font-style: normal;
 }
 
 :focus-visible {

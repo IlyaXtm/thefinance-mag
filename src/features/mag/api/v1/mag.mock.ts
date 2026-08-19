@@ -240,7 +240,7 @@ const FULL_ARTICLE: Article = {
     `<div data-block="thefinance/disclaimer"><p>${DISCLAIMER_TEXT}</p></div>`,
   ].join('\n'),
   seo: {
-    title: 'تحلیل فاندامنتال چیست؟ راهنمای کاربردی | مگ فایننس',
+    title: 'تحلیل فاندامنتال چیست؟ راهنمای کاربردی | مجله فایننس',
     description:
       'تحلیل فاندامنتال چگونه کار می‌کند، چه تفاوتی با تحلیل تکنیکال دارد و کجا محدود می‌شود.',
     canonicalUrl: 'https://thefinance.ir/mag/fundamental-analysis',
@@ -344,7 +344,27 @@ export async function getArticle(slug: string): Promise<Article> {
     ...summary,
     content: `<h2 id="s1">${summary.outline[0] ?? 'مقدمه'}</h2><p>متن نمونه.</p>`,
     secondaryMarkets: [],
-    seo: { ...FULL_ARTICLE.seo, title: summary.title },
+    /*
+      Per-article SEO. Spreading FULL_ARTICLE.seo wholesale leaked one
+      article's OpenGraph title and description onto every other article —
+      caught by inspecting the rendered <meta> tags, not by the type system,
+      because the shape was valid the whole time.
+    */
+    seo: {
+      ...FULL_ARTICLE.seo,
+      title: summary.title,
+      description: null,
+      canonicalUrl: `https://thefinance.ir/mag/${summary.slug}`,
+      openGraph: FULL_ARTICLE.seo.openGraph
+        ? {
+            ...FULL_ARTICLE.seo.openGraph,
+            title: summary.title,
+            description: null,
+            url: `https://thefinance.ir/mag/${summary.slug}`,
+            imageUrl: summary.featuredImage?.url ?? null,
+          }
+        : null,
+    },
   });
 }
 

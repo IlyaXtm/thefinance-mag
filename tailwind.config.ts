@@ -36,6 +36,10 @@ const config: Config = {
         grid: 'var(--gap-grid)',
         'grid-mobile': 'var(--gap-grid-mobile)',
       },
+      fontFamily: {
+        // The variable set by next/font in layout.tsx.
+        sans: ['var(--font-fa)', 'Tahoma', 'system-ui', 'sans-serif'],
+      },
       lineHeight: {
         // Persian needs more than Latin defaults.
         body: '1.9',

@@ -1,15 +1,22 @@
 /**
  * SEO types mapping the `wp-graphql-rank-math` shape.
  *
- * ⚠️ UNVERIFIED AGAINST THE INSTALLED PLUGIN VERSION.
+ * ✅ VERIFIED against the installed plugin on wp.thefinance.ir (2026-08-19).
  *
- * `robots` is typed as `string[]` on the expectation that the plugin exposes
- * it as a `[String]` list queried as a leaf with no sub-selection, e.g.
- * ["index", "follow", "max-image-preview:large"].
+ * `seo.__typename` is `RankMathPostObjectSeo` — the node-specific types from
+ * the newer plugin versions.
  *
- * Confirm in GraphiQL before relying on this (build-plan step S0). If the
- * query errors with "must have a selection of subfields", it is an object
- * type and this file needs rewriting.
+ * `robots` is a `[String]` list queried as a leaf with no sub-selection.
+ * Live response:
+ *   ["index","follow","max-snippet:-1","max-video-preview:-1",
+ *    "max-image-preview:large"]
+ *
+ * `canonicalUrl` currently returns the public host already
+ * (https://thefinance.ir/mag/<slug>/) because WordPress `siteurl` is set
+ * there. That is deliberate — it means canonicals are correct with no
+ * rewriting. The rewrite in the API layer stays as a guard: if `siteurl` ever
+ * moves to the CMS host, it catches the regression instead of letting
+ * wp.thefinance.ir reach a <link rel="canonical">.
  */
 
 export interface SeoBreadcrumb {
