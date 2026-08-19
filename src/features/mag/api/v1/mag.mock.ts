@@ -324,7 +324,7 @@ export async function getArticles(
   const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
 
   const filtered = SUMMARIES.filter((a) => {
-    if (market && a.market.slug !== market) return false;
+    if (market && a.market?.slug !== market) return false;
     if (contentType && a.contentType.slug !== contentType) return false;
     if (authorSlug && a.author.slug !== authorSlug) return false;
     if (excludeSlug && a.slug === excludeSlug) return false;
@@ -377,7 +377,7 @@ export async function searchArticles(params: SearchParams): Promise<SearchResult
   const q = query.trim();
 
   const matched = q
-    ? SUMMARIES.filter((a) => a.title.includes(q) || a.market.name.includes(q))
+    ? SUMMARIES.filter((a) => a.title.includes(q) || Boolean(a.market?.name.includes(q)))
     : [];
 
   return simulate({ ...paginate(matched, page, perPage), query: q });

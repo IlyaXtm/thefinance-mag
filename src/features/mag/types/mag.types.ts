@@ -96,18 +96,28 @@ export interface ArticleSummary {
   slug: string;
   title: string;
   featuredImage: MagImage | null;
-  /** Primary market — the one shown as the card chip. */
-  market: Market;
+  /**
+   * Primary market — shown as the card chip.
+   *
+   * NULL for most of the archive. Verified in Phase 0: roughly 60% of posts
+   * are general technical-analysis education (Ichimoku, OBV, ATR…) that
+   * belongs to no single market. Consumers omit the chip and reflow; they must
+   * never render a placeholder.
+   */
+  market: Market | null;
   contentType: ContentType;
   /** Minutes. Computed server-side in the mu-plugin, never in React. */
   readingTime: number;
   /** ISO 8601. */
   publishedAt: string;
   /**
-   * ISO 8601. When it differs from publishedAt the article meta shows a
-   * revision date — the honest freshness signal for evergreen content.
+   * ISO 8601, or null when never revised.
+   *
+   * When present it differs from publishedAt, and the meta row shows both —
+   * «منتشر: … · بازبینی: …». That is the honest freshness signal for evergreen
+   * content, where a relative date would make a still-valid article look stale.
    */
-  modifiedAt: string;
+  modifiedAt: string | null;
   author: Author;
   /**
    * The article's own H2 headings, server-derived.
