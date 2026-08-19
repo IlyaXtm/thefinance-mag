@@ -17,3 +17,4 @@ infra/wp/wordpress/
 .DS_Store
 .vscode/
 .idea/
+*.tsbuildinfo

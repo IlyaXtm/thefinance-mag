@@ -1,0 +1,22 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Utility for isolating Latin fragments inside Persian text.
+ *
+ * Mag titles contain these constantly — «نات کوین (Notcoin) چیست؟»,
+ * «شاخص دلار (DXY)», «نسبت P/E». Without isolation the parentheses and
+ * punctuation scramble. This is the common case, not an edge case.
+ *
+ * Usage: <span className="ltr">Notcoin</span>
+ */
+@layer utilities {
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+    display: inline-block;
+  }
+}

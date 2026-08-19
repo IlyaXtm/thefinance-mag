@@ -1,0 +1,152 @@
+/**
+ * Design tokens.
+ *
+ * Two tiers: a theme block defines the semantic roles, and every component
+ * references the roles only. No component ever writes a colour value.
+ *
+ * Values below come from the audited design artifacts. They are placeholders
+ * for the redesign system's real token identifiers — when those arrive, this
+ * file is the only one that changes.
+ *
+ * Three themes. `v2-light` is the one that breaks: check contrast there first.
+ */
+
+:root,
+[data-theme='v1'] {
+  /* v1 — navy dark */
+  --surface: #040c1f;
+  --surface-raised: #071331;
+  --surface-hover: #111c39;
+
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-interactive: #63718a; /* 3.95 vs surface · 3.72 vs raised */
+
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
+
+  --accent: #4d9afe;
+  --accent-contrast: #041024; /* 6.67 on accent */
+  --focus-ring: #4d9afe; /* 6.84 vs surface · 6.43 vs raised */
+  --danger: #ff9e9e; /* 9.87 vs surface · 9.28 vs raised */
+
+  --skeleton: rgba(255, 255, 255, 0.07);
+  --skeleton-strong: rgba(255, 255, 255, 0.12);
+
+  --radius-card: 12px;
+  --gap-grid: 24px;
+  --gap-grid-mobile: 16px;
+}
+
+[data-theme='v2-dark'] {
+  --surface: #0a0a0a;
+  --surface-raised: #171717;
+  --surface-hover: #1f1f1f;
+
+  --border-subtle: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-interactive: #757575; /* 4.30 vs surface · 3.89 vs raised */
+
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
+
+  --accent: #4d9afe;
+  --accent-contrast: #06121f; /* 6.61 on accent */
+  --focus-ring: #4d9afe; /* 6.95 vs surface · 6.29 vs raised */
+  --danger: #fca5a5; /* 10.43 vs surface · 9.45 vs raised */
+
+  --skeleton: rgba(255, 255, 255, 0.06);
+  --skeleton-strong: rgba(255, 255, 255, 0.11);
+}
+
+[data-theme='v2-light'] {
+  --surface: #ffffff;
+  --surface-raised: #f2f4f7;
+  --surface-hover: #e8ebf1;
+
+  --border-subtle: #e0e3eb;
+  --border-strong: #c2c8d6;
+  --border-interactive: #737b8f; /* 4.23 vs surface · 3.84 vs raised */
+
+  --text-primary: #101219;
+  --text-secondary: #3a4359;
+  --text-muted: #4d5874; /* 6.43 on raised */
+
+  --accent: #1a5fbf;
+  --accent-contrast: #ffffff; /* 6.12 on accent */
+
+  /*
+   * NOT the dark-theme blue.
+   *
+   * #4D9AFE measures 2.85 against white and 2.59 against surface-raised,
+   * failing WCAG 2.2 SC 1.4.11 (3:1 for focus indicators) — keyboard focus is
+   * effectively invisible. The darker accent measures 6.12 / 5.55.
+   *
+   * This is a SYSTEM-LEVEL defect, not a Mag one: every focus indicator on the
+   * light theme site-wide has it. Fixed here so Mag is correct; the redesign
+   * token layer needs the same fix.
+   */
+  --focus-ring: #1a5fbf;
+
+  --danger: #a8180f; /* 7.49 vs surface · 6.80 vs raised */
+
+  --skeleton: #e4e8ef;
+  --skeleton-strong: #d5dae4;
+}
+
+/*
+ * --border-interactive exists because neither existing border token reaches
+ * the 3:1 required for an interactive control boundary. In v2-light,
+ * border-subtle measures 1.28 and border-strong 1.68. Passive labels on cards
+ * keep border-subtle; anything clickable uses border-interactive.
+ */
+
+html {
+  color-scheme: dark;
+}
+
+[data-theme='v2-light'] {
+  color-scheme: light;
+}
+
+/*
+ * Persian long-form defaults.
+ *
+ * Do not set font-style: italic anywhere — Persian faces have no true italic
+ * and browsers synthesise a broken slant.
+ *
+ * Do not set text-align: justify — without kashida support it produces rivers
+ * of whitespace.
+ */
+body {
+  background: var(--surface);
+  color: var(--text-primary);
+  line-height: 1.9;
+  text-align: start;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
