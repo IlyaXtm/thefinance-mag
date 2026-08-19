@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+.env
+.env.local
+.env*.local
+infra/wp/.env
+
+# CMS runtime data — never committed
+infra/wp/mysql/
+infra/wp/wordpress/
+
+*.log
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,53 @@
+# WordPress CMS for wp.thefinance.ir
+#
+# Deployed to /root/wp/ on the CMS VPS. Reads secrets from .env in the same
+# directory (never committed — see .env.example).
+#
+# Notes on deliberate choices:
+#   - No phpMyAdmin. Use `wp` CLI in the container, or an SSH tunnel if a GUI
+#     is genuinely needed. A public database admin panel is not worth it.
+#   - WordPress binds to 127.0.0.1 only. nginx on the host proxies to it, so
+#     nothing reaches Apache without passing through TLS and the security
+#     headers.
+#   - Only wp-content is mounted. WordPress core comes from the image, which
+#     keeps upgrades to an image bump.
+#   - siteurl/home stay at https://thefinance.ir/mag (set in the database, not
+#     here) so Rank Math emits canonicals on the public host rather than the
+#     CMS host.
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks: [internal]
+    # No published ports. The database is reachable only from the compose network.
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on: [db]
+    ports:
+      - "127.0.0.1:9080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${DB_NAME}
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('DISALLOW_FILE_EDIT', true);
+        define('FORCE_SSL_ADMIN', true);
+    volumes:
+      - ./wordpress/wp-content:/var/www/html/wp-content
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
