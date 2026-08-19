@@ -19,3 +19,4 @@ export { NewsletterCta } from './NewsletterCta';
 export { PageHeader } from './PageHeader';
 export { Section, SectionInner } from './Section';
 export { TableOfContents, tocId } from './TableOfContents';
+export { Pagination } from './Pagination';
