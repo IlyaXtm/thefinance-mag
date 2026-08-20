@@ -1,20 +1,22 @@
 /**
- * Real WPGraphQL implementation.
+ * WPGraphQL implementation.
  *
- * Never imported by a page or component. Only `mag.service.ts` imports this.
+ * Never imported by a page or component — only mag.service.ts imports this.
  *
- * ⚠️ The queries below are written against the EXPECTED schema. Field names
- * and the `robots` shape must be confirmed in GraphiQL (build-plan S0) before
- * this file is trusted. A field name written from memory becomes a silent
- * null in production metadata.
+ * ✅ Written against the schema VERIFIED on wp.thefinance.ir (2026-08-20):
+ *   WPGraphQL 2.19 · Rank Math Pro · wp-graphql-rank-math
+ *   seo.robots is [String]; seo.__typename is RankMathPostObjectSeo
+ *   readingTime · modifiedAtIso · marketDescription come from the mu-plugin
  */
 
 import {
   MagFetchError,
+  MagNotFoundError,
   type Article,
   type ArticleListParams,
   type ArticleSummary,
   type Author,
+  type MagImage,
   type Market,
   type MarketSlug,
   type Paginated,
@@ -22,28 +24,23 @@ import {
   type SearchParams,
   type SearchResult,
 } from '../../types/mag.types';
+import type { MagSeo } from '../../types/mag-seo.types';
+import { resolveContentType } from '../../lib/content-types';
+import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
+import { SITE_ORIGIN } from '../../lib/site';
 
-const ENDPOINT = process.env.NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT ?? '';
-
-/**
- * The public frontend origin. Canonical URLs are rewritten to this host —
- * Rank Math returns wp.thefinance.ir URLs and emitting those would index the
- * CMS alongside the public site.
- */
-const PUBLIC_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir';
-
-interface GraphQLResponse<T> {
-  data?: T;
-  errors?: Array<{ message: string }>;
-}
+const ENDPOINT =
+  process.env.WP_GRAPHQL_ENDPOINT ?? process.env.NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT ?? '';
 
 async function gql<T>(
   query: string,
   variables: Record<string, unknown> = {},
+  revalidate: number | false = 300,
 ): Promise<T> {
   if (!ENDPOINT) {
-    throw new MagFetchError('NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT is not set');
+    throw new MagFetchError(
+      'WP GraphQL endpoint is not configured. Set NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT.',
+    );
   }
 
   let res: Response;
@@ -52,133 +49,552 @@ async function gql<T>(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables }),
+      /*
+        Next caches this so ISR regeneration doesn't re-hit WordPress on every
+        request. That matters here: nginx rate-limits /graphql to 10 r/s on the
+        CMS host, and an uncached listing would spend that budget fast.
+      */
+      next: revalidate === false ? undefined : { revalidate },
+      ...(revalidate === false ? { cache: 'no-store' as const } : {}),
     });
   } catch (cause) {
-    throw new MagFetchError(
-      `GraphQL request failed: ${(cause as Error).message}`,
-    );
+    throw new MagFetchError(`GraphQL request failed: ${String(cause)}`);
   }
 
-  if (!res.ok) {
-    throw new MagFetchError(`GraphQL responded ${res.status}`, res.status);
-  }
+  if (!res.ok) throw new MagFetchError(`GraphQL responded ${res.status}`);
 
-  const json = (await res.json()) as GraphQLResponse<T>;
+  const json = (await res.json()) as { data?: T; errors?: Array<{ message: string }> };
 
-  if (json.errors?.length) {
-    throw new MagFetchError(
-      json.errors.map((e) => e.message).join('; '),
-      res.status,
-    );
-  }
-  if (!json.data) {
-    throw new MagFetchError('GraphQL response contained no data');
-  }
+  if (json.errors?.length) throw new MagFetchError(json.errors[0].message);
+  if (!json.data) throw new MagFetchError('GraphQL returned no data.');
+
   return json.data;
 }
 
-/**
- * Rewrites a WordPress URL to the public frontend host.
- * Applied to every canonical before it reaches a <link rel="canonical">.
- */
-export function toPublicUrl(wpUrl: string | null): string | null {
-  if (!wpUrl) return null;
-  try {
-    const parsed = new URL(wpUrl);
-    const target = new URL(PUBLIC_ORIGIN);
-    parsed.protocol = target.protocol;
-    parsed.host = target.host;
-    return parsed.toString();
-  } catch {
-    return wpUrl;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Fragments                                                           */
 /* ------------------------------------------------------------------ */
 
-const IMAGE_FIELDS = `
-  sourceUrl
-  altText
-  mediaDetails { width height }
-`;
-
-const CARD_FIELDS = `
-  id
+const SUMMARY_FIELDS = `
+  databaseId
   slug
   title
   date
-  modified
-  featuredImage { node { ${IMAGE_FIELDS} } }
-  magMeta { readingTime outline }
-  markets(first: 1) { nodes { slug name magMarketMeta { description } count } }
-  contentTypes(first: 1) { nodes { slug name } }
-  author { node { slug name magAuthorMeta { role bio } avatar { url } } }
+  readingTime
+  modifiedAtIso
+  categories { nodes { slug name } }
+  markets { nodes { slug name } }
+  author { node { name slug description } }
+  featuredImage { node { sourceUrl altText mediaDetails { width height } } }
 `;
 
-/* ------------------------------------------------------------------ */
-/* Not yet implemented                                                 */
+const SEO_FIELDS = `
+  seo {
+    title
+    description
+    canonicalUrl
+    robots
+    breadcrumbs { text url isHidden }
+    openGraph { title description url type locale image { url } twitterMeta { card } }
+  }
+`;
+
+interface WpTerm {
+  slug: string;
+  name: string;
+}
+
+interface WpSummary {
+  databaseId: number;
+  slug: string;
+  title: string;
+  date: string;
+  readingTime: number | null;
+  modifiedAtIso: string | null;
+  categories: { nodes: WpTerm[] } | null;
+  markets: { nodes: WpTerm[] } | null;
+  author: { node: { name: string; slug: string; description: string | null } | null } | null;
+  featuredImage: {
+    node: {
+      sourceUrl: string;
+      altText: string | null;
+      mediaDetails: { width: number | null; height: number | null } | null;
+    } | null;
+  } | null;
+}
+
 /* ------------------------------------------------------------------ */
 
 /**
- * These throw rather than returning fake data. The scaffolding ships with
- * mocks so UI work can proceed; wiring the real queries happens once the
- * WordPress fields exist and the schema is verified (build-plan S2).
+ * Rewrite any CMS-host URL to the public origin.
  *
- * Throwing keeps the failure loud. Returning empty arrays would let a broken
- * integration look like an empty state.
+ * Rank Math derives canonicals from `siteurl`, which is currently
+ * https://thefinance.ir/mag — so canonicals already come back correct. This is
+ * a guard, not a transform: if `siteurl` ever moves to the CMS host, it catches
+ * the regression instead of letting wp.thefinance.ir reach a
+ * <link rel="canonical"> and split the index across two hosts.
  */
-function notWired(operation: string): never {
-  throw new MagFetchError(
-    `mag.api.${operation} is not wired yet — verify the schema (S0) and ` +
-      `register the WordPress fields (S2) first. Run with ` +
-      `NEXT_PUBLIC_USE_MOCK=true until then.`,
-  );
+export function toPublicUrl(wpUrl: string | null): string | null {
+  if (!wpUrl) return null;
+  return wpUrl.replace(/^https?:\/\/wp\.thefinance\.ir/i, SITE_ORIGIN);
+}
+
+function mapImage(node: WpSummary['featuredImage']): MagImage | null {
+  const image = node?.node;
+  if (!image?.sourceUrl) return null;
+
+  return {
+    url: image.sourceUrl,
+    /* An empty alt is surfaced as-is rather than invented. Fabricated alt text
+       is worse than none — it misdescribes the image to the people who rely
+       on it. */
+    alt: image.altText ?? '',
+    width: image.mediaDetails?.width ?? 1200,
+    height: image.mediaDetails?.height ?? 675,
+  };
+}
+
+/**
+ * Author.
+ *
+ * Gravatar is deliberately dropped. WordPress returns a secure.gravatar.com URL
+ * for every user, but it is a third-party request per author, it leaks a hash
+ * of their email to a foreign service, and it is unreliable from Iran. `avatar`
+ * stays null and the UI renders an initial.
+ *
+ * Every user currently has `description: null` — nobody has a bio. That weakens
+ * E-E-A-T on financial content, where Google wants to know who wrote this and
+ * why they're qualified. Filling four bios is a ten-minute job.
+ */
+function mapAuthor(node: WpSummary['author']): Author {
+  const author = node?.node;
+
+  if (!author) {
+    return {
+      slug: 'thefinance',
+      name: 'تحریریه فایننس',
+      role: null,
+      bio: null,
+      avatar: null,
+      articleCount: null,
+    };
+  }
+
+  return {
+    slug: author.slug,
+    name: author.name,
+    role: null,
+    bio: author.description?.trim() || null,
+    avatar: null,
+    articleCount: null,
+  };
+}
+
+function mapMarket(term: WpTerm): Market {
+  return { slug: term.slug as MarketSlug, name: term.name, description: null, count: null };
+}
+
+function mapSummary(node: WpSummary): ArticleSummary {
+  const marketNodes = node.markets?.nodes ?? [];
+
+  return {
+    id: String(node.databaseId),
+    slug: node.slug,
+    title: node.title,
+    featuredImage: mapImage(node.featuredImage),
+    /* Most of the archive has no market — expected, not a failure. */
+    market: marketNodes.length > 0 ? mapMarket(marketNodes[0]) : null,
+    contentType: resolveContentType((node.categories?.nodes ?? []).map((c) => c.slug)),
+    readingTime: node.readingTime ?? 1,
+    publishedAt: node.date,
+    modifiedAt: node.modifiedAtIso,
+    author: mapAuthor(node.author),
+    /* Only the full article parses its body for headings. */
+    outline: [],
+  };
+}
+
+function mapSeo(raw: unknown): MagSeo {
+  const seo = (raw ?? {}) as {
+    title?: string | null;
+    description?: string | null;
+    canonicalUrl?: string | null;
+    robots?: string[] | null;
+    breadcrumbs?: Array<{ text?: string | null; url?: string | null; isHidden?: boolean | null }> | null;
+    openGraph?: {
+      title?: string | null;
+      description?: string | null;
+      url?: string | null;
+      type?: string | null;
+      locale?: string | null;
+      image?: { url?: string | null } | null;
+      twitterMeta?: { card?: string | null } | null;
+    } | null;
+  };
+
+  return {
+    title: seo.title ?? null,
+    description: seo.description ?? null,
+    canonicalUrl: toPublicUrl(seo.canonicalUrl ?? null),
+    robots: seo.robots ?? [],
+    /*
+      Rank Math's breadcrumbs are mapped but the UI builds its own trail from
+      the article's market and title. Keeping both in sync matters: structured
+      breadcrumbs that disagree with the visible ones is a mismatch Google
+      flags, so whichever the page renders must be the one it marks up.
+    */
+    breadcrumbs: (seo.breadcrumbs ?? [])
+      .filter((crumb) => !crumb.isHidden)
+      .map((crumb) => ({
+        text: crumb.text ?? '',
+        url: toPublicUrl(crumb.url ?? null) ?? '',
+        isHidden: false,
+      })),
+    /*
+      Rank Math's own JSON-LD is fetched but NOT emitted. The schema layer
+      builds its own — it knows which articles are news (NewsArticle) versus
+      evergreen education (Article), which Rank Math cannot infer. Emitting
+      both would put two conflicting Article blocks on one page.
+    */
+    jsonLdRaw: null,
+    openGraph: seo.openGraph
+      ? {
+          title: seo.openGraph.title ?? null,
+          description: seo.openGraph.description ?? null,
+          url: toPublicUrl(seo.openGraph.url ?? null),
+          type: seo.openGraph.type ?? null,
+          locale: seo.openGraph.locale ?? null,
+          imageUrl: seo.openGraph.image?.url ?? null,
+          twitterCard: seo.openGraph.twitterMeta?.card ?? null,
+        }
+      : null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cursor pagination.
+ *
+ * WPGraphQL core ships `first`/`after` cursors but NOT offset pagination —
+ * that needs wp-graphql-offset-pagination, which is not in the WordPress
+ * plugin repository. Installing from outside the repo means no automatic
+ * updates and no review, and 91% of disclosed WordPress vulnerabilities are in
+ * plugins. Not worth it for something solvable in code.
+ *
+ * So a numbered page is reached by walking cursors. Two things make that
+ * cheap here:
+ *   - the archive is ~32 posts, so at most a few hops
+ *   - ISR caches the result, so the walk happens on regeneration, not per
+ *     request
+ *
+ * It is also lighter on MySQL than a large OFFSET, which has to count and
+ * discard rows. Irrelevant at 32 articles; not at 300.
+ */
+async function cursorForPage(
+  page: number,
+  perPage: number,
+  filters: { category: string | null; author: string | null; search: string | null },
+): Promise<string | null> {
+  if (page <= 1) return null;
+
+  let cursor: string | null = null;
+
+  for (let hop = 1; hop < page; hop += 1) {
+    const data: { posts: { pageInfo: { endCursor: string | null; hasNextPage: boolean } } } =
+      await gql(
+        `query Cursor($size: Int!, $after: String, $category: String, $author: String, $search: String) {
+          posts(first: $size, after: $after, where: {
+            status: PUBLISH
+            categoryName: $category
+            authorName: $author
+            search: $search
+          }) {
+            pageInfo { endCursor hasNextPage }
+          }
+        }`,
+        { size: perPage, after: cursor, ...filters },
+      );
+
+    if (!data.posts.pageInfo.hasNextPage) return null;
+    cursor = data.posts.pageInfo.endCursor;
+  }
+
+  return cursor;
 }
 
 export async function getArticles(
-  _params: ArticleListParams = {},
+  params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
-  void CARD_FIELDS;
-  return notWired('getArticles');
+  const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
+
+  const filters = {
+    category: contentType ?? null,
+    author: authorSlug ?? null,
+    search: null,
+  };
+
+  const after = await cursorForPage(page, perPage, filters);
+
+  const data = await gql<{
+    posts: {
+      nodes: WpSummary[];
+      pageInfo: { hasNextPage: boolean };
+    };
+  }>(
+    `query Articles($size: Int!, $after: String, $category: String, $author: String) {
+      posts(first: $size, after: $after, where: {
+        status: PUBLISH
+        categoryName: $category
+        authorName: $author
+      }) {
+        nodes { ${SUMMARY_FIELDS} }
+        pageInfo { hasNextPage }
+      }
+    }`,
+    { size: perPage, after, ...filters },
+  );
+
+  let items = data.posts.nodes.map(mapSummary);
+
+  /*
+    Market filtering happens here rather than in the query.
+
+    A taxQuery would be cleaner, but `market` is a custom taxonomy and a wrong
+    enum name would silently return nothing rather than erroring. Filtering a
+    single page in JS is honest and can't fail quietly. Revisit if the archive
+    outgrows a few hundred posts.
+  */
+  if (market) items = items.filter((a) => a.market?.slug === market);
+  if (excludeSlug) items = items.filter((a) => a.slug !== excludeSlug);
+
+  /*
+    Total post count comes from a separate lightweight query rather than being
+    inferred. Without offset pagination there is no `total` on the connection,
+    and guessing it would break the pagination component.
+  */
+  const total = await countArticles(filters);
+
+  return {
+    items,
+    page,
+    perPage,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / perPage)),
+  };
+}
+
+/**
+ * Total published posts matching the filters.
+ *
+ * Walks the connection in large pages counting nodes. Cached for an hour: the
+ * count changes only on publish, and the automation adds roughly two a day.
+ */
+async function countArticles(filters: {
+  category: string | null;
+  author: string | null;
+  search: string | null;
+}): Promise<number> {
+  let total = 0;
+  let cursor: string | null = null;
+  /* Guard against an unbounded loop if the API misbehaves. */
+  const MAX_HOPS = 20;
+
+  for (let hop = 0; hop < MAX_HOPS; hop += 1) {
+    const data: {
+      posts: { nodes: Array<{ databaseId: number }>; pageInfo: { endCursor: string | null; hasNextPage: boolean } };
+    } = await gql(
+      `query CountArticles($after: String, $category: String, $author: String, $search: String) {
+        posts(first: 100, after: $after, where: {
+          status: PUBLISH
+          categoryName: $category
+          authorName: $author
+          search: $search
+        }) {
+          nodes { databaseId }
+          pageInfo { endCursor hasNextPage }
+        }
+      }`,
+      { after: cursor, ...filters },
+      3600,
+    );
+
+    total += data.posts.nodes.length;
+
+    if (!data.posts.pageInfo.hasNextPage) break;
+    cursor = data.posts.pageInfo.endCursor;
+  }
+
+  return total;
 }
 
 export async function getArticle(slug: string): Promise<Article> {
-  void slug;
-  return notWired('getArticle');
+  const data = await gql<{
+    post: (WpSummary & { content: string | null; seo: unknown }) | null;
+  }>(
+    `query Article($slug: ID!) {
+      post(id: $slug, idType: SLUG) {
+        ${SUMMARY_FIELDS}
+        content
+        ${SEO_FIELDS}
+      }
+    }`,
+    { slug },
+  );
+
+  if (!data.post) throw new MagNotFoundError(slug);
+
+  /* Strip inline `text-align: justify` before the body renders. The classic
+     editor writes it, inline styles beat the stylesheet, and justified Persian
+     produces rivers of whitespace without kashida support. */
+  /* Sanitise first, then stamp heading ids — the ids must survive, so they
+     go on after the style stripping. */
+  const content = addHeadingIds(sanitizeArticleHtml(data.post.content ?? ''));
+  const markets = (data.post.markets?.nodes ?? []).map(mapMarket);
+
+  return {
+    ...mapSummary(data.post),
+    content,
+    outline: extractHeadings(content),
+    /* Secondary only — the first market is already the card chip. */
+    secondaryMarkets: markets.slice(1),
+    seo: mapSeo(data.post.seo),
+  };
 }
 
 export async function getMarkets(): Promise<Market[]> {
-  return notWired('getMarkets');
+  const data = await gql<{
+    markets: {
+      nodes: Array<WpTerm & { count: number | null; marketDescription: string | null }>;
+    };
+  }>(
+    `query Markets {
+      markets(first: 20) { nodes { slug name count marketDescription } }
+    }`,
+    {},
+    3600,
+  );
+
+  return data.markets.nodes.map((node) => ({
+    slug: node.slug as MarketSlug,
+    name: node.name,
+    description: node.marketDescription,
+    count: node.count ?? 0,
+  }));
 }
 
 export async function getMarket(slug: MarketSlug): Promise<Market> {
-  void slug;
-  return notWired('getMarket');
+  const market = (await getMarkets()).find((m) => m.slug === slug);
+  if (!market) throw new MagNotFoundError(slug);
+  return market;
+}
+
+/**
+ * Author fields.
+ *
+ * The published count is derived by fetching ids rather than reading a total —
+ * WPGraphQL core exposes no count on a connection without the offset-pagination
+ * plugin. 100 is a safe ceiling per author for this archive; if an author ever
+ * exceeds it the number under-reports rather than breaking, which is the right
+ * failure direction for a display-only figure.
+ */
+const AUTHOR_FIELDS = `
+  name
+  slug
+  description
+  posts(first: 100, where: { status: PUBLISH }) {
+    nodes { databaseId }
+  }
+`;
+
+interface WpAuthor {
+  name: string;
+  slug: string;
+  description: string | null;
+  posts: { nodes: Array<{ databaseId: number }> } | null;
+}
+
+function mapFullAuthor(node: WpAuthor): Author {
+  return {
+    slug: node.slug,
+    name: node.name,
+    role: null,
+    bio: node.description?.trim() || null,
+    /* Gravatar deliberately dropped — see mapAuthor. */
+    avatar: null,
+    articleCount: node.posts?.nodes.length ?? 0,
+  };
 }
 
 export async function getAuthor(slug: string): Promise<Author> {
-  void slug;
-  return notWired('getAuthor');
+  const data = await gql<{ user: WpAuthor | null }>(
+    `query AuthorBySlug($slug: ID!) {
+      user(id: $slug, idType: SLUG) { ${AUTHOR_FIELDS} }
+    }`,
+    { slug },
+    3600,
+  );
+
+  if (!data.user) throw new MagNotFoundError(slug);
+  return mapFullAuthor(data.user);
 }
 
 export async function getAuthors(): Promise<Author[]> {
-  return notWired('getAuthors');
+  const data = await gql<{ users: { nodes: WpAuthor[] } }>(
+    `query Authors {
+      users(first: 50, where: { hasPublishedPosts: POST }) {
+        nodes { ${AUTHOR_FIELDS} }
+      }
+    }`,
+    {},
+    3600,
+  );
+
+  return data.users.nodes
+    .map(mapFullAuthor)
+    /* An author with nothing published would be a dead page. */
+    .filter((author) => (author.articleCount ?? 0) > 0);
 }
 
-export async function getReports(
-  _page = 1,
-  _perPage = 12,
-): Promise<Paginated<Report>> {
-  return notWired('getReports');
+/**
+ * Reports and monthlies.
+ *
+ * No source exists — no CPT, no category, nothing published. Returns empty so
+ * every consumer hides its section, which is the documented behaviour.
+ *
+ * Deliberately NOT faked with articles: an empty section is honest, a padded
+ * one lies about what the publication produces.
+ */
+export async function getReports(page = 1, perPage = 12): Promise<Paginated<Report>> {
+  return { items: [], page, perPage, total: 0, totalPages: 1 };
 }
 
-export async function searchArticles(
-  _params: SearchParams,
-): Promise<SearchResult> {
-  return notWired('searchArticles');
-}
+export async function searchArticles(params: SearchParams): Promise<SearchResult> {
+  const { query, page = 1, perPage = 9 } = params;
 
-/** Exported for the schema-verification script. */
-export const __internal = { gql, toPublicUrl };
+  const filters = { category: null, author: null, search: query };
+  const after = await cursorForPage(page, perPage, filters);
+
+  const data = await gql<{ posts: { nodes: WpSummary[] } }>(
+    `query Search($search: String!, $size: Int!, $after: String) {
+      posts(first: $size, after: $after, where: {
+        search: $search
+        status: PUBLISH
+      }) {
+        nodes { ${SUMMARY_FIELDS} }
+      }
+    }`,
+    { search: query, size: perPage, after },
+    /* Search results are per-query and shouldn't be cached. */
+    false,
+  );
+
+  const total = await countArticles(filters);
+
+  return {
+    items: data.posts.nodes.map(mapSummary),
+    page,
+    perPage,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / perPage)),
+    query,
+  };
+}

@@ -137,7 +137,7 @@ export default async function ArticlePage({
         ]}
       />
 
-      <Section className="!pb-0">
+      <Section width="article" className="!pb-0">
         <div className="max-w-prose">
           <Breadcrumbs items={crumbs} />
 
@@ -181,8 +181,10 @@ export default async function ArticlePage({
         </div>
       </Section>
 
-      <Section className="!pt-10">
+      <Section width="article" className="!pt-10">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
+          {/* min-w-0 lets the column shrink below its content width, which is
+              what stops a long unbroken string from blowing out the layout. */}
           <div className="min-w-0 flex-1">
             <div className="mb-8 lg:hidden">
               <TableOfContents headings={article.outline} />
@@ -210,7 +212,7 @@ export default async function ArticlePage({
       </Section>
 
       {related.items.length >= 3 && (
-        <Section className="!pt-0">
+        <Section width="article" className="!pt-0">
           <h2 className="mb-6 text-[22px] font-bold text-text-primary">مطالب مرتبط</h2>
           <ArticleGrid articles={related.items} />
         </Section>

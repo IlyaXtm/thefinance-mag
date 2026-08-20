@@ -65,9 +65,15 @@ export function ContentTypeFilterBar({
   contentTypes: ContentType[];
   activeSlug?: string | null;
 }) {
+  /* Query-string filtering on the archive, not separate routes. One canonical
+     archive URL with a filter parameter beats four thin near-duplicate pages. */
   const items: FilterItem[] = [
-    { slug: 'all', name: 'همه', href: '/' },
-    ...contentTypes.map((c) => ({ slug: c.slug, name: c.name, href: `/type/${c.slug}` })),
+    { slug: 'all', name: 'همه', href: '/archive' },
+    ...contentTypes.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      href: `/archive?type=${c.slug}`,
+    })),
   ];
 
   return <Bar items={items} activeSlug={activeSlug ?? 'all'} />;

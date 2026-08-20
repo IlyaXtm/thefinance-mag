@@ -59,7 +59,17 @@ export function Pagination({
 
   if (totalPages <= 1) return null;
 
+  /*
+    The archive paginates by query string; everything else uses /page/N path
+    segments. Query strings keep one canonical archive URL rather than
+    multiplying thin near-duplicate routes, while path segments read better for
+    a market or author archive.
+  */
   const hrefFor = (page: number) => {
+    if (basePath === '/archive') {
+      return page === 1 ? '/archive' : `/archive?page=${page}`;
+    }
+
     const base = basePath === '/' ? '' : basePath;
     return page === 1 ? base || '/' : `${base}/page/${page}`;
   };

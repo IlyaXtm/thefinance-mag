@@ -20,3 +20,6 @@ export { PageHeader } from './PageHeader';
 export { Section, SectionInner } from './Section';
 export { TableOfContents, tocId } from './TableOfContents';
 export { Pagination } from './Pagination';
+export { ArticleRow, SectionHeading } from './ArticleRow';
+export { FeaturedArticle } from './FeaturedArticle';
+export { TopicList } from './TopicList';

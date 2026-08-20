@@ -22,6 +22,23 @@ import {
   type SearchResult,
 } from '../../types/mag.types';
 import { DISCLAIMER_TEXT } from '../../types/mag-blocks.types';
+import { addHeadingIds, sanitizeArticleHtml } from '../../lib/sanitize';
+
+/**
+ * The mock runs the SAME content pipeline as the real API.
+ *
+ * Without this the two diverge in exactly the way that hides bugs: the mock
+ * had hardcoded heading ids (`s1`, `s2`) while production generates them from
+ * the heading text, so the table of contents linked to anchors that existed
+ * only in production. Nothing errored — the links simply did nothing, and only
+ * in the environment nobody develops against.
+ *
+ * A mock that skips the transforms isn't testing the component, it's testing a
+ * different component.
+ */
+function prepareContent(html: string): string {
+  return addHeadingIds(sanitizeArticleHtml(html));
+}
 
 /* ------------------------------------------------------------------ */
 /* Simulation controls                                                 */
@@ -48,37 +65,44 @@ const MARKETS: Record<MarketSlug, Market> = {
     slug: 'tse',
     name: 'بورس ایران',
     description: 'تحلیل، گزارش و آموزش درباره بازار سهام تهران.',
-    count: 24,
+    count: 2,
   },
   'gold-usd': {
     slug: 'gold-usd',
     name: 'طلا و دلار',
     description: 'روند طلا، سکه و ارز و عوامل مؤثر بر آن‌ها.',
-    count: 18,
+    count: 1,
   },
   crypto: {
     slug: 'crypto',
     name: 'کریپتو',
     description: null, // exercises the "description absent" archive variant
-    count: 31,
+    count: 5,
   },
   forex: {
     slug: 'forex',
     name: 'فارکس',
     description: 'مفاهیم، ابزارها و ساختار بازار جهانی ارز.',
-    count: 12,
+    count: 3,
   },
   global: {
     slug: 'global',
     name: 'اقتصاد جهانی',
     description: 'داده‌ها و رویدادهای کلان و اثرشان بر بازارهای داخلی.',
-    count: 9,
+    count: 3,
   },
   housing: {
     slug: 'housing',
     name: 'مسکن',
     description: 'داده‌های معاملات و تحلیل بازار مسکن.',
-    count: 7,
+    /*
+      ZERO — matching the real archive.
+      Kept at zero deliberately so the "hide markets with no articles" rule is
+      exercised in development. A mock where every bucket has data means the
+      empty case is only ever discovered in production, which is exactly where
+      it matters most.
+    */
+    count: 0,
   },
 };
 
@@ -208,6 +232,8 @@ const SUMMARIES: ArticleSummary[] = [
 
 /** The full sample article, with a revision date that differs from publish. */
 const FULL_ARTICLE: Article = {
+  /* content is passed through prepareContent below, after the object literal,
+     so the mock and the real API produce identical HTML. */
   id: 'a7',
   slug: 'fundamental-analysis',
   title: 'تحلیل فاندامنتال (Fundamental Analysis) چیست؟',
@@ -226,16 +252,16 @@ const FULL_ARTICLE: Article = {
   ],
   secondaryMarkets: [MARKETS.global],
   content: [
-    '<h2 id="s1">تحلیل فاندامنتال چیست</h2>',
+    '<h2>تحلیل فاندامنتال چیست</h2>',
     '<p>تحلیل فاندامنتال روشی است که با بررسی وضعیت مالی و عملیاتی یک شرکت می‌کوشد ارزش ذاتی آن را برآورد کند. در این روش قیمت بازار نقطه شروع نیست، بلکه چیزی است که در پایان با برآورد به‌دست‌آمده مقایسه می‌شود.</p>',
     `<div data-block="thefinance/callout"><strong>ارزش ذاتی</strong><p>برآوردی از ارزش یک دارایی بر پایه داده‌های بنیادی، مستقل از قیمتی که بازار در لحظه به آن می‌دهد.</p></div>`,
-    '<h2 id="s2">تفاوت آن با تحلیل تکنیکال</h2>',
+    '<h2>تفاوت آن با تحلیل تکنیکال</h2>',
     '<p>تحلیل تکنیکال رفتار قیمت و حجم را بررسی می‌کند و به این پرسش نمی‌پردازد که شرکت چه می‌کند. تحلیل فاندامنتال دقیقاً از همان‌جا شروع می‌شود. این دو یکدیگر را نفی نمی‌کنند و بسیاری از سرمایه‌گذاران هر دو را به کار می‌برند.</p>',
-    '<h2 id="s3">صورت‌های مالی و نسبت‌های کلیدی</h2>',
+    '<h2>صورت‌های مالی و نسبت‌های کلیدی</h2>',
     '<p>سه صورت مالی پایه — ترازنامه، صورت سود و زیان و صورت جریان وجوه نقد — ورودی اصلی این تحلیل‌اند. نسبت‌هایی مانند <span dir="ltr">P/E</span> از دل همین صورت‌ها بیرون می‌آیند و به‌تنهایی معنا نمی‌دهند؛ باید با میانگین صنعت و تاریخچه خود شرکت سنجیده شوند.</p>',
     '<h3>نسبت قیمت به درآمد</h3>',
     '<p>این نسبت نشان می‌دهد بازار حاضر است بابت هر واحد سود چقدر بپردازد. عدد بالا لزوماً بد نیست و عدد پایین لزوماً فرصت نیست.</p>',
-    '<h2 id="s4">محدودیت‌های این روش</h2>',
+    '<h2>محدودیت‌های این روش</h2>',
     '<p>برآورد ارزش ذاتی به مفروضات وابسته است و تغییر کوچکی در نرخ رشد فرض‌شده می‌تواند نتیجه را به‌کلی جابه‌جا کند. ضمناً این روش درباره زمان‌بندی چیزی نمی‌گوید؛ ممکن است سال‌ها طول بکشد تا قیمت به برآورد نزدیک شود.</p>',
     `<div data-block="thefinance/disclaimer"><p>${DISCLAIMER_TEXT}</p></div>`,
   ].join('\n'),
@@ -265,6 +291,11 @@ const FULL_ARTICLE: Article = {
     },
   },
 };
+
+/* The same transforms production applies. Doing it here rather than inline
+   keeps the fixture readable while guaranteeing parity. */
+FULL_ARTICLE.content = prepareContent(FULL_ARTICLE.content);
+
 
 const REPORTS: Report[] = [
   {
@@ -342,7 +373,7 @@ export async function getArticle(slug: string): Promise<Article> {
 
   return simulate({
     ...summary,
-    content: `<h2 id="s1">${summary.outline[0] ?? 'مقدمه'}</h2><p>متن نمونه.</p>`,
+    content: prepareContent(`<h2>${summary.outline[0] ?? 'مقدمه'}</h2><p>متن نمونه.</p>`),
     secondaryMarkets: [],
     /*
       Per-article SEO. Spreading FULL_ARTICLE.seo wholesale leaked one

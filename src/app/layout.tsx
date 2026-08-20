@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { getMarkets } from '@/features/mag/api/v1/mag.service';
+import { MagFooter, MagHeader } from '@/shared/ui';
 import '@/styles/globals.css';
 
 /**
@@ -46,14 +48,30 @@ export const metadata: Metadata = {
   description: 'تحلیل، گزارش و آموزش برای بازارهای مالی',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  /*
+    Markets are fetched here so the footer can link every populated archive on
+    every page. On a thirty-page site that footer is how a crawler reaches
+    pages that are otherwise several clicks deep.
+
+    A failure must not take the whole site down — the footer degrades to no
+    market column rather than throwing.
+  */
+  const markets = await getMarkets().catch(() => []);
+
   return (
     /*
       dir and lang live here, not per page. RTL is the base direction for this
       product, not a mode layered on an LTR default.
     */
     <html lang="fa" dir="rtl" data-theme="v1" className={iranYekan.variable}>
-      <body>{children}</body>
+      {/* flex column + mt-auto on the footer keeps it at the bottom on short
+          pages without a fixed height or a viewport calculation. */}
+      <body className="flex min-h-screen flex-col">
+        <MagHeader />
+        <div className="flex-1">{children}</div>
+        <MagFooter markets={markets} />
+      </body>
     </html>
   );
 }

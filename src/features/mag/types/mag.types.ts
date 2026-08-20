@@ -39,19 +39,28 @@ export interface Market {
 }
 
 /**
- * Content type taxonomy. Deliberately three values.
+ * Content type taxonomy.
  *
- * `news` (اخبار) is NOT included: the Mag/Khabarchi ownership boundary is
- * unresolved, and shipping it would create two parallel paths for the same
- * content. Adding it later is cheap.
+ * `news` was originally excluded pending the Mag/Khabarchi boundary decision.
+ * It is now included: an RSS automation publishes roughly two news items a day
+ * and they are meant to be indexed, so the type exists whether the frontend
+ * models it or not.
+ *
+ * News is treated differently downstream in two places that matter:
+ *   - schema is NewsArticle, not Article — publication date is the primary
+ *     signal for translated news, whereas evergreen education leans on the
+ *     revision date
+ *   - the landing page keeps news in its own rail. At two items a day, a
+ *     date-sorted feed buries the human-written educational archive within
+ *     about two months.
  */
-export const CONTENT_TYPE_SLUGS = ['analysis', 'report', 'education'] as const;
+export const CONTENT_TYPE_SLUGS = ['analysis', 'report', 'education', 'news'] as const;
 
 export type ContentTypeSlug = (typeof CONTENT_TYPE_SLUGS)[number];
 
 export interface ContentType {
   slug: ContentTypeSlug;
-  /** Persian display name: تحلیل · گزارش · آموزش */
+  /** Persian display name: تحلیل · گزارش · آموزش · اخبار */
   name: string;
 }
 
