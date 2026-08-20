@@ -15,13 +15,21 @@ import type { Author } from '../types/mag.types';
  *
  * A missing avatar falls back to an initial and keeps the box height stable,
  * so a page of authors doesn't go ragged.
+ *
+ * On the author's own page the name is the page's <h1> and is NOT a link:
+ * every page needs exactly one h1, and linking to the page you are already on
+ * is a wasted tab stop — the same rule the breadcrumb trail applies to its
+ * last item.
  */
 export function AuthorBox({
   author,
   size = 'inline',
+  isCurrentPage = false,
 }: {
   author: Author;
   size?: 'inline' | 'page';
+  /** True on /author/<slug> itself: renders the name as the page's h1. */
+  isCurrentPage?: boolean;
 }) {
   const px = size === 'page' ? 80 : 56;
   const pxMobile = size === 'page' ? 64 : 48;
@@ -51,12 +59,18 @@ export function AuthorBox({
       </div>
 
       <div className="min-w-0">
-        <Link
-          href={`/author/${author.slug}`}
-          className="font-semibold text-text-primary transition-colors hover:text-accent"
-        >
-          {author.name}
-        </Link>
+        {isCurrentPage ? (
+          <h1 className="text-[24px] font-bold leading-[1.5] text-text-primary md:text-[28px]">
+            {author.name}
+          </h1>
+        ) : (
+          <Link
+            href={`/author/${author.slug}`}
+            className="font-semibold text-text-primary transition-colors hover:text-accent"
+          >
+            {author.name}
+          </Link>
+        )}
         {author.role && <p className="mt-0.5 text-[13px] text-text-muted">{author.role}</p>}
         {author.bio && (
           <p className="mt-2 line-clamp-3 text-[14px] leading-[1.8] text-text-secondary">

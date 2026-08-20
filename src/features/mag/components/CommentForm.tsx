@@ -29,7 +29,11 @@ export function CommentForm({ articleId }: { articleId: string }) {
   const [state, setState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit() {
+  async function handleSubmit(event: React.FormEvent) {
+    /* A real form, so Enter submits and the browser's own validation and
+       autofill behave the way people expect. */
+    event.preventDefault();
+
     setError(null);
     setState('sending');
 
@@ -93,6 +97,7 @@ export function CommentForm({ articleId }: { articleId: string }) {
         دیدگاه‌ها پیش از انتشار بررسی می‌شوند. ایمیل شما نمایش داده نمی‌شود.
       </p>
 
+      <form onSubmit={handleSubmit} noValidate>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <div>
           <label htmlFor="comment-name" className="mb-1.5 block text-[13px] text-text-secondary">
@@ -163,13 +168,13 @@ export function CommentForm({ articleId }: { articleId: string }) {
       )}
 
       <button
-        type="button"
-        onClick={handleSubmit}
+        type="submit"
         disabled={state === 'sending'}
         className="mt-4 min-h-11 rounded-full bg-accent px-6 text-[15px] font-semibold text-accent-contrast transition-opacity disabled:opacity-60"
       >
         {state === 'sending' ? 'در حال ارسال…' : 'ارسال دیدگاه'}
       </button>
+      </form>
     </section>
   );
 }

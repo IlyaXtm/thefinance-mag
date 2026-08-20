@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
-import { MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
+import { magPath, MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
 import {
   ArticleRow,
   FeaturedArticle,
@@ -76,7 +76,10 @@ export default async function MagIndexPage() {
             <p className="mt-2 text-text-secondary">{MAG_DESCRIPTION}</p>
           </div>
 
-          <form action="/search" method="get" className="shrink-0">
+          {/* Native form action — basePath is NOT applied automatically, so it
+              goes through magPath. Without it the search box posts to
+              thefinance.ir/search and leaves the magazine. */}
+          <form action={magPath('/search')} method="get" className="shrink-0">
             <label htmlFor="mag-search" className="sr-only">
               جستجو در مجله
             </label>

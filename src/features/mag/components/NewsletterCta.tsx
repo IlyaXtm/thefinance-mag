@@ -23,7 +23,14 @@ export function NewsletterCta() {
 
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-  async function handleSubmit() {
+  async function handleSubmit(event: React.FormEvent) {
+    /*
+      A real <form> rather than a button with a click handler: without one,
+      pressing Enter in the email field does nothing, which is how most people
+      submit a single-field form.
+    */
+    event.preventDefault();
+
     if (!EMAIL.test(email.trim())) {
       setError('ایمیل معتبر نیست. آدرس را بررسی کنید.');
       return;
@@ -55,7 +62,7 @@ export function NewsletterCta() {
         </p>
       ) : (
         <>
-          <div className="mt-4 flex flex-col gap-2 md:flex-row">
+          <form onSubmit={handleSubmit} noValidate className="mt-4 flex flex-col gap-2 md:flex-row">
             <label htmlFor="newsletter-email" className="sr-only">
               ایمیل شما
             </label>
@@ -76,14 +83,13 @@ export function NewsletterCta() {
               style={{ borderColor: error ? 'var(--danger)' : 'var(--border-interactive)' }}
             />
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
               disabled={state === 'sending'}
               className="min-h-11 rounded-full bg-accent px-6 text-[15px] font-semibold text-accent-contrast transition-opacity disabled:opacity-60"
             >
               {state === 'sending' ? '…' : 'عضویت'}
             </button>
-          </div>
+          </form>
 
           {error && (
             <p

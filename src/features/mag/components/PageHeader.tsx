@@ -1,3 +1,5 @@
+import { magPath } from '../lib/site';
+
 /**
  * Page header for the listing.
  *
@@ -26,7 +28,7 @@ export function PageHeader({
       </div>
 
       {showSearch && (
-        <form action="/search" method="get" className="shrink-0">
+        <form action={magPath('/search')} method="get" className="shrink-0">
           <label htmlFor="mag-search" className="sr-only">
             جستجو در مجله
           </label>

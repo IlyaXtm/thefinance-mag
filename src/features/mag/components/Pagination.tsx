@@ -10,7 +10,53 @@ import { toPersianDigits } from '../lib/format';
  * button, which is the single most-used control on a magazine.
  *
  * Chevrons point in RTL reading direction — "next" is LEFT.
+ *
+ * THE CALLER BUILDS THE HREFS.
+ *
+ * This component used to derive them from a `basePath` string, special-casing
+ * '/archive' for query-string mode and falling through to `${base}/page/N` for
+ * everything else. Two failures came out of that, and both were invisible in
+ * the component itself:
+ *
+ *   - the fall-through emitted /market/<slug>/page/2, /author/<slug>/page/2
+ *     and /search/page/2, none of which are routes. Crawlers followed them
+ *     into 404s and every article past the ninth was unreachable.
+ *   - the query-string branch rebuilt the URL from scratch, dropping the
+ *     filter it was paginating: /archive?type=education paged to
+ *     /archive?page=2, silently switching the reader back to everything.
+ *
+ * A route knows its own URL shape; this component does not. So it takes a
+ * builder, and `pagePathHref` / `pageQueryHref` below cover the two shapes in
+ * use — with the query builder carrying the existing parameters forward.
  */
+
+/** `/base` · `/base/page/2` — for routes with a /page/[n] segment. */
+export function pagePathHref(base: string) {
+  const root = base === '/' ? '' : base;
+  return (page: number) => (page === 1 ? root || '/' : `${root}/page/${page}`);
+}
+
+/**
+ * `/base?…` · `/base?…&page=2` — for routes that paginate by query string.
+ *
+ * `params` are the filters already active on the page (`type`, `q`). They are
+ * carried into every page link, which is the part the old implementation
+ * dropped.
+ */
+export function pageQueryHref(base: string, params: Record<string, string | undefined> = {}) {
+  return (page: number) => {
+    const search = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value) search.set(key, value);
+    }
+
+    if (page > 1) search.set('page', String(page));
+
+    const query = search.toString();
+    return query ? `${base}?${query}` : base;
+  };
+}
 
 function pageWindow(current: number, total: number): Array<number | 'gap'> {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -46,33 +92,18 @@ const Chevron = ({ direction }: { direction: 'prev' | 'next' }) => (
 export function Pagination({
   page,
   totalPages,
-  basePath,
+  hrefFor,
 }: {
   page: number;
   totalPages: number;
-  /** e.g. '/' for the listing, '/market/crypto' for an archive. */
-  basePath: string;
+  /** Built by the route — see pagePathHref / pageQueryHref above. */
+  hrefFor: (page: number) => string;
 }) {
   const currentPage = page;
   const hasPreviousPage = currentPage > 1;
   const hasNextPage = currentPage < totalPages;
 
   if (totalPages <= 1) return null;
-
-  /*
-    The archive paginates by query string; everything else uses /page/N path
-    segments. Query strings keep one canonical archive URL rather than
-    multiplying thin near-duplicate routes, while path segments read better for
-    a market or author archive.
-  */
-  const hrefFor = (page: number) => {
-    if (basePath === '/archive') {
-      return page === 1 ? '/archive' : `/archive?page=${page}`;
-    }
-
-    const base = basePath === '/' ? '' : basePath;
-    return page === 1 ? base || '/' : `${base}/page/${page}`;
-  };
 
   const itemClass =
     'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm transition-colors';

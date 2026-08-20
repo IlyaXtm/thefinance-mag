@@ -11,6 +11,7 @@ import {
   AuthorBox,
   Breadcrumbs,
   Pagination,
+  pageQueryHref,
   Section,
 } from '@/features/mag/components';
 
@@ -51,15 +52,22 @@ export async function generateMetadata({
 
 export default async function AuthorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
+  const { page } = await searchParams;
   const author = await fetchAuthor(slug);
 
   if (!author) notFound();
 
-  const articles = await getArticles({ page: 1, perPage: 9, authorSlug: author.slug });
+  /* Same fix as the market archive: the page was pinned to 1 while pagination
+     still rendered, so a prolific author's older articles had no route. */
+  const currentPage = Math.max(1, Number(page) || 1);
+
+  const articles = await getArticles({ page: currentPage, perPage: 9, authorSlug: author.slug });
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },
@@ -77,8 +85,12 @@ export default async function AuthorPage({
         <Breadcrumbs items={crumbs} />
 
         <div className="mt-5 max-w-prose">
-          {/* The page-scale variant of the same component used after articles. */}
-          <AuthorBox author={author} size="page" />
+          {/*
+            The page-scale variant of the same component used after articles.
+            `isCurrentPage` makes the name the page's h1 — without it this page
+            had no h1 at all and started at the visually-hidden h2 below.
+          */}
+          <AuthorBox author={author} size="page" isCurrentPage />
         </div>
 
         {author.articleCount !== null && (
@@ -94,7 +106,11 @@ export default async function AuthorPage({
         {articles.items.length > 0 ? (
           <>
             <ArticleGrid articles={articles.items} />
-            <Pagination page={articles.page} totalPages={articles.totalPages} basePath={`/author/${author.slug}`} />
+            <Pagination
+              page={articles.page}
+              totalPages={articles.totalPages}
+              hrefFor={pageQueryHref(`/author/${author.slug}`)}
+            />
           </>
         ) : (
           <ArticleGridEmpty message="این نویسنده هنوز مطلبی منتشر نکرده." />

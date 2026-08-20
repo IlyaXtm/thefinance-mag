@@ -6,6 +6,7 @@ import {
   ArticleRow,
   ContentTypeFilterBar,
   Pagination,
+  pageQueryHref,
   Section,
   SectionHeading,
 } from '@/features/mag/components';
@@ -73,10 +74,12 @@ export default async function ArchivePage({
           ))}
         </div>
 
+        {/* `type` travels with the page number — paging a filtered archive
+            must not silently drop the filter. */}
         <Pagination
           page={articles.page}
           totalPages={articles.totalPages}
-          basePath="/archive"
+          hrefFor={pageQueryHref('/archive', { type: contentType?.slug })}
         />
       </Section>
     </main>

@@ -160,4 +160,114 @@
     font-weight: 600;
     color: var(--text-primary);
   }
+
+  /*
+   * Code.
+   *
+   * Long unbroken tokens — a contract address, a formula, an API path — are
+   * the one thing that can still blow out a 700px column, because nothing in
+   * them is a break opportunity. The block scrolls inside its own box rather
+   * than widening the page, the same treatment tables get.
+   */
+  .article-body pre {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1em;
+    font-size: 14px;
+    line-height: 1.7;
+    /* Code is Latin and reads left to right even inside a Persian article. */
+    direction: ltr;
+    text-align: start;
+    unicode-bidi: isolate;
+  }
+
+  .article-body :not(pre) > code {
+    border-radius: 4px;
+    background: var(--surface-raised);
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /*
+   * In-body blocks.
+   *
+   * WordPress delivers these as <div data-block="thefinance/…"> inside the
+   * article HTML, so — like everything else in .article-body — they are styled
+   * by attribute selector rather than by a class we control.
+   *
+   * Without these rules the blocks render as ordinary paragraphs: the callout
+   * is indistinguishable from the prose around it, and the disclaimer, which
+   * exists for legal reasons rather than editorial ones, reads as a closing
+   * sentence of the article.
+   *
+   * None of them introduces a heading element. As <h3> their titles would
+   * enter the table of contents and break the article's outline.
+   */
+  .article-body [data-block] {
+    margin-block: 2em;
+  }
+
+  /*
+   * Callout — ONE variant, no severity colours. Four options means an editor
+   * chooses correctly once and wrongly three times.
+   */
+  .article-body [data-block='thefinance/callout'] {
+    border: 1px solid var(--border-subtle);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1.15em 1.25em;
+  }
+
+  .article-body [data-block='thefinance/callout'] > strong {
+    display: block;
+    margin-block-end: 0.4em;
+    font-size: 15px;
+  }
+
+  .article-body [data-block] > * + * {
+    margin-block-start: 0.8em;
+  }
+
+  /*
+   * Disclaimer — compliance copy, so it must be visibly separate from the
+   * article's own voice. Quiet rather than loud: a rule and muted text, no
+   * warning colour. It is a statement of scope, not an alert.
+   */
+  .article-body [data-block='thefinance/disclaimer'] {
+    border-block-start: 1px solid var(--border-subtle);
+    padding-block-start: 1.25em;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.9;
+  }
+
+  /*
+   * CTA — points at InChart or Academy. Capability, never outcome: no profit,
+   * urgency or scarcity language reaches this block.
+   */
+  .article-body [data-block='thefinance/cta'] {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1.25em;
+  }
+
+  .article-body [data-block='thefinance/cta'] a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    border-radius: 999px;
+    background: var(--accent);
+    padding-inline: 1.25em;
+    color: var(--accent-contrast);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
 }

@@ -19,7 +19,7 @@ export { NewsletterCta } from './NewsletterCta';
 export { PageHeader } from './PageHeader';
 export { Section, SectionInner } from './Section';
 export { TableOfContents, tocId } from './TableOfContents';
-export { Pagination } from './Pagination';
+export { Pagination, pagePathHref, pageQueryHref } from './Pagination';
 export { ArticleRow, SectionHeading } from './ArticleRow';
 export { FeaturedArticle } from './FeaturedArticle';
 export { TopicList } from './TopicList';

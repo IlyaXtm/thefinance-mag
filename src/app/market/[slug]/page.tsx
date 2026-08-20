@@ -12,6 +12,7 @@ import {
   Breadcrumbs,
   MarketFilterBar,
   Pagination,
+  pageQueryHref,
   Section,
   SectionInner,
 } from '@/features/mag/components';
@@ -61,16 +62,27 @@ export async function generateMetadata({
 
 export default async function MarketArchivePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
+  const { page } = await searchParams;
   const market = await fetchMarket(slug);
 
   if (!market) notFound();
 
+  /*
+    The page number comes from the query string, the same shape the archive
+    uses. It was previously pinned to 1 while the pagination below still
+    rendered links, so every article past the ninth in a market was
+    unreachable and the links pointed at a route that does not exist.
+  */
+  const currentPage = Math.max(1, Number(page) || 1);
+
   const [articles, markets] = await Promise.all([
-    getArticles({ page: 1, perPage: 9, market: market.slug }),
+    getArticles({ page: currentPage, perPage: 9, market: market.slug }),
     getMarkets(),
   ]);
 
@@ -117,7 +129,11 @@ export default async function MarketArchivePage({
         {articles.items.length > 0 ? (
           <>
             <ArticleGrid articles={articles.items} />
-            <Pagination page={articles.page} totalPages={articles.totalPages} basePath={`/market/${market.slug}`} />
+            <Pagination
+              page={articles.page}
+              totalPages={articles.totalPages}
+              hrefFor={pageQueryHref(`/market/${market.slug}`)}
+            />
           </>
         ) : (
           <ArticleGridEmpty message={`هنوز مطلبی در ${market.name} منتشر نشده.`} />

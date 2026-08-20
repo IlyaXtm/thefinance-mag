@@ -9,6 +9,7 @@ import {
   ContentTypeFilterBar,
   PageHeader,
   Pagination,
+  pagePathHref,
   Section,
   SectionInner,
 } from '@/features/mag/components';
@@ -66,7 +67,7 @@ export default async function PaginatedListingPage({
       <Section>
         <h2 className="sr-only">صفحه {toPersianDigits(page)}</h2>
         <ArticleGrid articles={articles.items} />
-        <Pagination page={articles.page} totalPages={articles.totalPages} basePath={'/'} />
+        <Pagination page={articles.page} totalPages={articles.totalPages} hrefFor={pagePathHref('/')} />
       </Section>
     </main>
   );

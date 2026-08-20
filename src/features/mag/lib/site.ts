@@ -41,6 +41,19 @@ export const ORGANIZATION = {
   ] as string[],
 } as const;
 
+/**
+ * Href for a plain HTML form `action` or a raw `<a>`.
+ *
+ * next/link and the router prefix basePath automatically; a native form
+ * action does NOT. `<form action="/search">` therefore posts to
+ * thefinance.ir/search — the main site — instead of the magazine, and the
+ * search box silently leaves the app. Every native action goes through here.
+ */
+export function magPath(path = ''): string {
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `${MAG_PATH}${clean === '/' ? '' : clean}`;
+}
+
 /** Absolute URL for a Mag path. Canonicals must never point at the CMS host. */
 export function magUrl(path = ''): string {
   const clean = path.startsWith('/') ? path : `/${path}`;
