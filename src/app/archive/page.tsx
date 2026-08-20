@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { getArticles } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
+import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import {
+  ArticleGridEmpty,
   ArticleRow,
   ContentTypeFilterBar,
   Pagination,
@@ -50,6 +53,10 @@ export default async function ArchivePage({
     contentType: contentType?.slug,
   });
 
+  /* Past the last page is a URL that does not exist. Page 1 with nothing on it
+     is a real empty archive and keeps its empty state below. */
+  if (isPageBeyondEnd(currentPage, articles.items.length)) notFound();
+
   return (
     <main>
       <Section className="!pb-0">
@@ -68,11 +75,25 @@ export default async function ArchivePage({
 
         <SectionHeading title={contentType ? contentType.name : 'همه مطالب'} />
 
-        <div>
-          {articles.items.map((article) => (
-            <ArticleRow key={article.id} article={article} />
-          ))}
-        </div>
+        {articles.items.length > 0 ? (
+          <div>
+            {articles.items.map((article) => (
+              <ArticleRow key={article.id} article={article} />
+            ))}
+          </div>
+        ) : (
+          /* The market and author archives already do this; the archive was the
+             one listing that rendered a bare heading and nothing else. */
+          <ArticleGridEmpty
+            message={
+              contentType
+                ? `هنوز مطلبی در دسته ${contentType.name} منتشر نشده.`
+                : 'هنوز مطلبی منتشر نشده.'
+            }
+            actionHref="/archive"
+            actionLabel="همه مطالب"
+          />
+        )}
 
         {/* `type` travels with the page number — paging a filtered archive
             must not silently drop the filter. */}

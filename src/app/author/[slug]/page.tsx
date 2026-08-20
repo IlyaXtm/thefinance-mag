@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getArticles, getAuthor } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
@@ -68,6 +69,11 @@ export default async function AuthorPage({
   const currentPage = Math.max(1, Number(page) || 1);
 
   const articles = await getArticles({ page: currentPage, perPage: 9, authorSlug: author.slug });
+
+  /* Past the last page is a URL that does not exist — and without this the
+     empty state below would claim nothing has been published, which is false
+     whenever the reader simply asked for a page beyond the end. */
+  if (isPageBeyondEnd(articles.page, articles.items.length)) notFound();
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },

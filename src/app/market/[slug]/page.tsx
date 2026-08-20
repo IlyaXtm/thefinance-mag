@@ -4,6 +4,7 @@ import { getArticles, getMarket, getMarkets } from '@/features/mag/api/v1/mag.se
 import { MagNotFoundError, MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import type { MarketSlug } from '@/features/mag/types/mag.types';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
@@ -85,6 +86,11 @@ export default async function MarketArchivePage({
     getArticles({ page: currentPage, perPage: 9, market: market.slug }),
     getMarkets(),
   ]);
+
+  /* Past the last page is a URL that does not exist — and without this the
+     empty state below would claim nothing has been published, which is false
+     whenever the reader simply asked for a page beyond the end. */
+  if (isPageBeyondEnd(articles.page, articles.items.length)) notFound();
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },

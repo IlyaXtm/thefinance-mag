@@ -35,6 +35,7 @@ New to the project, in this order:
 | `design-audit.md` | Auditing the built pages against the design decisions |
 | `phase-0-verification.md` | Executable checks against the live system |
 | `audit-2026-08-20.md` | The result of running the two above: what was measured, what was fixed, what is still open |
+| `audit-2026-08-20-pass2.md` | Second pass: adversarial content, interaction, theme switching and print |
 
 ### Design
 

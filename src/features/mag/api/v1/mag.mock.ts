@@ -21,8 +21,9 @@ import {
   type SearchParams,
   type SearchResult,
 } from '../../types/mag.types';
+import type { MagSeo } from '../../types/mag-seo.types';
 import { DISCLAIMER_TEXT } from '../../types/mag-blocks.types';
-import { addHeadingIds, sanitizeArticleHtml } from '../../lib/sanitize';
+import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
 
 /**
  * The mock runs the SAME content pipeline as the real API.
@@ -132,6 +133,17 @@ const AUTHOR: Author = {
     height: 160,
   },
   articleCount: 12,
+};
+
+/** Every one of the six real users has `description` null, so a bio-less
+    author is the normal case, not the edge case. */
+const AUTHOR_NO_BIO: Author = {
+  slug: 'no-bio-author',
+  name: 'سارا کاظمی',
+  role: 'دبیر بخش اخبار',
+  bio: null,
+  avatar: null,
+  articleCount: 3,
 };
 
 /** Second author without an avatar — exercises the initial-based fallback. */
@@ -245,7 +257,14 @@ const SUMMARIES: ArticleSummary[] = [
     slug: 'tehran-housing-spring-1405',
     title: 'بازار مسکن تهران در بهار ۱۴۰۵: داده‌های معاملات',
     featuredImage: img('housing', 'نمای شهری تهران'),
-    market: MARKETS.housing,
+    /*
+      NULL. `housing` is documented as a zero-article market so the
+      "hide empty markets" rule stays exercised, but this fixture was still
+      pointing at it — so the filter bar hid housing while /market/housing
+      rendered an article, and the empty archive could never be reached.
+      Market-less is also the majority case in the real archive (18 of 32).
+    */
+    market: null,
     contentType: TYPES.report,
     readingTime: 11,
     publishedAt: '2026-08-13T09:45:00+03:30',
@@ -322,6 +341,122 @@ const FULL_ARTICLE: Article = {
    keeps the fixture readable while guaranteeing parity. */
 FULL_ARTICLE.content = prepareContent(FULL_ARTICLE.content);
 
+/* ------------------------------------------------------------------ */
+/* Adversarial fixtures                                                */
+/* ------------------------------------------------------------------ */
+/*
+ * Real archives contain all of these, and every one of them is a case the
+ * happy-path fixture above cannot reach. They are SYNTHETIC — shaped to match
+ * what Phase 0 measured about the real archive, not copied from it — so they
+ * prove the components survive the shape, not that production content is fine.
+ *
+ * They are reachable by slug but deliberately absent from SUMMARIES, so they
+ * never appear in a listing, a sitemap or a count.
+ */
+
+/* Minimal per-article SEO — enough for the metadata mapping to run, with no
+   shared OpenGraph object that could leak one fixture's title onto another. */
+function stressSeo(slug: string, title: string): MagSeo {
+  return {
+    title,
+    description: null,
+    canonicalUrl: `https://thefinance.ir/mag/${slug}`,
+    robots: ['index', 'follow', 'max-image-preview:large'],
+    breadcrumbs: [],
+    jsonLdRaw: null,
+    openGraph: null,
+  };
+}
+
+const STRESS: Article[] = [
+  {
+    /* The longest article in the archive is a 41-minute read. 24 headings is
+       what makes the table of contents scroll rather than run off-screen. */
+    id: 'x1',
+    slug: 'stress-long-technical-analysis',
+    title: 'تحلیل تکنیکال (Technical Analysis) چیست؟ راهنمای جامع ابزارها، الگوها و مدیریت ریسک برای بازارهای مالی',
+    featuredImage: img('technical', 'نمودار تحلیل تکنیکال روی نمایشگر'),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 41,
+    publishedAt: '2025-03-11T10:00:00+03:30',
+    modifiedAt: '2026-07-02T09:15:00+03:30',
+    author: AUTHOR,
+    outline: [],
+    secondaryMarkets: [],
+    content: '__LONG__',
+    seo: stressSeo('stress-long-technical-analysis', 'تحلیل تکنیکال (Technical Analysis) چیست؟ راهنمای جامع ابزارها، الگوها و مدیریت ریسک برای بازارهای مالی'),
+  },
+  {
+    /*
+      A percent-encoded Persian slug — the form most of the archive uses.
+      The route param arrives decoded, so this fixture proves the decode and
+      the lookup line up. The RE-encode that production needs on the way to
+      WordPress lives in mag.api.ts and cannot be exercised from here.
+    */
+    id: 'x4',
+    slug: 'تحلیل-تکنیکال-چیست',
+    title: 'تحلیل تکنیکال چیست؟',
+    featuredImage: img('technical', 'نمودار تحلیل تکنیکال'),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 12,
+    publishedAt: '2026-05-04T10:00:00+03:30',
+    modifiedAt: '2026-05-04T10:00:00+03:30',
+    author: AUTHOR,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p><h2>ابزارها</h2><p>متن نمونه.</p>',
+    seo: stressSeo('تحلیل-تکنیکال-چیست', 'تحلیل تکنیکال چیست؟'),
+  },
+  {
+    /* One heading — the ToC must be omitted, not rendered with a single row. */
+    id: 'x2',
+    slug: 'stress-one-heading',
+    title: 'یک تیتر، بدون فهرست',
+    featuredImage: img('single', 'تصویر شاهد'),
+    market: MARKETS.forex,
+    contentType: TYPES.analysis,
+    readingTime: 4,
+    publishedAt: '2026-06-01T10:00:00+03:30',
+    modifiedAt: '2026-06-01T10:00:00+03:30',
+    author: AUTHOR,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>تنها تیتر مقاله</h2><p>متن نمونه برای حالتی که مقاله فقط یک تیتر دارد.</p>',
+    seo: stressSeo('stress-one-heading', 'یک تیتر، بدون فهرست'),
+  },
+  {
+    /* Zero headings, and no featured image either — so the hero block and the
+       ToC both have to disappear without leaving a gap behind them. */
+    id: 'x3',
+    slug: 'stress-no-heading-no-image',
+    title: 'بدون تیتر و بدون تصویر شاخص',
+    featuredImage: null,
+    market: null,
+    contentType: TYPES.news,
+    readingTime: 2,
+    publishedAt: '2026-06-02T10:00:00+03:30',
+    modifiedAt: '2026-06-02T10:00:00+03:30',
+    author: AUTHOR_NO_BIO,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<p>خبری کوتاه بدون هیچ تیتر داخلی و بدون تصویر شاخص.</p><p>پاراگراف دوم.</p>',
+    seo: stressSeo('stress-no-heading-no-image', 'بدون تیتر و بدون تصویر شاخص'),
+  },
+];
+
+STRESS[0].content = '<h2>تحلیل تکنیکال چیست</h2>\n<p>در این بخش به «تحلیل تکنیکال چیست» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فرض‌های بنیادی این روش</h2>\n<p>در این بخش به «فرض‌های بنیادی این روش» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>نمودار شمعی و خواندن آن</h2>\n<p>در این بخش به «نمودار شمعی و خواندن آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<figure><img src="/mock/covers/chart.jpg" alt="نمودار شمعی نمونه" width="1200" height="675" /><figcaption>نمودار شمعی روزانه؛ هر شمع یک روز معاملاتی است.</figcaption></figure>\n<h2>خطوط روند</h2>\n<p>در این بخش به «خطوط روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حمایت و مقاومت</h2>\n<p>در این بخش به «حمایت و مقاومت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>میانگین متحرک ساده</h2>\n<p>در این بخش به «میانگین متحرک ساده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<ul><li>میانگین کوتاه‌مدت<ul><li>۹ روزه</li><li>۲۱ روزه<ul><li>کاربرد در نوسان‌گیری</li></ul></li></ul></li><li>میانگین بلندمدت</li></ul>\n<h2>میانگین متحرک نمایی</h2>\n<p>در این بخش به «میانگین متحرک نمایی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>اندیکاتور مکدی</h2>\n<p>در این بخش به «اندیکاتور مکدی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>شاخص قدرت نسبی</h2>\n<p>در این بخش به «شاخص قدرت نسبی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<table><thead><tr><th>اندیکاتور</th><th>دوره پیش‌فرض</th><th>نوع</th><th>سیگنال اصلی</th><th>ضعف شناخته‌شده</th></tr></thead><tbody><tr><td><span dir="ltr">RSI</span></td><td>۱۴</td><td>نوسان‌نما</td><td>اشباع خرید و فروش</td><td>در روند قوی دیر برمی‌گردد</td></tr><tr><td><span dir="ltr">MACD</span></td><td>۱۲/۲۶/۹</td><td>روندنما</td><td>تقاطع خطوط</td><td>تأخیر ذاتی</td></tr><tr><td><span dir="ltr">ATR</span></td><td>۱۴</td><td>نوسان</td><td>اندازه حد ضرر</td><td>جهت نمی‌دهد</td></tr></tbody></table>\n<h2>باندهای بولینگر</h2>\n<p>در این بخش به «باندهای بولینگر» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>ایچیموکو</h2>\n<p>در این بخش به «ایچیموکو» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حجم معاملات و تأیید روند</h2>\n<p>در این بخش به «حجم معاملات و تأیید روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>الگوهای بازگشتی</h2>\n<p>در این بخش به «الگوهای بازگشتی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<blockquote><p>بازار می‌تواند بیشتر از آنچه شما توان پرداخت دارید غیرمنطقی بماند.</p></blockquote>\n<h2>الگوهای ادامه‌دهنده</h2>\n<p>در این بخش به «الگوهای ادامه‌دهنده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فیبوناچی اصلاحی</h2>\n<p>در این بخش به «فیبوناچی اصلاحی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>امواج الیوت</h2>\n<p>در این بخش به «امواج الیوت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>واگرایی و انواع آن</h2>\n<p>در این بخش به «واگرایی و انواع آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>تایم‌فریم و انتخاب آن</h2>\n<p>در این بخش به «تایم‌فریم و انتخاب آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<pre><code>ema(close, 21) &gt; ema(close, 55) and rsi(close, 14) &lt; 70 and volume &gt; sma(volume, 20) * 1.5</code></pre>\n<h2>مدیریت ریسک</h2>\n<p>در این بخش به «مدیریت ریسک» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حد ضرر و حد سود</h2>\n<p>در این بخش به «حد ضرر و حد سود» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>خطاهای رایج</h2>\n<p>در این بخش به «خطاهای رایج» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<p>یک شناسه بسیار طولانی بدون فاصله برای آزمودن سرریز ستون: <code>ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789</code></p>\n<h2>ترکیب با تحلیل بنیادی</h2>\n<p>در این بخش به «ترکیب با تحلیل بنیادی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>محدودیت‌های تحلیل تکنیکال</h2>\n<p>در این بخش به «محدودیت‌های تحلیل تکنیکال» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>جمع‌بندی</h2>\n<p>در این بخش به «جمع‌بندی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>';
+
+/* Same pipeline as everything else — a fixture that skips it is testing a
+   different component. Outlines are derived, never hand-written, so they
+   cannot drift from the ids the body actually carries. */
+for (const article of STRESS) {
+  article.content = prepareContent(article.content);
+  article.outline = extractHeadings(article.content);
+}
+
+
 
 const REPORTS: Report[] = [
   {
@@ -357,14 +492,25 @@ const REPORTS: Report[] = [
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Mirrors the real API, including what it does when asked for a page past the
+ * end: an EMPTY items array at the requested page number.
+ *
+ * This used to clamp `page` into range, which quietly made out-of-range pages
+ * impossible to reach — so the `items.length === 0 → notFound()` guard in
+ * /page/[n] could never fire locally, and /mag/page/999 answered 200 with
+ * page-1 content in development while production would 404. Clamping in a
+ * fixture doesn't make the app more robust; it just moves the discovery to
+ * production.
+ */
 function paginate<T>(items: T[], page: number, perPage: number): Paginated<T> {
   const total = items.length;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
-  const safePage = Math.min(Math.max(1, page), totalPages);
-  const start = (safePage - 1) * perPage;
+  const requested = Math.max(1, page);
+  const start = (requested - 1) * perPage;
   return {
     items: items.slice(start, start + perPage),
-    page: safePage,
+    page: requested,
     perPage,
     total,
     totalPages,
@@ -393,6 +539,9 @@ export async function getArticles(
 
 export async function getArticle(slug: string): Promise<Article> {
   if (slug === FULL_ARTICLE.slug) return simulate(FULL_ARTICLE);
+
+  const stress = STRESS.find((a) => a.slug === slug);
+  if (stress) return simulate(stress);
 
   const summary = SUMMARIES.find((a) => a.slug === slug);
   if (!summary) throw new MagNotFoundError(slug);
@@ -436,13 +585,13 @@ export async function getMarket(slug: MarketSlug): Promise<Market> {
 }
 
 export async function getAuthor(slug: string): Promise<Author> {
-  const author = [AUTHOR, AUTHOR_NO_AVATAR].find((a) => a.slug === slug);
+  const author = [AUTHOR, AUTHOR_NO_AVATAR, AUTHOR_NO_BIO].find((a) => a.slug === slug);
   if (!author) throw new MagNotFoundError(slug);
   return simulate(author);
 }
 
 export async function getAuthors(): Promise<Author[]> {
-  return simulate([AUTHOR, AUTHOR_NO_AVATAR]);
+  return simulate([AUTHOR, AUTHOR_NO_AVATAR, AUTHOR_NO_BIO]);
 }
 
 export async function getReports(page = 1, perPage = 12): Promise<Paginated<Report>> {
