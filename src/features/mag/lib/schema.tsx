@@ -9,13 +9,17 @@ import { MAG_DESCRIPTION, MAG_NAME, MAG_URL, ORGANIZATION, magUrl } from './site
  * that claims something the page doesn't show is a spam signal, so these
  * functions never invent a rating, a price, or a metric.
  *
- * `Article`, not `NewsArticle`.
- * NewsArticle is for time-bound reporting. Most of this archive is evergreen
- * educational content — "what is the Ichimoku indicator" is as true next year
- * as today. Labelling it NewsArticle would send Google the wrong freshness
- * signal and invite the staleness penalty we already avoided by using revision
- * dates instead of relative ones. If `اخبار` ever enters Mag, that content
- * type gets NewsArticle and nothing else does.
+ * `NewsArticle` for `اخبار`, `Article` for everything else.
+ *
+ * NewsArticle is for time-bound reporting, and the RSS automation that files
+ * under `اخبار` publishes about two items a day — publication date is the
+ * signal that matters for them. The rest of the archive is evergreen
+ * education: "what is the Ichimoku indicator" is as true next year as today,
+ * and NewsArticle would send Google a freshness signal the content doesn't
+ * claim, inviting the staleness penalty that using revision dates instead of
+ * relative ones already avoids.
+ *
+ * So the split is exactly one content type wide, and nothing else gets it.
  */
 
 type JsonLd = Record<string, unknown>;
@@ -53,7 +57,7 @@ export function articleJsonLd(article: Article): JsonLd {
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': article.contentType.slug === 'news' ? 'NewsArticle' : 'Article',
     headline: article.title,
     /*
       inLanguage matters for a Persian site: it tells Google the content is

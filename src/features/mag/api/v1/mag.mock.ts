@@ -107,6 +107,14 @@ const MARKETS: Record<MarketSlug, Market> = {
 };
 
 const TYPES = {
+  /*
+    `news` is here because production produces it: an RSS automation files
+    roughly two items a day under «اخبار». It is also the ONE content type
+    that gets NewsArticle rather than Article in the JSON-LD, so a mock
+    without it can't exercise that branch — and that branch shipped
+    unimplemented for exactly that reason.
+  */
+  news: { slug: 'news', name: 'اخبار' },
   analysis: { slug: 'analysis', name: 'تحلیل' },
   report: { slug: 'report', name: 'گزارش' },
   education: { slug: 'education', name: 'آموزش' },
@@ -141,6 +149,24 @@ function img(seed: string, alt: string): ArticleSummary['featuredImage'] {
 }
 
 const SUMMARIES: ArticleSummary[] = [
+  {
+    /*
+      A translated news item — time-bound, no revision. Publication date is
+      the only freshness signal it carries, which is what NewsArticle exists
+      to say.
+    */
+    id: 'a0',
+    slug: 'fed-holds-rates-august',
+    title: 'فدرال‌رزرو نرخ بهره را بدون تغییر نگه داشت',
+    featuredImage: img('fed', 'ساختمان فدرال‌رزرو'),
+    market: MARKETS.global,
+    contentType: TYPES.news,
+    readingTime: 3,
+    publishedAt: '2026-08-19T14:10:00+03:30',
+    modifiedAt: '2026-08-19T14:10:00+03:30',
+    author: AUTHOR_NO_AVATAR,
+    outline: ['تصمیم نشست', 'واکنش بازارها'],
+  },
   {
     id: 'a1',
     slug: 'bank-half-year-financials',
