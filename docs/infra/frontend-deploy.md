@@ -108,7 +108,26 @@ set $mag_upstream 127.0.0.1:3100;   # Next.js  — after cutover
 ```bash
 nginx -t && systemctl reload nginx
 curl -sI https://thefinance.ir/mag/ | grep -i x-robots   # MUST be empty
+./scripts/verify-redirects.sh https://thefinance.ir > after.txt
+diff before.txt after.txt
 ```
+
+### Rollback triggers — roll back immediately, without debate
+
+- any `noindex` on production
+- a wrong canonical, or the CMS host appearing in one
+- a missing article body
+- **any legacy redirect returning 404, or taking more than one hop.** Those
+  twelve URLs carry 89% of `/mag` organic clicks. Capture the baseline BEFORE
+  the switch:
+
+  ```bash
+  ./scripts/verify-redirects.sh https://thefinance.ir > before.txt
+  ```
+
+  A redirect that 404s is not a cosmetic regression — it is most of the
+  section's traffic, and it fails silently: the page still renders for anyone
+  arriving from an internal link.
 
 Rollback is the same line back to 9080 and another reload — seconds, no
 redeploy. That is why the old WordPress theme is never deleted.

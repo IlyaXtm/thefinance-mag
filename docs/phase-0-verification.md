@@ -219,7 +219,18 @@ curl -s https://new.thefinance.ir/mag/ | grep -oE 'https?://[^"]*\.(woff2?|css)[
 - Search Console → Pages → record the count of indexed URLs under `/mag`.
 - Export a full list of current live `/mag` URLs (from the WordPress sitemap or a crawl). This becomes the source for the 301 map if URLs change.
 
-**Record:** indexed URL count, and whether the URL structure will change (`/mag/<slug>` staying identical means no redirect map is needed — that's the ideal outcome).
+**Record:** indexed URL count, and — this is the part that was missed the first
+time — whether each RANKING URL still resolves without a redirect. An unchanged
+permalink structure does NOT mean no redirect map: it describes how WordPress
+builds URLs for posts it has, and says nothing about posts whose slug changed.
+Export the ranking URLs and check each one:
+
+```bash
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "https://thefinance.ir/mag/<slug>/"
+```
+
+Anything answering 301 is a rule living inside WordPress that disappears at
+cutover. Check the trailing-slash form too — it is part of the URL.
 
 ---
 

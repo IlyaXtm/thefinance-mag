@@ -8,6 +8,99 @@ why it was made.
 
 ---
 
+## 2026-08-21 — Redirect map: correcting a Phase 0 conclusion
+
+**Phase 0 concluded no redirect map was needed. That was wrong, and it would
+have cost most of the section's organic traffic at cutover.**
+
+The reasoning was not careless, it was incomplete. The permalink structure is
+`/%postname%/` and genuinely does not change — but that setting describes how
+WordPress builds a URL for a post it *has*. It says nothing about posts whose
+slug has since changed. The slugs did change, Persian to English or the
+reverse, and the URLs Google ranks are the historical ones. They resolve today
+only because WordPress and Rank Math 301 them, from
+`wp_rank_math_redirections` and `_wp_old_slug` — both entirely inside
+WordPress, both gone the moment the rendering layer moves.
+
+From three months of Search Console:
+
+| | URLs | Clicks | Impressions |
+|---|---|---|---|
+| Indexed under `/mag` | 71 | 180 | 4,284 |
+| Slug exists in WordPress today | 23 | 19 | 1,104 |
+| **Slug does not exist** | **48** | **161** | **3,154** |
+
+89% of `/mag` organic clicks land on URLs WordPress no longer has a post for.
+
+Corrected in `phase-0-findings.md`, `plan.md`, `phase-0-verification.md`,
+`README.md` and the original 2026-08-19 changelog entry — struck through rather
+than deleted, because the failure shape is worth keeping visible. The check
+that would have caught it is now in `phase-0-verification.md`: take the ranking
+URLs from Search Console and ask whether each still resolves *without* a
+redirect. Checking the permalink setting is not the same question.
+
+**Fourteen rules, flattened to twelve entries and one hop each.** Some URLs
+take two hops in WordPress today — Rank Math points at a slug that
+`_wp_old_slug` then redirects again. Google does not penalise a short chain,
+but every hop spends crawl budget and delays the reader, and since the map was
+being rebuilt there was no reason to reproduce it. Each entry names the final
+destination.
+
+**In middleware, not `next.config.ts`.** The SEO team has to be able to change
+the map without a rebuild and a redeploy. Nothing else goes in that file: the
+`middleware.ts` → `proxy.ts` rename followed CVE-2025-29927, where one header
+bypassed every authorisation check implemented in middleware, and the lesson is
+that the layer is for routing at the network boundary. A redirect table belongs
+there; its worst failure is a wrong destination.
+
+**One deliberate exception to 301-only.**
+`introduction-to-persian-tradingview-inchart` is a 302. It is the biggest
+single organic entry point — 77 clicks, 43% of `/mag` — currently 404ing, and
+the decision is to rewrite the article under that same slug. A 301 to the
+holding page would tell Google the two URLs are one, consolidate the signals
+into the destination and drop the source from the index — which is precisely
+the URL we intend to publish at. 302 keeps the source indexed and its identity
+intact, which is what "the content is coming back here" means in HTTP. Every
+other entry is 301. Remove this one when the article ships (backlog B0).
+
+**A trailing-slash bug found while testing, and it was the common case.**
+Next's automatic trailing-slash 308 runs BEFORE middleware, so every legacy URL
+arriving with a slash took two hops:
+
+```
+/mag/what-is-the-mfi-indicator/  →308→  /mag/what-is-the-mfi-indicator
+                                 →301→  /mag/mfi-indicator
+```
+
+Not an edge case: `/%postname%/` means the historical URLs Google ranks END IN
+A SLASH, so the two-hop path was the normal one.
+`skipTrailingSlashRedirect: true` hands normalisation to middleware, which
+answers a legacy slug in one 301 and 308s everything else exactly as before.
+
+Building the destination with `nextUrl.clone()` then caused an infinite loop —
+`NextURL` remembers the request's trailing slash and re-applies it on
+serialisation, so `/mag/archive/` redirected to `/mag/archive/`. curl followed
+it fifty times. Destinations are now built with a plain `URL` against
+`request.url`.
+
+**A second URL-shape change, flagged not decided** (backlog B0b). The trailing
+slash is itself part of the URL and it also changes at cutover — for all 71
+indexed URLs, not just the 48 legacy ones. `decisions.md` says "do not change
+URLs during the headless migration"; this is the part that does. Whether to set
+`trailingSlash: true` to match WordPress exactly is a product decision about
+URL shape, so it is written up rather than taken.
+
+**Not verified: any of it, against the live site.** The build environment
+cannot reach `thefinance.ir`, so every destination in the map is unconfirmed —
+they came from a database export, and a typo'd slug is a 404 that looks exactly
+like a working redirect until someone follows it.
+`scripts/verify-redirects.sh` runs the whole check against any origin and must
+be run against production BEFORE the switch, to capture a baseline, and after.
+If any of these 404s post-cutover, roll back: it is 89% of the section's
+organic traffic, not a cosmetic regression.
+
+---
+
 ## 2026-08-21 — Containerised, and a staging host
 
 Step 1 of the cutover. Nothing was deployed — the build sandbox reaches neither
@@ -470,9 +563,10 @@ admin recovery — hence `php -l` before every deploy.
 
 Three findings changed the plan:
 
-**Permalinks are `/%postname%/`.** No redirect map is needed — the URL
-structure doesn't change, only the rendering layer. This removed the largest
-risk in the migration and an entire phase from the roadmap.
+**Permalinks are `/%postname%/`.** ~~No redirect map is needed~~ — **corrected
+2026-08-21: this was wrong, see that day's entry.** The structure doesn't
+change, but the slugs did, and 89% of organic clicks land on historical slugs
+that only WordPress knows how to redirect.
 
 **Most slugs are percent-encoded Persian.** An early assumption that they were
 Latin was wrong, drawn from the five most recent posts. The `[slug]` param needs

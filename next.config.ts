@@ -18,6 +18,23 @@ const nextConfig: NextConfig = {
    */
   output: 'standalone',
 
+  /*
+   * Next's automatic trailing-slash 308 runs BEFORE middleware, which turned
+   * every legacy redirect arriving with a trailing slash into TWO hops:
+   *
+   *   /mag/what-is-the-mfi-indicator/  →308→  /mag/what-is-the-mfi-indicator
+   *                                    →301→  /mag/mfi-indicator
+   *
+   * That is not an edge case here. WordPress's permalink structure is
+   * `/%postname%/`, so the historical URLs Google actually ranks END IN A
+   * SLASH — the two-hop path was the common one.
+   *
+   * Turning the automatic redirect off hands normalisation to middleware,
+   * which can then answer a legacy slug in a single 301 and still 308
+   * everything else exactly as Next did. See src/middleware.ts.
+   */
+  skipTrailingSlashRedirect: true,
+
   reactStrictMode: true,
 
   images: {

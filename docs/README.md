@@ -63,7 +63,7 @@ Kept for history; do not act on them.
 
 | File | Superseded by | Why |
 |---|---|---|
-| `superseded/roadmap.md` | `plan.md` | Written before Phase 0. Assumed a redirect map was needed — permalinks turned out to be `/%postname%/`, so it isn't |
+| `superseded/roadmap.md` | `plan.md` | Written before Phase 0. Superseded on phasing — note its redirect-map requirement turned out to be RIGHT; the Phase 0 conclusion that dropped it was wrong (2026-08-21) |
 | `superseded/build-plan.md` | `plan.md` | Overlapping phase numbering with the roadmap; the two disagreed |
 | `superseded/decision-brief.md` | `decisions.md` | Folded into the decisions log |
 | `superseded/roadmap-review.md` | `decisions.md` | Review of an external roadmap; its conclusions are now decisions |
