@@ -8,6 +8,85 @@ why it was made.
 
 ---
 
+## 2026-08-21 — Preview, revalidation, and a live redirect map
+
+The frontend half of `thefinance-mag-redirects.php`. All three of these break
+silently the moment the frontend stops being WordPress: the editor clicks the
+same button, sees no error, and nothing happens.
+
+**Redirects now read from WordPress, with the compiled table as the floor.**
+
+The twelve rules could have stayed a constant, and that works exactly once —
+every redirect after it would need a deploy. The SEO team adds one in Rank Math
+today and it is live immediately; after cutover they would add one, see no
+error, and nothing would happen. So `magRedirects` is fetched on a five-minute
+window.
+
+But a CMS blip must not turn ranked URLs into 404s, and those twelve carry 89%
+of the section's organic clicks. So the fetch is **never in the request's
+path**: a redirect is answered from cache, and a stale cache triggers a
+background refresh whose failure is swallowed. Cold start serves the
+compiled-in table. Verified by killing the stub CMS mid-session — rules fetched
+before the failure kept serving, and pages kept rendering.
+
+Deliberately standalone from `mag.api.ts`. This runs in front of every request;
+pulling the data layer into that bundle would put the article mapper, the
+sanitiser and the SEO mapper on the critical path of a static asset request.
+
+**One sharp edge, made visible rather than papered over.** Once WordPress
+answers, its map REPLACES the compiled one rather than merging. That is
+deliberate: merging would make a redirect impossible to delete — the SEO team
+would remove one in Rank Math and it would keep redirecting, the same silent
+failure pointing the other way. The cost is that an under-returning
+`magRedirects` silently drops ranked URLs, so `/mag/health` now lists
+`redirectSource.missingKnown`: compiled-in rules WordPress is not returning.
+Tested with a stub returning 3 of 12 — health named the missing 9. **It must be
+empty before cutover.**
+
+The two rules whose targets no longer exist in the database are code-only and
+always win, so a stale row cannot resurrect a 404. Verified against a stub that
+deliberately tried to override one.
+
+**Preview.** `/mag/api/draft` validates the secret with a constant-time
+comparison over SHA-256 digests — `timingSafeEqual` throws on a length
+mismatch, which would leak the length through an exception, so both sides are
+hashed to a fixed width first. Every failure is one generic 401 and the secret
+is never echoed back, in a message, a redirect or a log line.
+
+The redirect carries the POST ID in the slug position rather than the slug: a
+draft may not have one yet, and an editor renaming a slug is exactly when
+preview matters most. In Draft Mode the article route treats that segment as an
+ID and fetches through `magPreview`, which returns the newest autosave — a
+preview showing the last saved revision looks broken, which is worse than none.
+
+`/mag/api/exit-draft` needs no secret, because turning draft mode OFF is not a
+privileged action and requiring one would mean the escape hatch fails exactly
+when someone needs it. A banner on every preview says the page is not what
+readers see and carries the way out; without it, an editor who previews once is
+served uncached drafts everywhere and reports the site as broken.
+
+**Reading `draftMode()` does not un-cache the article route.** That was the
+real risk in this change — the ISR fix on that page was hard-won — so it was
+checked against the build output rather than assumed. `/[slug]` is still `●`
+SSG at 5m, and a published article still answers `s-maxage=300` while a preview
+answers `no-store`.
+
+**Revalidation** hits the article, the index, the archive, the feed, the
+market archive and the sitemap — the sitemap because `lastModified` comes from
+the revision date, and a stale one tells Google there is nothing to crawl. It
+is an optimisation, never a dependency: the ISR window stays underneath, so a
+call lost to a restart means "a few minutes later", never "never".
+
+**Not verified, and not in this repo.** `thefinance-mag-redirects.php` is not
+in `wordpress/mu-plugins/` — the frontend is written against the contract as
+described in the brief (`magRedirects { from to status }`,
+`magPreview(id, secret)`). If the real field or argument names differ, this
+fails quietly, which is the failure mode the work exists to prevent. PHP 8.4 IS
+available in the build environment, so `php -l` can be run here the moment the
+file lands.
+
+---
+
 ## 2026-08-21 — Redirect map: correcting a Phase 0 conclusion
 
 **Phase 0 concluded no redirect map was needed. That was wrong, and it would

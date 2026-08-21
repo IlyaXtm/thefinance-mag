@@ -460,6 +460,50 @@ export async function getArticle(slug: string): Promise<Article> {
   };
 }
 
+/**
+ * Fetch an article for PREVIEW, by post ID, including unpublished revisions.
+ *
+ * `magPreview` is exposed by the mu-plugin rather than by WPGraphQL core:
+ * previewing a draft requires authentication, and the alternative is an
+ * authenticated WordPress session reaching the frontend — a much larger
+ * surface than one secret on one field.
+ *
+ * It returns the newest AUTOSAVE, not the last saved revision, so an editor
+ * sees what they just typed. A preview that shows the previous save looks like
+ * the preview is broken, which is worse than not having one.
+ *
+ * `revalidate: false` — never cached. A cached preview is the same defect in a
+ * different place.
+ */
+export async function getPreviewArticle(id: string, secret: string): Promise<Article> {
+  const data = await gql<{
+    magPreview: (WpSummary & { content: string | null; seo: unknown }) | null;
+  }>(
+    `query MagPreview($id: ID!, $secret: String!) {
+      magPreview(id: $id, secret: $secret) {
+        ${SUMMARY_FIELDS}
+        content
+        ${SEO_FIELDS}
+      }
+    }`,
+    { id, secret },
+    false,
+  );
+
+  if (!data.magPreview) throw new MagNotFoundError(id);
+
+  const content = addHeadingIds(sanitizeArticleHtml(data.magPreview.content ?? ''));
+  const markets = (data.magPreview.markets?.nodes ?? []).map(mapMarket);
+
+  return {
+    ...mapSummary(data.magPreview),
+    content,
+    outline: extractHeadings(content),
+    secondaryMarkets: markets.slice(1),
+    seo: mapSeo(data.magPreview.seo),
+  };
+}
+
 export async function getMarkets(): Promise<Market[]> {
   const data = await gql<{
     markets: {

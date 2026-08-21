@@ -219,3 +219,90 @@ Not verified, and needing a machine that can reach the CMS:
   This is the exit criterion and it can only be checked on the server;
 - TLS, certbot, and the real `thefinance.ir` config, which may carry rules for
   the other apps that the repo version does not know about.
+
+---
+
+## Preview, revalidation and the live redirect map
+
+Three things that break silently at cutover unless both halves are deployed —
+the person clicks the same button, sees no error, and nothing happens.
+
+### The WordPress half is not in this repo
+
+`thefinance-mag-redirects.php` was described in the brief but is not in
+`wordpress/mu-plugins/`. The frontend below is written against the contract as
+described:
+
+```graphql
+{ magRedirects { from to status } }
+magPreview(id: ID!, secret: String!) { …post fields… }
+```
+
+**Verify that shape before trusting any of this.** If the real field names or
+argument names differ, the frontend fails in the way this whole piece of work
+exists to prevent: quietly.
+
+**PHP 8.4 is available in the build environment**, so `php -l` can be run here
+the moment the file is in the repo — the brief noted it could not be linted.
+Lint it before it goes near the live CMS regardless: a parse error in an
+mu-plugin takes down the whole site and cannot be undone from wp-admin.
+
+```bash
+php -l wordpress/mu-plugins/thefinance-mag-redirects.php
+# and on the CMS VPS
+docker compose exec -T wordpress php -l \
+  /var/www/html/wp-content/mu-plugins/thefinance-mag-redirects.php
+```
+
+### Frontend configuration
+
+Add to `/root/mag/.env`, matching `wp-config.php` byte for byte:
+
+```
+TF_MAG_PREVIEW_SECRET=<openssl rand -hex 32>
+```
+
+Never `NEXT_PUBLIC_`. `/mag/health` reports `previewConfigured` so a missing
+secret is visible rather than silent.
+
+### Checks
+
+```bash
+# Health now reports configuration, not just liveness
+curl -s https://new.thefinance.ir/mag/health | python3 -m json.tool
+```
+
+- `source` — `wpgraphql`, not `mock`
+- `previewConfigured` — `true`
+- `redirectSource.reachable` — `true`. False means no new SEO redirect is
+  reaching the frontend and middleware is serving the compiled-in floor.
+- **`redirectSource.missingKnown` — MUST be empty.** Anything listed is a
+  compiled-in rule that `magRedirects` is not returning, i.e. a ranked URL
+  about to start 404ing. Do not cut over with a non-empty list.
+
+```bash
+# Preview: wrong secret gives a bare 401 with no article content
+curl -s -o /dev/null -w '%{http_code}\n' \
+  "https://new.thefinance.ir/mag/api/draft?secret=wrong&id=123"
+
+# Revalidation
+curl -s -X POST https://new.thefinance.ir/mag/api/revalidate \
+  -H 'Content-Type: application/json' \
+  -d '{"secret":"<secret>","slug":"<slug>","market":"<market>"}'
+```
+
+Then in wp-admin: save a draft, click Preview, confirm the page carries the
+preview banner and `noindex`, click «خروج از پیش‌نمایش», and confirm normal
+pages return to `s-maxage=300`.
+
+### One behaviour worth knowing before you rely on it
+
+Once WordPress answers, its map **replaces** the compiled-in one rather than
+merging with it. That is deliberate — merging would make a redirect impossible
+to delete, so the SEO team would remove one in Rank Math and it would keep
+redirecting.
+
+The cost is that an under-returning `magRedirects` silently drops ranked URLs,
+which is why `missingKnown` exists. The two rules whose targets no longer exist
+in the database are the exception: they are code-only and always win, so a
+stale database row cannot resurrect a 404.

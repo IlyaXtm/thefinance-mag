@@ -33,6 +33,9 @@ services:
       - '127.0.0.1:3100:3000'
 
     env_file:
+      # Carries TF_MAG_PREVIEW_SECRET, which is why this file is not in the
+      # repository and is not a build arg — a secret baked into an image is a
+      # secret in every registry copy of it.
       - .env
 
     healthcheck:

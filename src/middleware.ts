@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { resolveLegacyRedirect, redirectTarget } from '@/features/mag/lib/redirects';
+import { redirectTarget, resolveRedirect } from '@/features/mag/lib/redirects';
+import { currentRedirects } from '@/features/mag/lib/redirect-source';
 import { MAG_PATH } from '@/features/mag/lib/site';
 
 /**
@@ -26,7 +27,7 @@ export function middleware(request: NextRequest) {
     while every page still renders. Verified by test rather than assumed.
   */
   const { pathname } = request.nextUrl;
-  const rule = resolveLegacyRedirect(pathname);
+  const rule = resolveRedirect(currentRedirects(), pathname);
 
   if (!rule) {
     /*

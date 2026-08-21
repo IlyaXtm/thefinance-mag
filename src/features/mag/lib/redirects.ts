@@ -123,23 +123,49 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
  * normalising the incoming path — which is where this kind of matching usually
  * goes wrong — every accepted spelling is registered up front and the match is
  * an exact map lookup.
+ *
+ * Memoised on the rules array's identity: the live map is refreshed every five
+ * minutes, and rebuilding ~70 keys on every request in front of every asset
+ * would be pure waste.
  */
-const BY_SOURCE = new Map<string, LegacyRedirect>();
+let indexedRules: readonly LegacyRedirect[] | null = null;
+let index = new Map<string, LegacyRedirect>();
 
-for (const rule of LEGACY_REDIRECTS) {
-  for (const key of [rule.from, encodeURIComponent(rule.from), decodeURIComponent(rule.from)]) {
-    BY_SOURCE.set(key, rule);
-    BY_SOURCE.set(key.toLowerCase(), rule);
+function indexFor(rules: readonly LegacyRedirect[]): Map<string, LegacyRedirect> {
+  if (indexedRules === rules) return index;
+
+  const built = new Map<string, LegacyRedirect>();
+
+  for (const rule of rules) {
+    let decoded = rule.from;
+    try {
+      decoded = decodeURIComponent(rule.from);
+    } catch {
+      /* A rule whose `from` is not valid percent-encoding still matches its
+         literal form; it just gets no decoded alias. */
+    }
+
+    for (const key of [rule.from, encodeURIComponent(rule.from), decoded]) {
+      built.set(key, rule);
+      built.set(key.toLowerCase(), rule);
+    }
   }
+
+  indexedRules = rules;
+  index = built;
+  return built;
 }
 
 /**
- * Resolve a request path to its redirect, or null.
+ * Resolve a request path against a rule set.
  *
- * `path` is the pathname WITHOUT the `/mag` basePath and without a leading
- * slash — matching what middleware sees.
+ * `path` is the pathname WITHOUT the `/mag` basePath — matching what
+ * middleware sees.
  */
-export function resolveLegacyRedirect(path: string): LegacyRedirect | null {
+export function resolveRedirect(
+  rules: readonly LegacyRedirect[],
+  path: string,
+): LegacyRedirect | null {
   const slug = path.replace(/^\/+/, '').replace(/\/+$/, '');
   if (!slug) return null;
 
@@ -151,7 +177,9 @@ export function resolveLegacyRedirect(path: string): LegacyRedirect | null {
        raw form rather than throwing inside middleware. */
   }
 
-  return BY_SOURCE.get(slug) ?? BY_SOURCE.get(decoded) ?? BY_SOURCE.get(decoded.toLowerCase()) ?? null;
+  const map = indexFor(rules);
+
+  return map.get(slug) ?? map.get(decoded) ?? map.get(decoded.toLowerCase()) ?? null;
 }
 
 /**
