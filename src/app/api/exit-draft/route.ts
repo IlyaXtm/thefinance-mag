@@ -1,5 +1,5 @@
 import { draftMode } from 'next/headers';
-import { NextResponse, type NextRequest } from 'next/server';
+import { seeOther } from '@/features/mag/lib/redirect-response';
 import { magPath } from '@/features/mag/lib/site';
 
 /**
@@ -16,11 +16,9 @@ import { magPath } from '@/features/mag/lib/site';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const draft = await draftMode();
   draft.disable();
 
-  const response = NextResponse.redirect(new URL(magPath('/'), request.url), 307);
-  response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-  return response;
+  return seeOther(magPath('/'));
 }

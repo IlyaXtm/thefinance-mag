@@ -22,6 +22,7 @@ New to the project, in this order:
 | File | What it is |
 |---|---|
 | `plan.md` | Current state and remaining phases. **The single source for what's next** |
+| `cutover-plan.md` | The cutover itself: steps, the one-line switch, rollback triggers, what is verified |
 | `decisions.md` | Architecture and product decisions with rationale |
 | `changelog.md` | What changed, when, and why |
 | `backlog.md` | Deferred items, with enough context to pick them up |

@@ -8,6 +8,70 @@ why it was made.
 
 ---
 
+## 2026-08-21 — Staging re-verification, and two proxy-only bugs
+
+The deploy artifacts were built earlier; this re-ran them against the current
+app, which has since gained middleware, preview, revalidation and the feed. Two
+bugs surfaced that only appear behind a proxy — both invisible on localhost,
+which is why they had survived.
+
+**Preview redirected editors to the container's internal address.** Behind
+nginx, `/mag/api/draft` answered:
+
+```
+Location: https://0.0.0.0:3100/mag/a7
+```
+
+A route handler's `request.url` in the standalone server is built from the
+address the process is BOUND to, not from the `Host` nginx forwarded. An editor
+clicking Preview in wp-admin would be sent somewhere their browser cannot
+reach. On localhost the internal address IS the public one, so it passed every
+earlier test.
+
+Fixed by emitting a **relative** `Location`. Valid per RFC 7231, resolved by
+every browser against the request URL, and it cannot name the wrong host
+because it names none — which is better than reconstructing the origin from
+`X-Forwarded-*` and depending on proxy headers being right.
+
+**And the same fix broke middleware.** Next's middleware runtime parses the
+header as a URL and throws `ERR_INVALID_URL` on a relative one, turning every
+redirect into a 500. So the two layers genuinely differ: middleware must emit
+absolute, route handlers must not. That is safe, because a middleware
+`request.url` IS reconstructed from the forwarded `Host` — exactly what a route
+handler's is not. Both directions are now documented where someone will hit
+them.
+
+**`WP_PREVIEW_SECRET` accepted alongside `TF_MAG_PREVIEW_SECRET`.** The deploy
+brief names the frontend variable `WP_PREVIEW_SECRET` and the `wp-config.php`
+one `TF_MAG_PREVIEW_SECRET`, holding the same value. Both are read here, so
+whichever name someone typed on the server works — a mismatch would otherwise
+be a silent 401 with nothing to diagnose it by.
+
+**`docs/cutover-plan.md` now exists.** Four briefs have referenced it and it
+was in no repo, including the two that attributed to it the claim that no
+redirect map was needed. That claim is corrected in the file itself rather than
+left to be rediscovered.
+
+**The cutover line got its reasoning inline.** The brief specified two
+commented `proxy_pass` directives while also requiring a one-line edit; those
+pull against each other, since commenting one and uncommenting the other is two
+edits and a half-finished one either refuses to load or 500s every request. The
+variable stays, with the alternative written above it and the reason why.
+
+**Verified against the real config files, running:** staging noindexed and
+production not, in both directions and again after the cutover line was
+flipped; cutover and rollback each with a reload; and through nginx on the
+staging host — the index, an article with its canonical on `thefinance.ir`, the
+mfi redirect at one hop, preview 401 and 307, revalidation 401 and 200.
+
+**Still not deployed.** The frontend server is unreachable from the build
+environment: every request returns the sandbox's 403 and there is no SSH
+client. A raw TCP check appears to connect, but it does so against a bogus
+address too, so it proves nothing — worth recording, since it looks like
+evidence of reachability and is not.
+
+---
+
 ## 2026-08-21 — Preview, revalidation, and a live redirect map
 
 The frontend half of `thefinance-mag-redirects.php`. All three of these break

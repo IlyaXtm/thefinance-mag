@@ -9,7 +9,8 @@ import { timingSafeEqual } from 'node:crypto';
  * file here — in `wp-config.php` rather than the database so it never appears
  * in a dump or an export.
  */
-const SECRET = process.env.TF_MAG_PREVIEW_SECRET ?? '';
+const SECRET =
+  process.env.WP_PREVIEW_SECRET ?? process.env.TF_MAG_PREVIEW_SECRET ?? '';
 
 export function hasPreviewSecret(): boolean {
   return SECRET.length > 0;

@@ -56,15 +56,27 @@ export function middleware(request: NextRequest) {
 /**
  * Build the destination URL.
  *
- * NOT `nextUrl.clone()`. `NextURL` remembers the trailing slash of the
- * REQUEST and re-applies it when serialising, so cloning it to build a
- * redirect produced `/mag/mfi-indicator/` from a request for
- * `/mag/what-is-the-mfi-indicator/` — and, for the normalisation branch,
- * `/mag/archive/` redirecting to `/mag/archive/`: an infinite loop that curl
- * followed fifty times.
+ * MIDDLEWARE MUST EMIT AN ABSOLUTE `Location`, and route handlers must not.
+ * That asymmetry is not obvious and cost a debugging round:
  *
- * A plain URL against `request.url` has no such memory. The basePath is added
- * explicitly here because it is only automatic on the NextURL path.
+ *  - The route handlers under `api/` had absolute URLs built from
+ *    `request.url`, which in the standalone server is the address the process
+ *    is BOUND to. Behind nginx that produced
+ *    `Location: https://0.0.0.0:3100/mag/a7` — the container's internal
+ *    address, unreachable from an editor's browser. They now emit a relative
+ *    `Location`, which is valid per RFC 7231 and cannot name the wrong host.
+ *  - Doing the same here fails: Next's middleware runtime parses the header as
+ *    a URL and throws `ERR_INVALID_URL` on a relative one, turning every
+ *    redirect into a 500.
+ *
+ * So middleware stays absolute — and that is safe, because a middleware
+ * `request.url` IS reconstructed from the forwarded `Host`, which is exactly
+ * what a route handler's is not.
+ *
+ * NOT `nextUrl.clone()`: `NextURL` remembers the request's trailing slash and
+ * re-applies it when serialising, so cloning to build a redirect made
+ * `/mag/archive/` redirect to `/mag/archive/` — a loop curl followed fifty
+ * times. A plain `URL` has no such memory.
  *
  * The query string is dropped deliberately. These are article URLs, and a
  * stray `?utm_…` carried onto the destination fragments the canonical.

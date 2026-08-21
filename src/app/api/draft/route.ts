@@ -1,5 +1,6 @@
 import { draftMode } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
+import { seeOther } from '@/features/mag/lib/redirect-response';
 import { matchesPreviewSecret } from '@/features/mag/lib/preview-secret';
 import { magPath } from '@/features/mag/lib/site';
 
@@ -50,9 +51,5 @@ export async function GET(request: NextRequest) {
     as an ID and fetches through `magPreview`. There is no ambiguity to
     resolve: in draft mode it is always an ID.
   */
-  const target = new URL(magPath(`/${encodeURIComponent(id)}`), request.url);
-
-  const response = NextResponse.redirect(target, 307);
-  response.headers.set('X-Robots-Tag', 'noindex, nofollow');
-  return response;
+  return seeOther(magPath(`/${encodeURIComponent(id)}`));
 }
