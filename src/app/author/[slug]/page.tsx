@@ -4,6 +4,7 @@ import { getArticles, getAuthor } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
+import { toMetadata } from '@/features/mag/lib/seo';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
@@ -44,11 +45,13 @@ export async function generateMetadata({
 
   if (!author) return { title: 'نویسنده پیدا نشد' };
 
-  return {
-    title: author.name,
-    description: author.bio ?? `مطالب ${author.name} در ${MAG_NAME}`,
-    alternates: { canonical: magUrl(`/author/${author.slug}`) },
-  };
+  return toMetadata({
+    seo: null,
+    path: `/author/${author.slug}`,
+    fallbackTitle: author.name,
+    fallbackDescription: author.bio ?? `مطالب ${author.name} در ${MAG_NAME}`,
+    ogTitle: `${author.name} | ${MAG_NAME}`,
+  });
 }
 
 export default async function AuthorPage({

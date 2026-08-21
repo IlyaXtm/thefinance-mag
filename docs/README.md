@@ -36,6 +36,7 @@ New to the project, in this order:
 | `phase-0-verification.md` | Executable checks against the live system |
 | `audit-2026-08-20.md` | The result of running the two above: what was measured, what was fixed, what is still open |
 | `audit-2026-08-20-pass2.md` | Second pass: adversarial content, interaction, theme switching and print |
+| `audit-seo-security-performance.md` | SEO, security and performance sweep before the next stage |
 
 ### Design
 

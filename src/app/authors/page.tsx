@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getAuthors } from '@/features/mag/api/v1/mag.service';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { toMetadata } from '@/features/mag/lib/seo';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { AuthorBox, Breadcrumbs, Section } from '@/features/mag/components';
 
@@ -8,11 +9,13 @@ import { AuthorBox, Breadcrumbs, Section } from '@/features/mag/components';
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: 'نویسندگان',
-  description: `نویسندگان ${MAG_NAME}`,
-  alternates: { canonical: magUrl('/authors') },
-};
+export const metadata: Metadata = toMetadata({
+  seo: null,
+  path: '/authors',
+  fallbackTitle: 'نویسندگان',
+  fallbackDescription: `نویسندگان ${MAG_NAME}`,
+  ogTitle: `نویسندگان | ${MAG_NAME}`,
+});
 
 export default async function AuthorsPage() {
   const authors = await getAuthors();

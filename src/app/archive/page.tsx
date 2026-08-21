@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { getArticles } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
-import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
+import { toMetadata } from '@/features/mag/lib/seo';
+import { MAG_NAME } from '@/features/mag/lib/site';
 import {
   ArticleGridEmpty,
   ArticleRow,
@@ -31,11 +32,13 @@ import {
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: 'آرشیو',
-  description: `همه مطالب ${MAG_NAME}`,
-  alternates: { canonical: magUrl('/archive') },
-};
+export const metadata: Metadata = toMetadata({
+  seo: null,
+  path: '/archive',
+  fallbackTitle: 'آرشیو',
+  fallbackDescription: `همه مطالب ${MAG_NAME}`,
+  ogTitle: `آرشیو | ${MAG_NAME}`,
+});
 
 export default async function ArchivePage({
   searchParams,

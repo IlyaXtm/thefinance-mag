@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { magUrl, SITE_ORIGIN } from '@/features/mag/lib/site';
+import { magPath, magUrl, SITE_ORIGIN } from '@/features/mag/lib/site';
 
 /**
  * robots.txt for the /mag app.
@@ -25,10 +25,19 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          /* Thin, infinitely variable, and duplicating content that already
-             exists on the pages themselves. */
-          '/search',
-          '/api/',
+          /*
+            Prefixed with basePath. Next does NOT apply basePath to these
+            values, so they were emitting `Disallow: /search` and
+            `Disallow: /api/` — paths on the MAIN site, belonging to a
+            different app, while leaving Mag's own /mag/search unmentioned.
+            The whole point of this file is to state Mag's intent without
+            contradicting the main one, and un-prefixed paths did the reverse.
+
+            Thin, infinitely variable, and duplicating content that already
+            exists on the pages themselves.
+          */
+          magPath('/search'),
+          magPath('/api/'),
         ],
       },
     ],

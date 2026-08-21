@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { toMetadata } from '@/features/mag/lib/seo';
 import { magPath, MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
 import {
   ArticleRow,
@@ -32,11 +33,12 @@ import {
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: MAG_NAME,
-  description: MAG_DESCRIPTION,
-  alternates: { canonical: '/mag' },
-};
+export const metadata: Metadata = toMetadata({
+  seo: null,
+  path: '/',
+  fallbackTitle: MAG_NAME,
+  fallbackDescription: MAG_DESCRIPTION,
+});
 
 export default async function MagIndexPage() {
   const [latest, education, markets] = await Promise.all([

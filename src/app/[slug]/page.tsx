@@ -35,6 +35,39 @@ import {
 export const revalidate = 300;
 
 /**
+ * WITHOUT THIS THE ARTICLE PAGE IS NOT CACHED AT ALL.
+ *
+ * A dynamic segment with no `generateStaticParams` is treated as fully
+ * dynamic: Next server-renders it on every request and sends
+ * `Cache-Control: private, no-cache, no-store, must-revalidate`. Measured
+ * before this existed — the route was absent from `dynamicRoutes` in
+ * prerender-manifest.json entirely, so `revalidate = 300` above was dead
+ * code.
+ *
+ * That is the worst place in the product for it to happen. Articles are where
+ * search traffic lands, so this meant: the ArvanCloud CDN could never hold an
+ * article, every request re-ran the article, related and comment queries, and
+ * all of it went at a /graphql that nginx limits to 10 r/s. A crawl burst
+ * would spend that budget on pages that had not changed in months.
+ *
+ * Returning the slugs prerenders the archive at build time. `dynamicParams`
+ * stays at its default of true, so anything published after the build is still
+ * generated on demand and then ISR-cached.
+ *
+ * The catch matters: a build machine that cannot reach WordPress degrades to
+ * an empty list — every article generated on demand and cached — rather than
+ * failing the build outright.
+ */
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  try {
+    const articles = await getArticles({ page: 1, perPage: 200 });
+    return articles.items.map((article) => ({ slug: article.slug }));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Slugs are percent-encoded Persian for most of the archive, e.g.
  * `%d8%a7%d9%86%d8%af%db%8c%da%a9%d8%a7%d8%aa%d9%88%d8%b1-...`
  *

@@ -81,8 +81,22 @@ async function gql<T>(query: string, variables: Record<string, unknown>): Promis
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),
-    // Comments change often enough that caching them would confuse readers.
-    cache: 'no-store',
+    /*
+      NOT `cache: 'no-store'`.
+      
+      A no-store fetch during render opts the WHOLE route into dynamic
+      rendering. This runs inside the article page, so it was silently
+      disabling that page's ISR: `export const revalidate = 300` never took
+      effect, every article response carried
+      `Cache-Control: private, no-cache, no-store, must-revalidate`, the CDN
+      could not hold the HTML, and every single request re-ran the article,
+      related and comment queries against a /graphql that nginx limits to
+      10 r/s. On the highest-traffic, most SEO-critical page in the product.
+
+      60 seconds is far fresher than the content needs: comments are held for
+      moderation, so the delay before one can appear at all is human-scale.
+    */
+    next: { revalidate: 60 },
   });
 
   if (!res.ok) throw new Error(`GraphQL request failed: ${res.status}`);

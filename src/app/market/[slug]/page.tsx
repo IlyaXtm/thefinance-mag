@@ -5,6 +5,7 @@ import { MagNotFoundError, MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import type { MarketSlug } from '@/features/mag/types/mag.types';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
+import { toMetadata } from '@/features/mag/lib/seo';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
@@ -54,11 +55,13 @@ export async function generateMetadata({
 
   if (!market) return { title: 'بازار پیدا نشد' };
 
-  return {
-    title: market.name,
-    description: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
-    alternates: { canonical: magUrl(`/market/${market.slug}`) },
-  };
+  return toMetadata({
+    seo: null,
+    path: `/market/${market.slug}`,
+    fallbackTitle: market.name,
+    fallbackDescription: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
+    ogTitle: `${market.name} | ${MAG_NAME}`,
+  });
 }
 
 export default async function MarketArchivePage({

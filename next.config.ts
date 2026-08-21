@@ -28,6 +28,75 @@ const nextConfig: NextConfig = {
 
   eslint: { ignoreDuringBuilds: false },
   typescript: { ignoreBuildErrors: false },
+
+  /*
+   * `X-Powered-By: Next.js` names the stack and the framework version range to
+   * anyone scanning. It buys nothing.
+   */
+  poweredByHeader: false,
+
+  /**
+   * Security headers.
+   *
+   * Set here rather than only in nginx so they survive a proxy misconfiguration
+   * and so the guarantee lives with the code that depends on it.
+   *
+   * NOT set here: Strict-Transport-Security. HSTS applies to the whole host,
+   * so declaring it from a sub-path would commit `thefinance.ir` on behalf of
+   * the main site. That belongs at the edge, as a domain-wide decision.
+   */
+  async headers() {
+    /*
+     * The CSP earns its place because of ONE line in this codebase:
+     * `ArticleBody` renders WordPress HTML through `dangerouslySetInnerHTML`.
+     * `sanitizeArticleHtml` strips inline styles — it is not an XSS sanitiser
+     * and does not remove scripts. That is a deliberate trust decision about
+     * editors, but a compromised WordPress account or plugin would otherwise
+     * run arbitrary JavaScript on the main domain. `script-src 'self'` means
+     * injected markup cannot pull in an external payload.
+     *
+     * It also enforces "no third-party scripts" — a documented product
+     * constraint and a Core Web Vitals one — in the browser rather than in
+     * review.
+     *
+     * `'unsafe-inline'` on script-src is required by Next's inline bootstrap;
+     * removing it needs nonces via middleware, which is a larger change. The
+     * directives that block the common attack shapes — object-src, base-uri,
+     * form-action, frame-ancestors — are all strict regardless.
+     */
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      /* Media stays on our own hosts. `data:` covers next/image blur
+         placeholders. */
+      "img-src 'self' data: https://thefinance.ir https://wp.thefinance.ir",
+      /* Self-hosted IRANYekanX only — no Google Fonts, no foreign CDN. */
+      "font-src 'self'",
+      "connect-src 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      'upgrade-insecure-requests',
+    ].join('; ');
+
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
