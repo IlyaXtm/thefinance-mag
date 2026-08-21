@@ -222,6 +222,28 @@ Assessed as low real exposure: the postcss issues need attacker-controlled CSS
 in the build pipeline, and sharp processes images from your own CMS rather than
 public uploads. Upgrading mid-build would mean changing two variables at once.
 
+**What the upgrade involves beyond a version bump:**
+
+- **`middleware.ts` → `proxy.ts`.** Next 16 renamed the convention; the
+  exported function becomes `proxy`, and config flags rename with it
+  (`skipMiddlewareUrlNormalize` → `skipProxyUrlNormalize`). Codemod:
+  `npx @next/codemod@canary middleware-to-proxy`. Next 16 still accepts
+  `middleware.ts` but logs a deprecation warning.
+
+  We have no such file yet — redirects are planned, not written — so this
+  costs nothing today. Write them as `proxy.ts` when the time comes.
+
+  The rename is not cosmetic. It followed CVE-2025-29927 (a header could
+  bypass every middleware authorisation check) and CVE-2025-66478 (remote code
+  execution — the advisory that prompted our own bump from 15.1.0 to 15.5.23).
+  The layer is for routing at the network boundary, not for auth or data
+  access, and the new name says so.
+
+- Turbopack becomes the default bundler
+- `params` become async
+- `next/image` defaults change — worth checking against our `remotePatterns`
+  and the LCP hero
+
 **Revisit when:** the article and listing pages are done and connected to real
 data.
 

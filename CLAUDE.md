@@ -102,9 +102,11 @@ Their absence is deliberate and documented. Do not add them back thinking they w
 
 ## Content model — only these fields exist
 
-`market` (taxonomy) · `contentType` (taxonomy: تحلیل / گزارش / آموزش) · `readingTime` (computed server-side in the mu-plugin) · `modifiedAt` (revision date, shown when it differs from publish date) · market `description` (taxonomy field, may be empty).
+`market` (taxonomy) · `contentType` (taxonomy: تحلیل / گزارش / آموزش / اخبار) · `readingTime` (computed server-side in the mu-plugin) · `modifiedAt` (revision date, shown when it differs from publish date) · market `description` (taxonomy field, may be empty).
 
-**Deliberately excluded:** `reviewedBy`, `factCheckedBy` (no review process exists), `tickerRelations`, `source`/`sourceUrl`, and `اخبار` as a content type (Khabarchi boundary unresolved).
+**`اخبار` is a real content type.** It was originally excluded pending the Mag/Khabarchi boundary decision, but an RSS automation publishes roughly two items a day and they are meant to be indexed. News gets `NewsArticle` schema; everything else gets `Article`, because publication date is the signal for translated news while revision date is the signal for evergreen education.
+
+**Deliberately excluded:** `reviewedBy`, `factCheckedBy` (no review process exists), `tickerRelations`, `source`/`sourceUrl`.
 
 **Standing rule: never build a component against a field that doesn't exist in the source.** Verify in GraphiQL first.
 

@@ -9,13 +9,17 @@ import { MAG_DESCRIPTION, MAG_NAME, MAG_URL, ORGANIZATION, magUrl } from './site
  * that claims something the page doesn't show is a spam signal, so these
  * functions never invent a rating, a price, or a metric.
  *
- * `Article`, not `NewsArticle`.
- * NewsArticle is for time-bound reporting. Most of this archive is evergreen
- * educational content — "what is the Ichimoku indicator" is as true next year
- * as today. Labelling it NewsArticle would send Google the wrong freshness
- * signal and invite the staleness penalty we already avoided by using revision
- * dates instead of relative ones. If `اخبار` ever enters Mag, that content
- * type gets NewsArticle and nothing else does.
+ * `NewsArticle` for news, `Article` for everything else.
+ *
+ * NewsArticle is for time-bound reporting, where the publication date is the
+ * primary signal. Most of this archive is evergreen education — "what is the
+ * Ichimoku indicator" is as true next year as today — and labelling that
+ * NewsArticle would invite exactly the staleness judgement we avoided by using
+ * revision dates instead of relative ones.
+ *
+ * `اخبار` is now a real content type: an RSS automation publishes roughly two
+ * items a day and they are meant to be indexed. Those get NewsArticle. Nothing
+ * else does.
  */
 
 type JsonLd = Record<string, unknown>;
@@ -51,9 +55,14 @@ export function organizationJsonLd(): JsonLd {
 export function articleJsonLd(article: Article): JsonLd {
   const url = magUrl(`/${article.slug}`);
 
+  /* News is time-bound reporting; everything else is evergreen. The type is
+     derived rather than configured, so a new news article is labelled
+     correctly the moment it publishes. */
+  const schemaType = article.contentType.slug === 'news' ? 'NewsArticle' : 'Article';
+
   return {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': schemaType,
     headline: article.title,
     /*
       inLanguage matters for a Persian site: it tells Google the content is
@@ -138,7 +147,7 @@ export function magBlogJsonLd(articles: ArticleSummary[]): JsonLd {
     inLanguage: 'fa-IR',
     publisher,
     blogPost: articles.slice(0, 10).map((a) => ({
-      '@type': 'BlogPosting',
+      '@type': a.contentType.slug === 'news' ? 'NewsArticle' : 'BlogPosting',
       headline: a.title,
       url: magUrl(`/${a.slug}`),
       datePublished: a.publishedAt,

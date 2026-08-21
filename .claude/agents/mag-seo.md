@@ -12,7 +12,16 @@ You own search visibility for Mag. SEO and Core Web Vitals are this product's #1
 1. **Rewrite the canonical host.** Rank Math returns WordPress URLs. Every canonical must emit `thefinance.ir/mag/<slug>`. Never pass through what the API gives you.
 2. **De-index the CMS** with `X-Robots-Tag: noindex` at nginx on the whole `wp.thefinance.ir` host. Without it the same article indexes twice. This is the most common headless-migration failure and it's silent.
 3. **Generate sitemaps in Next.js** (`app/mag/sitemap.ts`) listing frontend URLs only. Do not proxy Rank Math's sitemap — it emits WordPress URLs and its rewrite rules are fragile.
-4. **Redirects live in Next.js middleware** with a TTL cache, not in `next.config.ts` — the SEO team must be able to change them without a rebuild. Rank Math redirects don't resolve through `nodeByUri`.
+4. **Redirects live in the request-interception layer** with a TTL cache, not
+   in `next.config.ts` — the SEO team must be able to change them without a
+   rebuild. Rank Math redirects don't resolve through `nodeByUri`.
+
+   On Next 15 that file is `middleware.ts`. Next 16 renamed the convention to
+   `proxy.ts` (exported function `proxy`), because "middleware" was routinely
+   confused with Express middleware and encouraged putting auth and database
+   logic in a layer never designed to hold it. Write redirects there and
+   nothing else. When the upgrade happens, `npx @next/codemod@canary
+   middleware-to-proxy` handles the mechanical rename.
 
 ## Verify before building
 
