@@ -8,6 +8,82 @@ why it was made.
 
 ---
 
+## 2026-08-21 — Containerised, and a staging host
+
+Step 1 of the cutover. Nothing was deployed — the build sandbox reaches neither
+Docker Hub nor the frontend server — so this is the reviewable artifact set plus
+what could be verified without them. `docs/infra/frontend-deploy.md` is explicit
+about which is which.
+
+**The frontend nginx config is in the repository now.**
+
+It previously existed only on the server, which meant the cutover — the riskiest
+single action in this project — depended on a file nobody could review, diff or
+roll back. `thefinance.ir.conf` and `new.thefinance.ir.conf` fix that.
+
+The cutover is deliberately one line: the port in `set $mag_upstream`. A
+variable rather than two commented `proxy_pass` lines, so switching under
+pressure is one edit and a reload rather than a two-line dance where half a
+change is a broken site. Rollback is the same line back. Both were exercised
+against a running nginx, in both directions.
+
+Both configs set `X-Real-IP` from `$remote_addr`, and that is load-bearing
+rather than boilerplate: the comment rate limit keys on it precisely because
+`X-Forwarded-For` is built with `$proxy_add_x_forwarded_for` and so begins with
+whatever the client sent. Verified through nginx — a spoofed `X-Forwarded-For`
+was still limited on the fourth request.
+
+**Staging is a host, not a path prefix.**
+
+The brief asked for a staging path. `basePath: '/mag'` is inlined at build time,
+so an image served under `/mag-staging/` still emits links to `/mag/...` — which
+on that server is WordPress. Staging would render once and then navigate into
+production on the first click. A path prefix needs a second image with a
+different basePath, at which point staging is no longer testing the artifact
+that gets promoted. `new.thefinance.ir` was already the documented staging host.
+
+The whole staging host is `noindex, nofollow` and serves nothing but `/mag`.
+Staging carries the same articles as production, so a leak into the index means
+the same content competing with itself — and like the CMS-host case, it fails
+silently because every page renders perfectly throughout. Verified in both
+directions: staging noindexed, production carrying no such header.
+
+**`NEXT_PUBLIC_*` moved to server-only names.**
+
+Raised in the brief as possibly awkward for the pipeline, and it was: those
+variables are inlined at build time, so "env comes from a file on the server"
+and `NEXT_PUBLIC_` are in tension. `USE_MOCK`, `WP_GRAPHQL_ENDPOINT` and
+`SITE_ORIGIN` are now read server-side first, with the public names kept as
+fallbacks so an existing deployment keeps working. Confirmed nothing reading
+them reaches the browser — the SWR hooks that import the data service are
+referenced by no rendered component, and the endpoint appears in no client
+chunk. The public prefix was buying nothing and only invited the value into a
+client bundle later.
+
+What renaming does NOT fix, recorded so it is not rediscovered: `SITE_ORIGIN`
+is baked into prerendered HTML regardless, because canonical and `og:url` are
+written at build time. It does not bite here because all three values are the
+same in staging and production — canonicals must name the production origin
+even when staging serves the page — so the image stays portable and staging
+validates byte-for-byte what production will run. It would bite on review-apps
+with a different origin each, which is why the Dockerfile takes them as build
+args.
+
+**The Dockerfile copies three things, and two of them are easy to miss.**
+
+`public/` and `.next/static` are not inside `.next/standalone`. A Dockerfile
+that omits either serves HTML with no CSS, no JavaScript and no font — which
+reads as a broken build rather than a missing copy step. Verified by
+reconstructing the runtime stage on disk and running `node server.js` against
+it: every route served, and the hashed stylesheet and the IRANYekanX woff2 both
+returned 200.
+
+The healthcheck hits `/mag/health`, which reports the data SOURCE and not just
+liveness. A container quietly serving mock data in staging is a
+misconfiguration that would otherwise look perfectly healthy.
+
+---
+
 ## 2026-08-21 — Lead slot, feed, and cacheable archives
 
 Four items from `audit-seo-security-performance.md`. The fourth — the Next 16

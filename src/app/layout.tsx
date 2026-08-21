@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
-import { feedAlternate } from '@/features/mag/lib/site';
+import { feedAlternate, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { MagFooter, MagHeader } from '@/shared/ui';
 import '@/styles/globals.css';
 
@@ -41,7 +41,7 @@ const iranYekan = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir'),
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: 'مجله فایننس',
     template: '%s | مجله فایننس',

@@ -1,0 +1,56 @@
+# TheFinance Mag — staging on the frontend server.
+#
+# Deployed to /root/mag/ alongside the existing apps. Reads its environment
+# from `.env` in the same directory — see .env.example. That file is NOT in the
+# repository.
+#
+#   docker compose up -d --build
+#   docker compose logs -f mag
+#   docker compose ps          # healthy?
+#
+# The container binds to 127.0.0.1 only. nginx is the sole way in, which is
+# what makes the security headers and the staging noindex unbypassable — and
+# what makes the comment rate limit trustworthy, since it keys on the
+# X-Real-IP nginx sets.
+
+services:
+  mag:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        # Must match the runtime values below. Prerendered pages bake the
+        # canonical origin at build time, so these are not optional.
+        SITE_ORIGIN: ${SITE_ORIGIN:-https://thefinance.ir}
+        WP_GRAPHQL_ENDPOINT: ${WP_GRAPHQL_ENDPOINT:-https://wp.thefinance.ir/mag/graphql}
+        USE_MOCK: ${USE_MOCK:-false}
+    image: thefinance-mag:staging
+    container_name: thefinance-mag
+    restart: unless-stopped
+
+    # 3100 on the host, 3000 in the container. Localhost only.
+    ports:
+      - '127.0.0.1:3100:3000'
+
+    env_file:
+      - .env
+
+    healthcheck:
+      # /mag/health reports the DATA SOURCE, not just liveness — it answers
+      # "wpgraphql" or "mock". A container serving mock data in staging is a
+      # misconfiguration that would otherwise look perfectly healthy.
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/mag/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      # Generous: the first request after a cold start compiles nothing, but
+      # ISR may still be fetching from WordPress over the network.
+      start_period: 40s
+      retries: 3
+
+    # WordPress is reached over the public internet, so no shared network is
+    # needed. The CMS lives on its own VPS.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

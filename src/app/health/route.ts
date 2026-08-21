@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export function GET() {
   return Response.json({
     status: 'ok',
-    source: process.env.NEXT_PUBLIC_USE_MOCK === 'true' ? 'mock' : 'wpgraphql',
+    source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
     time: new Date().toISOString(),
   });
 }

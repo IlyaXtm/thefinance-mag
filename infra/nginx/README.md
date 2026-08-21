@@ -38,3 +38,29 @@ not in this repo. Two things will need to change there at cutover:
        expires 30d;
    }
    ```
+
+---
+
+## Frontend server
+
+`thefinance.ir.conf` and `new.thefinance.ir.conf` were added when Mag needed a
+staging host. They had previously never been in a repository — the frontend
+nginx lived only on the server, so the cutover depended on a file nobody could
+review.
+
+- **`thefinance.ir.conf`** — production. `/mag` still proxies to WordPress. The
+  cutover is one line: the port in `set $mag_upstream`. Rollback is the same
+  line back, plus a reload.
+- **`new.thefinance.ir.conf`** — staging, on port 3100. The whole host is
+  `noindex, nofollow` and serves nothing but `/mag`.
+
+Both set `X-Real-IP` from `$remote_addr`. That is load-bearing, not
+boilerplate: the comment endpoint's rate limit keys on it, because
+`X-Forwarded-For` is built with `$proxy_add_x_forwarded_for` and therefore
+begins with whatever the client sent. Remove it and the limit is bypassable
+with one header.
+
+Before deploying, diff against what is live — the server's copy may carry rules
+for the other apps that these files do not know about.
+
+Runbook: `docs/infra/frontend-deploy.md`.

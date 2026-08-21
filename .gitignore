@@ -18,3 +18,4 @@ infra/wp/wordpress/
 .vscode/
 .idea/
 *.tsbuildinfo
+infra/mag/.env

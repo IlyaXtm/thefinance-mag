@@ -53,6 +53,7 @@ New to the project, in this order:
 | `infra/wp-vps.md` | CMS VPS provisioning, compose, nginx, hardening |
 | `infra/media.md` | The image-URL contract, and why MinIO is deferred |
 | `infra/seo-safety.md` | Cutover protocol: baseline, diff, reversible switch, monitoring |
+| `infra/frontend-deploy.md` | Frontend server: container, staging host, nginx, the cutover line |
 
 ---
 

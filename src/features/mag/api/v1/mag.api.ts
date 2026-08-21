@@ -39,7 +39,7 @@ async function gql<T>(
 ): Promise<T> {
   if (!ENDPOINT) {
     throw new MagFetchError(
-      'WP GraphQL endpoint is not configured. Set NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT.',
+      'WP GraphQL endpoint is not configured. Set WP_GRAPHQL_ENDPOINT.',
     );
   }
 

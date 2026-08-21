@@ -24,7 +24,7 @@
 import * as real from './mag.api';
 import * as mock from './mag.mock';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true';
 
 /**
  * Structural check: both modules must satisfy the same contract.

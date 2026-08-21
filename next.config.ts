@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
    */
   basePath: '/mag',
 
+  /*
+   * Standalone output: `next build` emits `.next/standalone` containing a
+   * minimal server plus only the node_modules actually reached. That is what
+   * the container runs — it keeps the runtime image small and means the image
+   * has no npm install step and no dev dependencies in it.
+   */
+  output: 'standalone',
+
   reactStrictMode: true,
 
   images: {

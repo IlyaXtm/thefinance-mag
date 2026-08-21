@@ -7,7 +7,19 @@
  * typed inline per page.
  */
 
-export const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir';
+/*
+ * Server-only name first, `NEXT_PUBLIC_` kept as a fallback so an existing
+ * deployment keeps working. Nothing that reads this ships to the browser —
+ * the header, footer and metadata builders are all server components — so the
+ * public prefix buys nothing and only invites the value into a client bundle
+ * later.
+ *
+ * Note this value is the SAME in staging and production on purpose: canonicals
+ * must always point at the production origin, never at the environment serving
+ * them. See CLAUDE.md.
+ */
+export const SITE_ORIGIN =
+  process.env.SITE_ORIGIN ?? process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir';
 
 /** The magazine section, not the whole platform. */
 export const MAG_NAME = 'مجله فایننس';
