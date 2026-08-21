@@ -54,6 +54,22 @@ export function magPath(path = ''): string {
   return `${MAG_PATH}${clean === '/' ? '' : clean}`;
 }
 
+/**
+ * The feed alternate, for `Metadata.alternates.types`.
+ *
+ * It has to be repeated on every page that sets `alternates` at all, because
+ * Next REPLACES the whole `alternates` object from a page rather than merging
+ * its sub-fields — so a page declaring only `canonical` silently drops the
+ * layout's feed link. Exported from here so there is one string to change.
+ */
+export function feedAlternate(): Record<string, Array<{ url: string; title: string }>> {
+  /* A fresh object each call — Next's Metadata type wants a mutable array, and
+     a shared literal would be one object handed to every page. */
+  return {
+    'application/rss+xml': [{ url: `${MAG_URL}/feed`, title: `${MAG_NAME} — RSS` }],
+  };
+}
+
 /** Absolute URL for a Mag path. Canonicals must never point at the CMS host. */
 export function magUrl(path = ''): string {
   const clean = path.startsWith('/') ? path : `/${path}`;

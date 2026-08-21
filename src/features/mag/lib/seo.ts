@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { MagSeo } from '../types/mag-seo.types';
-import { MAG_NAME, magUrl } from './site';
+import { feedAlternate, MAG_NAME, magUrl } from './site';
 
 /**
  * Maps Rank Math's SEO payload onto Next.js Metadata.
@@ -87,7 +87,7 @@ export function toMetadata({
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: { canonical, types: feedAlternate() },
     robots: seo ? parseRobots(seo.robots) : undefined,
     openGraph: {
       type: publishedAt ? 'article' : 'website',

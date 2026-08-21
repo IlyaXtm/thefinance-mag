@@ -26,24 +26,62 @@ import { toPersianDigits } from '../lib/format';
  *     /archive?page=2, silently switching the reader back to everything.
  *
  * A route knows its own URL shape; this component does not. So it takes a
- * builder, and `pagePathHref` / `pageQueryHref` below cover the two shapes in
- * use — with the query builder carrying the existing parameters forward.
+ * builder. `pagePathHref` covers every listing; `pageParamHref` covers search,
+ * which is the one route with nothing to gain from a path segment.
  */
 
-/** `/base` · `/base/page/2` — for routes with a /page/[n] segment. */
-export function pagePathHref(base: string) {
+/**
+ * `/base?…` · `/base/page/2?…` — a path segment for the page, query string for
+ * the filters.
+ *
+ * WHY THE PAGE NUMBER MOVED BACK OUT OF THE QUERY STRING.
+ *
+ * Reading `searchParams` makes a Next route fully dynamic: the server cannot
+ * know which query strings will arrive, so it cannot prerender. Paginating by
+ * `?page=` therefore made the market and author archives uncacheable — every
+ * visit ran a GraphQL query against a `/graphql` that nginx limits to 10 r/s,
+ * for a page-one view that is identical for everybody.
+ *
+ * Splitting the two concerns fixes it: the page number is part of the
+ * resource's identity and belongs in the path, while a filter is a view over
+ * that resource and can stay in the query string. Page one of an archive is
+ * then a static ISR route, which is where nearly all of the traffic is.
+ *
+ * `params` are the filters already active (`type`, `q`), carried into every
+ * page link so paginating never silently drops the filter.
+ */
+export function pagePathHref(base: string, params: Record<string, string | undefined> = {}) {
   const root = base === '/' ? '' : base;
-  return (page: number) => (page === 1 ? root || '/' : `${root}/page/${page}`);
+
+  return (page: number) => {
+    const search = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value) search.set(key, value);
+    }
+
+    /* Page one lives at the base URL, never at `/page/1` — two URLs for one
+       page is a duplicate-content problem. */
+    const path = page === 1 ? root || '/' : `${root}/page/${page}`;
+    const query = search.toString();
+
+    return query ? `${path}?${query}` : path;
+  };
 }
 
 /**
- * `/base?…` · `/base?…&page=2` — for routes that paginate by query string.
+ * `/base?…&page=2` — the page number stays in the query string.
  *
- * `params` are the filters already active on the page (`type`, `q`). They are
- * carried into every page link, which is the part the old implementation
- * dropped.
+ * ONLY search uses this, and deliberately. The reason the page number moved
+ * into the path everywhere else is cacheability, and search has none to gain:
+ * it reads `q` from the query string, so it is dynamic whatever the page
+ * number does. It is also `noindex, follow`, so the duplicate-URL concern that
+ * makes `/page/1` a 404 elsewhere does not apply.
+ *
+ * Adding `/search/page/[n]` would be a route that exists only to look
+ * consistent.
  */
-export function pageQueryHref(base: string, params: Record<string, string | undefined> = {}) {
+export function pageParamHref(base: string, params: Record<string, string | undefined> = {}) {
   return (page: number) => {
     const search = new URLSearchParams();
 
@@ -96,7 +134,7 @@ export function Pagination({
 }: {
   page: number;
   totalPages: number;
-  /** Built by the route — see pagePathHref / pageQueryHref above. */
+  /** Built by the route — see pagePathHref / pageParamHref above. */
   hrefFor: (page: number) => string;
 }) {
   const currentPage = page;

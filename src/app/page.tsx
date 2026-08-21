@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
+import type { ContentTypeSlug } from '@/features/mag/types/mag.types';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { magPath, MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
@@ -40,14 +41,53 @@ export const metadata: Metadata = toMetadata({
   fallbackDescription: MAG_DESCRIPTION,
 });
 
+/**
+ * The lead slot never carries news.
+ *
+ * An RSS automation files roughly two «اخبار» items a day. Leading with the
+ * newest article therefore meant the hero was almost always a three-minute
+ * translated headline, and a publication whose identity is analysis and
+ * education would never show either in the largest editorial statement on its
+ * front page. Because the automation runs daily, that degrades on its own
+ * rather than correcting.
+ *
+ * Accepted cost: with infrequent human publishing the lead can go stale for
+ * weeks. A good article from last week beats an automated headline from this
+ * morning.
+ */
+const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['analysis', 'education', 'report'];
+
+/**
+ * How far back to look for a lead.
+ *
+ * The window has to outrun the automation. At roughly two news items a day, 20
+ * covers about ten days of uninterrupted publishing before a genuine article
+ * could fall out of range — and the same request supplies the latest list, so
+ * widening it costs no extra round trip. The API has no "not this type"
+ * filter, and inventing one against a field WordPress doesn't expose would be
+ * worse than filtering a window we already fetched.
+ */
+const LEAD_WINDOW = 20;
+
 export default async function MagIndexPage() {
-  const [latest, education, markets] = await Promise.all([
-    getArticles({ page: 1, perPage: 7 }),
+  const [pool, education, markets] = await Promise.all([
+    getArticles({ page: 1, perPage: LEAD_WINDOW }),
     getArticles({ page: 1, perPage: 6, contentType: 'education' }),
     getMarkets(),
   ]);
 
-  const [featured, ...rest] = latest.items;
+  const featured = pool.items.find((a) => LEAD_TYPES.includes(a.contentType.slug));
+
+  /*
+    The latest list keeps news — it is only barred from the hero — and drops
+    whatever the hero took so nothing appears twice on one screen.
+
+    If the window holds nothing but news there is no hero at all, and the page
+    opens on the latest list. That is the honest degradation: falling back to a
+    news item would defeat the rule this exists to enforce.
+  */
+  const latestItems = pool.items.filter((a) => a.slug !== featured?.slug);
+  const rest = latestItems.slice(0, 6);
 
   /*
     De-duplication.
@@ -57,12 +97,12 @@ export default async function MagIndexPage() {
     screen, which is what makes a small archive look both sparse AND
     repetitive — the single most avoidable error at this size.
   */
-  const shown = new Set(latest.items.map((a) => a.slug));
+  const shown = new Set([featured?.slug, ...rest.map((a) => a.slug)].filter(Boolean));
   const learning = education.items.filter((a) => !shown.has(a.slug)).slice(0, 5);
 
   return (
     <main>
-      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(latest.items)]} />
+      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 7))]} />
 
       {/*
         Masthead. Deliberately quiet: no hero image, no gradient, no

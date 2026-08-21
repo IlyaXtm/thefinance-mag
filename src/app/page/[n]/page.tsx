@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getArticles } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
-import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
+import { feedAlternate, magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
   ArticleGrid,
@@ -34,7 +34,7 @@ export async function generateMetadata({
 
   return {
     title: `${MAG_NAME} — صفحه ${toPersianDigits(page)}`,
-    alternates: { canonical: magUrl(`/page/${page}`) },
+    alternates: { canonical: magUrl(`/page/${page}`), types: feedAlternate() },
   };
 }
 

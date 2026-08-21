@@ -1,21 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArticles, getAuthor } from '@/features/mag/api/v1/mag.service';
+import { getAuthor, getAuthors } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
-import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
-import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { toMetadata } from '@/features/mag/lib/seo';
-import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
-import {
-  ArticleGrid,
-  ArticleGridEmpty,
-  AuthorBox,
-  Breadcrumbs,
-  Pagination,
-  pageQueryHref,
-  Section,
-} from '@/features/mag/components';
+import { MAG_NAME } from '@/features/mag/lib/site';
+import { AuthorArchiveView } from './_components/AuthorArchiveView';
 
 /**
  * /mag/author/<slug>
@@ -25,6 +14,26 @@ import {
  */
 
 export const revalidate = 300;
+
+/**
+ * Prerender page one for every author.
+ *
+ * Same reason as the article route: a dynamic segment with no
+ * `generateStaticParams` is treated as fully dynamic no matter what
+ * `revalidate` says, so without this the author archive stays uncacheable even
+ * after the page number moved out of the query string.
+ *
+ * Six users, so the set is bounded and cheap. Degrades to an empty list rather
+ * than failing a build that cannot reach WordPress.
+ */
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  try {
+    const authors = await getAuthors();
+    return authors.map((author) => ({ slug: author.slug }));
+  } catch {
+    return [];
+  }
+}
 
 async function fetchAuthor(slug: string) {
   try {
@@ -54,77 +63,18 @@ export async function generateMetadata({
   });
 }
 
-export default async function AuthorPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
-}) {
+/**
+ * Page ONE of the author archive.
+ *
+ * No `searchParams`: reading them makes the route fully dynamic, which is what
+ * made this archive uncacheable. Pages two and up live at
+ * `/author/<slug>/page/<n>`.
+ */
+export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { page } = await searchParams;
   const author = await fetchAuthor(slug);
 
   if (!author) notFound();
 
-  /* Same fix as the market archive: the page was pinned to 1 while pagination
-     still rendered, so a prolific author's older articles had no route. */
-  const currentPage = Math.max(1, Number(page) || 1);
-
-  const articles = await getArticles({ page: currentPage, perPage: 9, authorSlug: author.slug });
-
-  /* Past the last page is a URL that does not exist — and without this the
-     empty state below would claim nothing has been published, which is false
-     whenever the reader simply asked for a page beyond the end. */
-  if (isPageBeyondEnd(articles.page, articles.items.length)) notFound();
-
-  const crumbs = [
-    { name: MAG_NAME, href: '/' },
-    { name: 'نویسندگان', href: '/authors' },
-    { name: author.name, href: `/author/${author.slug}` },
-  ];
-
-  return (
-    <main>
-      <JsonLdScript
-        data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
-      />
-
-      <Section className="!pb-0">
-        <Breadcrumbs items={crumbs} />
-
-        <div className="mt-5 max-w-prose">
-          {/*
-            The page-scale variant of the same component used after articles.
-            `isCurrentPage` makes the name the page's h1 — without it this page
-            had no h1 at all and started at the visually-hidden h2 below.
-          */}
-          <AuthorBox author={author} size="page" isCurrentPage />
-        </div>
-
-        {author.articleCount !== null && (
-          <p className="mt-3 text-[13px] text-text-muted">
-            {toPersianDigits(author.articleCount)} مطلب
-          </p>
-        )}
-      </Section>
-
-      <Section>
-        <h2 className="sr-only">مطالب {author.name}</h2>
-
-        {articles.items.length > 0 ? (
-          <>
-            <ArticleGrid articles={articles.items} />
-            <Pagination
-              page={articles.page}
-              totalPages={articles.totalPages}
-              hrefFor={pageQueryHref(`/author/${author.slug}`)}
-            />
-          </>
-        ) : (
-          <ArticleGridEmpty message="این نویسنده هنوز مطلبی منتشر نکرده." />
-        )}
-      </Section>
-    </main>
-  );
+  return <AuthorArchiveView author={author} page={1} />;
 }

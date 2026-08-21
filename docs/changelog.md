@@ -8,6 +8,138 @@ why it was made.
 
 ---
 
+## 2026-08-21 — Lead slot, feed, and cacheable archives
+
+Four items from `audit-seo-security-performance.md`. The fourth — the Next 16
+upgrade — was deliberately not done; see the end of this entry.
+
+**The lead slot no longer carries news.**
+
+An RSS automation files roughly two «اخبار» items a day. The index led with the
+newest article, so the hero was almost always a three-minute translated
+headline — meaning a publication whose identity is analysis and education would
+never show either in the largest editorial statement on its front page. Because
+the automation runs daily, that degrades on its own rather than correcting.
+
+The featured article is now chosen from `analysis`, `education` and `report`.
+News keeps its place in the latest list and the archive; it just never takes
+the hero.
+
+The selection window is the newest 20 rather than the newest 7, because the
+window has to outrun the automation: at two news items a day, 20 covers about
+ten days of uninterrupted filing before a genuine article could fall out of
+range. The same request feeds the latest list, so widening it costs no extra
+round trip. The API has no "not this type" filter, and inventing one against a
+field WordPress doesn't expose would be worse than filtering a window already
+fetched.
+
+Accepted cost, stated so nobody treats it as a bug: with infrequent human
+publishing the lead can go stale for weeks. A good article from last week beats
+an automated headline from this morning.
+
+If the window somehow holds nothing but news there is no hero at all and the
+page opens on the latest list — verified by building with an empty type list.
+Falling back to a news item would defeat the rule this exists to enforce.
+
+**`/mag/feed` exists again.**
+
+WordPress generates `thefinance.ir/mag/feed` today; readers, aggregators and
+Telegram bots consume it. After cutover the Next app had no such route, so it
+404'd — and it breaks **silently**: a subscriber sees no error, just no new
+articles, for months, by which point they are gone. A 404 where content used to
+be is a regression whether or not anyone is currently subscribed.
+
+RSS 2.0 from the same `getArticles` everything else uses, newest 20, absolute
+`thefinance.ir/mag/…` URLs by construction, cached like the index rather than
+rebuilt per request.
+
+Item descriptions are built from the article's own H2 headings, for the same
+reason «در این مقاله» is: the content model has no excerpt, deliberately, since
+the live site's excerpts are auto-truncated mid-sentence. Headings are derived
+from real content, always accurate, and descriptive rather than promotional.
+
+Autodiscovery took a second pass. Declaring it once in the root layout did not
+work: Next **replaces** a page's `alternates` object wholesale rather than
+merging its sub-fields, so every page that set `canonical` silently dropped the
+layout's feed link. It now comes from `feedAlternate()` in `lib/site.ts`,
+applied by `toMetadata` and by the two routes that build metadata directly.
+
+We could not check whether anyone currently subscribes — the old frontend
+server is unreachable from the build environment, so the nginx access-log
+counts in the brief still need running by someone with shell on that box.
+
+**Pagination moved back into the path, so archives can be cached.**
+
+This corrects an earlier decision of ours rather than defending it. The archive
+was built with `?page=` because the content-type filter needed a query string
+anyway. What that missed: reading `searchParams` makes a Next route fully
+dynamic — the server cannot know which query strings will arrive, so it cannot
+prerender. Market and author archives were consequently uncacheable, running a
+GraphQL query against a `/graphql` that nginx limits to 10 r/s for a page-one
+view identical for everybody.
+
+The two concerns are now split: the page number is part of the resource's
+identity and lives in the path; a filter is a view over that resource and stays
+in the query string. Page one keeps the base URL — `/archive/page/1` and its
+siblings 404, because two URLs for one page is a duplicate-content problem.
+
+Result in the build output:
+
+| route | before | after |
+|---|---|---|
+| `/market/[slug]` | `ƒ` dynamic | **`●` SSG**, all six prerendered |
+| `/author/[slug]` | `ƒ` dynamic | **`●` SSG** |
+| `/archive` | `ƒ` dynamic | `ƒ` — see below |
+
+`/archive` stayed dynamic and the reason is worth recording, because it will
+come up again: **one route cannot be both static and `searchParams`-reading.**
+Awaiting `searchParams` at all opts a route out of prerendering, so `/archive`
+cannot be static while also serving `/archive?type=education`. Making it static
+requires the type filter to leave the query string too — a product decision
+about URL shape, not a technical one. Moving the page number out was still
+worth doing on its own: it is what made market and author static.
+
+Both archives also needed `generateStaticParams` on top of the path change. A
+dynamic segment without it is treated as fully dynamic no matter what
+`revalidate` says — the same defect the article route had.
+
+Two things this change nearly broke, caught before they shipped:
+
+- Search paginates by query string on purpose and has no `/search/page/[n]`
+  route. Switching the shared href builder pointed its pagination at a 404.
+  Search now uses `pageParamHref`, which keeps `?page=` — it reads `q` so it is
+  dynamic regardless, and it is `noindex`, so neither reason for the path shape
+  applies to it. A `/search/page/[n]` would be a route that exists only to look
+  consistent.
+- Pagination was untestable locally. Seven hand-written fixtures against page
+  sizes of nine and fifteen meant there was never a page two in development —
+  which is exactly how the previous round of pagination bugs survived. Added
+  generated filler so the boundary can actually be crossed, clearly marked and
+  dated older than every designed fixture so it never displaces a real one.
+
+**Next 16: deliberately NOT upgraded.**
+
+Three high-severity advisories sit in Next's own dependency tree and the only
+fix is a major bump. The exposure assessment stands: postcss is effectively
+nil, since only our own CSS is ever compiled; sharp is genuinely reachable
+through `next/image` at request time, narrowed to an authenticated editor
+uploading a malicious image because the optimizer only accepts our own hosts
+(verified — every SSRF shape tried returns 400).
+
+Not now, because the upgrade brings Turbopack as default, async `params` and
+changed `next/image` defaults, and there is currently nowhere to find out what
+breaks: staging does not exist yet. When it does, as its own change with its
+own test pass, then re-run the full audit sweep against it.
+
+Carried context for whoever does it: the `middleware.ts` → `proxy.ts` rename
+followed CVE-2025-29927, where a single header bypassed every middleware
+authorisation check, and CVE-2025-66478, the RCE that prompted our own bump
+from 15.1.0. That layer is for routing at the network boundary — not auth, not
+data access. If redirects are ever added they go in `proxy.ts` and contain
+nothing else.
+
+---
+
 ## 2026-08-20 — Editorial landing and archive
 
 **Rebuilt the index around one image instead of nine.**

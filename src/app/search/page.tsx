@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { searchArticles } from '@/features/mag/api/v1/mag.service';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
-import { magPath, magUrl } from '@/features/mag/lib/site';
+import { feedAlternate, magPath, magUrl } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
   ArticleGrid,
   MarketFilterBar,
   PageHeader,
   Pagination,
-  pageQueryHref,
+  pageParamHref,
   Section,
 } from '@/features/mag/components';
 import Link from 'next/link';
@@ -30,7 +30,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'نتایج جستجو',
   robots: { index: false, follow: true },
-  alternates: { canonical: magUrl('/search') },
+  alternates: { canonical: magUrl('/search'), types: feedAlternate() },
 };
 
 export default async function SearchPage({
@@ -97,7 +97,7 @@ export default async function SearchPage({
             <Pagination
               page={results.page}
               totalPages={results.totalPages}
-              hrefFor={pageQueryHref('/search', { q: query })}
+              hrefFor={pageParamHref('/search', { q: query })}
             />
           </>
         ) : (

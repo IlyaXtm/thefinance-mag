@@ -275,6 +275,45 @@ const SUMMARIES: ArticleSummary[] = [
   },
 ];
 
+/**
+ * Filler, so pagination is reachable at all.
+ *
+ * The hand-written fixtures above number seven, and every listing shows nine
+ * or fifteen per page — so before this existed there was never a page two in
+ * development. Pagination now spans three route families with their own 404
+ * edge cases (`/page/1`, past-the-end), and none of it could be seen locally.
+ * That is exactly how the previous round of pagination bugs survived: links
+ * pointing at routes that did not exist, and nobody could tell.
+ *
+ * Generated rather than hand-written because the content is not the point —
+ * crossing the page boundary is. They carry a distinct title prefix so they
+ * are never mistaken for designed fixtures.
+ */
+const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
+  const n = i + 1;
+  return {
+    id: `f${n}`,
+    slug: `filler-article-${n}`,
+    title: `نمونه صفحه‌بندی ${toPersianDigitsLocal(n)} — مطلبی برای پر کردن فهرست`,
+    featuredImage: img('filler', 'تصویر نمونه'),
+    market: n % 2 === 0 ? MARKETS.crypto : null,
+    contentType: n % 3 === 0 ? TYPES.analysis : TYPES.education,
+    readingTime: 4 + (n % 7),
+    /* Older than every designed fixture, so they sort to the back and never
+       displace a real one from the hero or the top of a list. */
+    publishedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
+    modifiedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
+    author: n % 2 === 0 ? AUTHOR : AUTHOR_NO_AVATAR,
+    outline: ['بخش نخست', 'بخش دوم'],
+  };
+});
+
+/** Local digit helper — the shared one lives in lib/format, which the mock
+    deliberately does not import so the fixture stays self-contained. */
+function toPersianDigitsLocal(value: number): string {
+  return String(value).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+}
+
 /** The full sample article, with a revision date that differs from publish. */
 const FULL_ARTICLE: Article = {
   /* content is passed through prepareContent below, after the object literal,
@@ -521,12 +560,16 @@ function paginate<T>(items: T[], page: number, perPage: number): Paginated<T> {
 /* API surface                                                         */
 /* ------------------------------------------------------------------ */
 
+/* Designed fixtures first, filler behind them — newest to oldest, the order a
+   real listing arrives in. */
+const ALL_SUMMARIES: ArticleSummary[] = [...SUMMARIES, ...FILLER];
+
 export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
   const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
 
-  const filtered = SUMMARIES.filter((a) => {
+  const filtered = ALL_SUMMARIES.filter((a) => {
     if (market && a.market?.slug !== market) return false;
     if (contentType && a.contentType.slug !== contentType) return false;
     if (authorSlug && a.author.slug !== authorSlug) return false;
@@ -543,7 +586,7 @@ export async function getArticle(slug: string): Promise<Article> {
   const stress = STRESS.find((a) => a.slug === slug);
   if (stress) return simulate(stress);
 
-  const summary = SUMMARIES.find((a) => a.slug === slug);
+  const summary = ALL_SUMMARIES.find((a) => a.slug === slug);
   if (!summary) throw new MagNotFoundError(slug);
 
   return simulate({
