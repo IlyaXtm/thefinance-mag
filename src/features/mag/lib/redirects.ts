@@ -64,20 +64,12 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
   },
   { from: 'what-is-the-mfi-indicator', to: 'mfi-indicator', kind: 'permanent' },
   {
-    from: 'what-is-the-stochastic-indicator',
-    to: '100-stochastic-indicator',
-    kind: 'permanent',
-    note: 'Two hops in WordPress, flattened.',
-  },
-  {
     from: 'complete-tutorial-on-the-williams-r-indicator',
     to: 'آموزش-کامل-اندیکاتور-williams-r',
     kind: 'permanent',
   },
   { from: 'what-is-the-cci-indicator', to: 'اندیکاتور-cci-چیست؟', kind: 'permanent' },
   { from: 'what-is-the-atr-indicator', to: 'اندیکاتور-atr-چیست؟', kind: 'permanent' },
-  { from: 'what-is-the-ichimoku-indicator', to: 'ichimoku', kind: 'permanent' },
-  { from: 'what-is-the-obv-indicator', to: 'onbalancevolum_obv', kind: 'permanent' },
   { from: 'what-is-a-moving-average-indicator', to: 'moving-average-indicator', kind: 'permanent' },
 
   /* ---- Content gone ---- */

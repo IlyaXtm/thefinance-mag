@@ -92,7 +92,6 @@ const SEO_FIELDS = `
     description
     canonicalUrl
     robots
-    breadcrumbs { text url isHidden }
     openGraph { title description url type locale image { url } twitterMeta { card } }
   }
 `;
@@ -218,7 +217,6 @@ function mapSeo(raw: unknown): MagSeo {
     description?: string | null;
     canonicalUrl?: string | null;
     robots?: string[] | null;
-    breadcrumbs?: Array<{ text?: string | null; url?: string | null; isHidden?: boolean | null }> | null;
     openGraph?: {
       title?: string | null;
       description?: string | null;
@@ -235,19 +233,7 @@ function mapSeo(raw: unknown): MagSeo {
     description: seo.description ?? null,
     canonicalUrl: toPublicUrl(seo.canonicalUrl ?? null),
     robots: seo.robots ?? [],
-    /*
-      Rank Math's breadcrumbs are mapped but the UI builds its own trail from
-      the article's market and title. Keeping both in sync matters: structured
-      breadcrumbs that disagree with the visible ones is a mismatch Google
-      flags, so whichever the page renders must be the one it marks up.
-    */
-    breadcrumbs: (seo.breadcrumbs ?? [])
-      .filter((crumb) => !crumb.isHidden)
-      .map((crumb) => ({
-        text: crumb.text ?? '',
-        url: toPublicUrl(crumb.url ?? null) ?? '',
-        isHidden: false,
-      })),
+    breadcrumbs: [],
     /*
       Rank Math's own JSON-LD is fetched but NOT emitted. The schema layer
       builds its own — it knows which articles are news (NewsArticle) versus
