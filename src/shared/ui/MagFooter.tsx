@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import logo from '@/shared/assets/logo.png';
 import type { Market } from '@/features/mag/types/mag.types';
 import {
   FOOTER_MAG_LINKS,
@@ -37,7 +38,7 @@ export function MagFooter({ markets = [] }: { markets?: Market[] }) {
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <a href={SITE_ORIGIN} className="flex items-center gap-2.5">
-              <Image src="/logo.png" alt="" width={32} height={32} className="h-8 w-8" aria-hidden="true" />
+              <Image src={logo} alt="" width={32} height={32} className="h-8 w-8" aria-hidden="true" />
               <span className="text-[17px] font-bold text-text-primary">فایننس</span>
             </a>
             <p className="mt-3 max-w-[34ch] text-[14px] leading-[1.9] text-text-secondary">

@@ -1,20 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArticles, getMarket, getMarkets } from '@/features/mag/api/v1/mag.service';
+import { getMarket } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError, MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import type { MarketSlug } from '@/features/mag/types/mag.types';
-import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
-import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
-import {
-  ArticleGrid,
-  ArticleGridEmpty,
-  Breadcrumbs,
-  MarketFilterBar,
-  Pagination,
-  Section,
-  SectionInner,
-} from '@/features/mag/components';
+import { toMetadata } from '@/features/mag/lib/seo';
+import { MAG_NAME } from '@/features/mag/lib/site';
+import { MarketArchiveView } from './_components/MarketArchiveView';
 
 /**
  * /mag/market/<slug> — market archive.
@@ -24,6 +15,17 @@ import {
  */
 
 export const revalidate = 300;
+
+/**
+ * Prerender page one for every market.
+ *
+ * The market list is a fixed six terms registered by the mu-plugin, so this is
+ * a bounded, cheap set — and it is the page-one view that carries essentially
+ * all of the traffic to these routes.
+ */
+export function generateStaticParams(): Array<{ slug: string }> {
+  return MARKET_SLUGS.map((slug) => ({ slug }));
+}
 
 function isMarketSlug(slug: string): slug is MarketSlug {
   return (MARKET_SLUGS as readonly string[]).includes(slug);
@@ -52,13 +54,22 @@ export async function generateMetadata({
 
   if (!market) return { title: 'بازار پیدا نشد' };
 
-  return {
-    title: market.name,
-    description: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
-    alternates: { canonical: magUrl(`/market/${market.slug}`) },
-  };
+  return toMetadata({
+    seo: null,
+    path: `/market/${market.slug}`,
+    fallbackTitle: market.name,
+    fallbackDescription: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
+    ogTitle: `${market.name} | ${MAG_NAME}`,
+  });
 }
 
+/**
+ * Page ONE of the market archive.
+ *
+ * No `searchParams` here on purpose: reading them makes the route fully
+ * dynamic, which is what made this archive uncacheable. Pages two and up live
+ * at `/market/<slug>/page/<n>`.
+ */
 export default async function MarketArchivePage({
   params,
 }: {
@@ -69,60 +80,5 @@ export default async function MarketArchivePage({
 
   if (!market) notFound();
 
-  const [articles, markets] = await Promise.all([
-    getArticles({ page: 1, perPage: 9, market: market.slug }),
-    getMarkets(),
-  ]);
-
-  const crumbs = [
-    { name: MAG_NAME, href: '/' },
-    { name: market.name, href: `/market/${market.slug}` },
-  ];
-
-  return (
-    <main>
-      <JsonLdScript
-        data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
-      />
-
-      <Section className="!pb-0">
-        <Breadcrumbs items={crumbs} />
-
-        <h1 className="mt-4 text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
-          {market.name}
-        </h1>
-
-        {/*
-          The description is a taxonomy field that may be empty. When absent the
-          heading and count still sit correctly — no placeholder, no gap.
-        */}
-        {market.description && (
-          <p className="mt-2 max-w-prose text-text-secondary">{market.description}</p>
-        )}
-
-        {market.count !== null && (
-          <p className="mt-2 text-[13px] text-text-muted">
-            {toPersianDigits(market.count)} مطلب
-          </p>
-        )}
-      </Section>
-
-      <SectionInner className="pt-8">
-        <MarketFilterBar markets={markets} activeSlug={market.slug} />
-      </SectionInner>
-
-      <Section>
-        <h2 className="sr-only">مطالب {market.name}</h2>
-
-        {articles.items.length > 0 ? (
-          <>
-            <ArticleGrid articles={articles.items} />
-            <Pagination page={articles.page} totalPages={articles.totalPages} basePath={`/market/${market.slug}`} />
-          </>
-        ) : (
-          <ArticleGridEmpty message={`هنوز مطلبی در ${market.name} منتشر نشده.`} />
-        )}
-      </Section>
-    </main>
-  );
+  return <MarketArchiveView market={market} page={1} />;
 }

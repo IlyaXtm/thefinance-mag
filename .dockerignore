@@ -1,0 +1,22 @@
+# Everything the build does not need. Keeping .next out matters most: copying a
+# host build into the image would ship a build made with the wrong env.
+node_modules
+.next
+out
+build
+dist
+.git
+.gitignore
+*.log
+.env
+.env.local
+.env*.local
+docs
+infra
+wordpress
+README.md
+CLAUDE.md
+.claude
+.vscode
+.idea
+*.tsbuildinfo

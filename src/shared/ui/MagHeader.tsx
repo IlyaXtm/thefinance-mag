@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import logo from '@/shared/assets/logo.png';
 import { HEADER_LINKS } from '@/features/mag/lib/nav';
 import { SITE_ORIGIN } from '@/features/mag/lib/site';
 
@@ -36,7 +37,7 @@ export function MagHeader() {
           aria-label="فایننس — بازگشت به سایت اصلی"
         >
           <Image
-            src="/logo.png"
+            src={logo}
             alt=""
             width={32}
             height={32}

@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { searchArticles } from '@/features/mag/api/v1/mag.service';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
-import { magUrl } from '@/features/mag/lib/site';
+import { feedAlternate, magPath, magUrl } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
   ArticleGrid,
   MarketFilterBar,
   PageHeader,
   Pagination,
+  pageParamHref,
   Section,
 } from '@/features/mag/components';
 import Link from 'next/link';
@@ -29,7 +30,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'نتایج جستجو',
   robots: { index: false, follow: true },
-  alternates: { canonical: magUrl('/search') },
+  alternates: { canonical: magUrl('/search'), types: feedAlternate() },
 };
 
 export default async function SearchPage({
@@ -51,7 +52,7 @@ export default async function SearchPage({
       <Section className="!pb-0">
         <PageHeader title="نتایج جستجو" showSearch={false} />
 
-        <form action="/search" method="get" className="mt-6 max-w-prose">
+        <form action={magPath('/search')} method="get" className="mt-6 max-w-prose">
           <label htmlFor="search-input" className="sr-only">
             جستجو در مجله
           </label>
@@ -91,7 +92,13 @@ export default async function SearchPage({
             </p>
 
             <ArticleGrid articles={results.items} />
-            <Pagination page={results.page} totalPages={results.totalPages} basePath="/search" />
+            {/* Query string, not a path segment: /search/page/2 is not a
+                route and would drop `q` even if it were. */}
+            <Pagination
+              page={results.page}
+              totalPages={results.totalPages}
+              hrefFor={pageParamHref('/search', { q: query })}
+            />
           </>
         ) : (
           <div className="space-y-6">

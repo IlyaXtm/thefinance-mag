@@ -24,7 +24,7 @@
 import * as real from './mag.api';
 import * as mock from './mag.mock';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true';
 
 /**
  * Structural check: both modules must satisfy the same contract.
@@ -33,6 +33,7 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
 type MagSource = {
   getArticles: typeof mock.getArticles;
   getArticle: typeof mock.getArticle;
+  getPreviewArticle: typeof mock.getPreviewArticle;
   getMarkets: typeof mock.getMarkets;
   getMarket: typeof mock.getMarket;
   getAuthor: typeof mock.getAuthor;
@@ -51,6 +52,13 @@ export const getArticles: MagSource['getArticles'] = (params) =>
 
 export const getArticle: MagSource['getArticle'] = (slug) =>
   source.getArticle(slug);
+
+/**
+ * Draft preview. Goes through the same switch as everything else, so preview
+ * is exercisable against the mock rather than only against a live CMS.
+ */
+export const getPreviewArticle: MagSource['getPreviewArticle'] = (id, secret) =>
+  source.getPreviewArticle(id, secret);
 
 export const getMarkets: MagSource['getMarkets'] = () => source.getMarkets();
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { MagSeo } from '../types/mag-seo.types';
-import { MAG_NAME, magUrl } from './site';
+import { feedAlternate, MAG_NAME, magUrl } from './site';
 
 /**
  * Maps Rank Math's SEO payload onto Next.js Metadata.
@@ -54,6 +54,7 @@ export function toMetadata({
   path,
   fallbackTitle,
   fallbackDescription,
+  ogTitle,
   imageUrl,
   publishedAt,
   modifiedAt,
@@ -64,6 +65,15 @@ export function toMetadata({
   path: string;
   fallbackTitle: string;
   fallbackDescription?: string;
+  /**
+   * Title for the share card only.
+   *
+   * `<title>` gets the layout's `%s | مجله فایننس` template appended; og:title
+   * does not, so a listing page whose title is «آرشیو» would share as the bare
+   * word with no publication attached. Pages that need the fuller form pass it
+   * here.
+   */
+  ogTitle?: string;
   imageUrl?: string | null;
   publishedAt?: string;
   modifiedAt?: string | null;
@@ -77,11 +87,11 @@ export function toMetadata({
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: { canonical, types: feedAlternate() },
     robots: seo ? parseRobots(seo.robots) : undefined,
     openGraph: {
       type: publishedAt ? 'article' : 'website',
-      title: seo?.openGraph?.title ?? title,
+      title: seo?.openGraph?.title ?? ogTitle ?? title,
       description: seo?.openGraph?.description ?? description,
       url: canonical,
       siteName: MAG_NAME,
@@ -97,7 +107,7 @@ export function toMetadata({
     },
     twitter: {
       card: ogImage ? 'summary_large_image' : 'summary',
-      title: seo?.openGraph?.title ?? title,
+      title: seo?.openGraph?.title ?? ogTitle ?? title,
       description: seo?.openGraph?.description ?? description,
       ...(ogImage ? { images: [ogImage] } : {}),
     },

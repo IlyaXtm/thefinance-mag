@@ -54,9 +54,30 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
+/**
+ * The client IP, taken from what our OWN proxy wrote — never from what the
+ * client sent.
+ *
+ * This used to read the FIRST entry of `X-Forwarded-For`. nginx builds that
+ * header with `$proxy_add_x_forwarded_for`, which APPENDS the real peer to
+ * whatever the client supplied, so the first entry is attacker-controlled:
+ * sending `X-Forwarded-For: 1.2.3.4` produced `1.2.3.4, <real ip>` and the
+ * rate limit keyed on `1.2.3.4`. Rotating that header defeated the limit
+ * entirely, one request at a time.
+ *
+ * `X-Real-IP` is set with `proxy_set_header X-Real-IP $remote_addr`, which
+ * REPLACES any client value, so it is trustworthy behind our nginx. The
+ * fallback takes the LAST `X-Forwarded-For` entry — the one the nearest
+ * trusted proxy appended — for the same reason.
+ */
 function clientIp(request: Request): string {
+  const realIp = request.headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp;
+
   const forwarded = request.headers.get('x-forwarded-for');
-  return forwarded?.split(',')[0]?.trim() || 'unknown';
+  const chain = forwarded?.split(',').map((part) => part.trim()).filter(Boolean) ?? [];
+
+  return chain[chain.length - 1] || 'unknown';
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;

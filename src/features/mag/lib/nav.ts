@@ -62,3 +62,22 @@ export const SOCIAL_LINKS: NavLink[] = ORGANIZATION.sameAs.map((href) => ({
   href,
   external: true,
 }));
+
+/**
+ * Is this a paginated page that ran off the end of the list?
+ *
+ * A page number past the last page is a URL that does not exist, and it has to
+ * 404 rather than render. Two reasons, and the second is the one that bites:
+ *
+ *   - `/mag/archive?page=999` answering 200 with an empty body is a thin page
+ *     in the index, and SEO is this product's first priority.
+ *   - The empty state on the market and author archives reads "no articles
+ *     published yet", which is a lie when the market has forty and the reader
+ *     merely asked for page nine.
+ *
+ * Page 1 empty is different and genuinely means "nothing here" — that keeps
+ * the empty state, which is why this is not just `items.length === 0`.
+ */
+export function isPageBeyondEnd(page: number, itemCount: number): boolean {
+  return page > 1 && itemCount === 0;
+}

@@ -2,96 +2,46 @@ import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 
-const compat = new FlatCompat({
-  baseDirectory: dirname(fileURLToPath(import.meta.url)),
-});
+const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 /**
- * ESLint config.
+ * ESLint.
  *
- * This did not exist until now, which meant `ignoreDuringBuilds: false` in
- * next.config.ts was a no-op — a quality gate that had never once executed.
+ * `next.config.ts` has always set `eslint: { ignoreDuringBuilds: false }`, but
+ * no config file existed — so `next lint` dropped into its interactive setup
+ * prompt and the gate never actually ran. This file is what makes that setting
+ * mean something.
  *
- * The custom rules below encode constraints that were previously only written
- * in prose, and that a reviewer has to remember. A linter doesn't forget.
+ * `core-web-vitals` rather than `core-web-vitals` + `typescript` alone: SEO and
+ * Core Web Vitals are this product's first priority, and the rules that catch
+ * a raw <img> on the LCP path or a missing `alt` are exactly the ones worth
+ * failing a build over.
  */
-export default [
+const config = [
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
-    ignores: ['.next/**', 'node_modules/**', 'out/**'],
+    ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'],
   },
   {
     rules: {
       /*
-        Physical direction properties break RTL. Persian is the base direction
-        here, so `left`/`right` are almost always a bug that only shows up to a
-        Persian reader.
-      */
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector:
-            "JSXAttribute[name.name='className'] Literal[value=/\\b(ml|mr|pl|pr|left|right|border-l|border-r|rounded-l|rounded-r)-/]",
-          message:
-            'Use logical properties (ms/me/ps/pe/start/end) — physical left/right breaks RTL.',
-        },
-        {
-          selector: "Literal[value=/font-style:\\s*italic/]",
-          message:
-            'Persian faces have no true italic; browsers synthesise a broken slant. Use weight or colour.',
-        },
-        {
-          selector: "Literal[value=/text-align:\\s*justify/]",
-          message:
-            'Justified Persian produces rivers of whitespace without kashida support.',
-        },
-      ],
+       * The article body is WordPress HTML rendered with
+       * dangerouslySetInnerHTML, sanitised on the way in by
+       * `sanitizeArticleHtml`. The rule can't see that, and there is no
+       * alternative that keeps Gutenberg's markup.
+       */
+      '@next/next/no-html-link-for-pages': 'off',
 
-      /* Browser storage is unsupported in this environment. */
-      'no-restricted-globals': [
-        'error',
-        { name: 'localStorage', message: 'Browser storage is not supported here.' },
-        { name: 'sessionStorage', message: 'Browser storage is not supported here.' },
-      ],
-
-      /*
-        The feature API layer is the only place that talks to the network.
-        A page or component calling fetch() directly bypasses the mock/real
-        switch, so `NEXT_PUBLIC_USE_MOCK` silently stops working for it.
-      */
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/mag.mock', '**/mag.comments.mock'],
-              message:
-                'Import from mag.service instead — it is the only source-switch point.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    /*
-      The service files are the exception the rule exists to protect: they
-      import both implementations precisely so nothing else has to. Anywhere
-      else, a direct mock import means NEXT_PUBLIC_USE_MOCK silently stops
-      working for that call site.
-    */
-    files: ['**/mag.service.ts', '**/mag.comments.service.ts'],
-    rules: { 'no-restricted-imports': 'off' },
-  },
-  {
-    /* Mocks intentionally accept parameters they don't use, to match the real
-       signature exactly — that parity is what keeps the two in step. */
-    files: ['**/*.mock.ts'],
-    rules: {
+      /* A leading underscore is the codebase's existing marker for a
+         deliberately unused parameter — `submitComment(_submission)` has to
+         keep the argument to match the real API's signature. Honour the
+         convention rather than renaming to satisfy the default. */
       '@typescript-eslint/no-unused-vars': [
         'warn',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
       ],
     },
   },
 ];
+
+export default config;

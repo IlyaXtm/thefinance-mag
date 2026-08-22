@@ -1,226 +1,145 @@
-# Plan to cutover
+# Cutover plan
 
-Ordered by dependency, not by preference. The sequence matters: two of these
-steps make the others recoverable, and doing them late is how migrations lose
-rankings.
+**This file did not exist.** Four separate briefs have referenced
+`docs/cutover-plan.md` — for the deploy step, the redirect map, and twice for
+the claim that no redirect map was needed. It is written here so the plan stops
+living in prompts.
 
-**Current state:** the app runs on real WordPress data, all routes work, three
-audit passes are closed. It has never run anywhere but a laptop.
-
----
-
-## Now — three things outside the repo
-
-None of these need code. One is costing you traffic today.
-
-**`robots.txt`** — in `thefinance-front`, `public/robots.txt`:
-
-```diff
-- Disallow: *.xml$              # blocks the sitemap declared in the same file
-- Disallow: *.thefinance.ir/    # robots.txt matches paths, not hosts — inert
-- Disallow: /map/wp-content/plugins/
-+ Disallow: /mag/wp-content/plugins/
-```
-
-The first line tells Google where your sitemap is and then forbids reading it.
-Unrelated to this project and worth fixing regardless.
-
-**SPF and DMARC** — on `thefinance.ir`:
-
-```
-TXT  @        v=spf1 ip4:185.248.32.4 -all
-TXT  _dmarc   v=DMARC1; p=none; rua=mailto:dmarc@thefinance.ir
-```
-
-Last test showed `dkim=pass` but `spf=none`. Newsletter confirmation mail goes
-to spam until this is published.
-
-**Search Console baseline** — and this one gates the cutover, so do it before
-anything else changes:
-
-- Performance → filter Page contains `/mag` → export three months. Save it dated.
-- Performance → **Search type: Image** → export separately. Skipping this means
-  an image-traffic drop after cutover can't be distinguished from noise.
-- Pages → record the indexed URL count under `/mag`.
-- Check whether `/mag/category/*` URLs are indexed. If they are, they need
-  redirects — the new app has no such route.
-
-**You cannot detect a regression without a before.** This is the step teams skip
-and then regret.
-
-✅ Done: comment moderation is on.
+Where a brief said this file contains something, that content is either below
+or linked from it. The one claim attributed to it that was **wrong** —
+"no redirect map is needed" — is corrected in step 2.
 
 ---
 
-## Step 1 — Deploy and staging · ~2 days
+## Status
 
-Everything downstream depends on this, including the Next 16 upgrade, which
-should not happen anywhere else first.
+| Step | State |
+|---|---|
+| 1. Deploy to staging | **Artifacts built and verified locally. Not deployed** — see below |
+| 2. Redirect map | Built, unverified against live URLs |
+| 3. Pre-cutover crawl diff | Blocked on step 1 |
+| 4. Next 16 upgrade | Blocked on step 1, deliberately |
+| 5. Cutover | Blocked on 1–4 |
 
-- Build the app into a container, run it on the frontend server at port 3100
-- Add an nginx location for a staging path so it's reachable without touching
-  `/mag`
-- **Staging must be `noindex`** — verify with `curl -I`, both directions:
-  staging noindexed, production not
-- The frontend nginx config isn't in any repo. Put it in one, or the cutover
-  depends on a file nobody can review
-
-**Exit:** the app is reachable at a staging URL, returns `noindex`, and renders
-real articles.
+Steps 3 and 4 both need a real staging URL: the crawl diff needs something to
+crawl, and the Next 16 upgrade must not land anywhere else first.
 
 ---
 
-## Step 2 — Next 16 upgrade · ~1 day
+## Step 1 — Deploy and staging
 
-On staging, as its own change with its own test pass. Not bundled with anything.
+Files, all in the repo and reviewable:
 
-```bash
-npx @next/codemod@canary middleware-to-proxy .
-npm install next@latest eslint-config-next@latest
-npm run lint && npx tsc --noEmit && npx next build
-```
+| File | Destination |
+|---|---|
+| `Dockerfile` | built on the server |
+| `infra/mag/compose.yaml` | `/root/mag/compose.yaml` |
+| `infra/mag/.env.example` | copy to `/root/mag/.env` |
+| `infra/nginx/thefinance.ir.conf` | `/etc/nginx/sites-available/` |
+| `infra/nginx/new.thefinance.ir.conf` | `/etc/nginx/sites-available/` |
 
-Closes three high-severity advisories. `sharp` is the one that matters —
-reachable through `next/image` at request time.
+Runbook with the exact commands: **`docs/infra/frontend-deploy.md`**.
 
-Watch: Turbopack becomes default, `params` go async, `next/image` defaults
-change. Re-run the full audit sweep afterwards.
+**Not deployed, and it cannot be from the build environment.** The frontend
+server (87.247.171.97) is unreachable — every request returns the sandbox's
+403, there is no SSH client, and a raw TCP check "succeeds" against any address
+including a bogus one, so it proves nothing. Everything below was verified
+against the real config files running locally.
 
-**Exit:** `npm audit` clean, all gates pass, sweep finds nothing new.
+### Staging is a host, not a path
 
----
+`basePath: '/mag'` is inlined at build time — every internal link, asset URL
+and the router compile with it. The same image served under `/mag-staging/`
+emits links to `/mag/...`, which on that server is WordPress: staging renders
+once, then navigates into production on the first click. A path prefix needs a
+second image with a different basePath, at which point staging is no longer
+testing the artifact that gets promoted.
 
-## Step 3 — Editor enablement · ~2 weeks
+`new.thefinance.ir` is already the staging host in `CLAUDE.md`.
 
-The largest remaining piece, and the one that decides whether the content team
-can work without a developer.
+### The cutover line
 
-- `theme.json` generated from the design tokens; freeform colour and font-size
-  controls off so editors stay on-brand
-- Three blocks only: Callout, Disclaimer, CTA. Chart embeds and product cards
-  wait until an editor asks
-- Block locking on branded structures; Disclaimer copy not editor-editable
-- Draft Mode preview wired through nginx
-- Publish webhook → `revalidatePath`, with the ISR TTL as fallback
-
-**Exit:** an editor previews a draft and publishes; the article appears within
-seconds rather than at the end of a revalidation window.
-
----
-
-## Step 4 — Content team · ~3 days
-
-`docs/content-team-guide.md` exists. Roles configured as Editor/Author with no
-admin capability. One training session.
-
-**Hard pass/fail: a content team member publishes a complete article —
-disclaimer and CTA included — with zero developer help.**
-
-If that fails, the answer is a bigger block library, not an architecture change.
-
----
-
-## Step 5 — Pre-cutover verification · ~2 days
-
-Crawl staging and diff it against a crawl of current production. Per URL:
-status, canonical, title, meta description, `h1`, robots, JSON-LD presence,
-word count, internal link count.
-
-The last two matter most: a large drop in either means content renders for a
-human but not for a crawler.
-
-Then confirm, on production:
-
-- `/mag` is not blocked in `robots.txt`
-- No `noindex` anywhere on the public frontend
-- `wp.thefinance.ir` still returns `X-Robots-Tag: noindex`
-- `sitemap.xml` contains zero `wp.` URLs
-- Every article URL from the baseline still resolves
-
-**No redirect map is needed** — the permalink structure is `/%postname%/` and
-doesn't change. The one exception is `/mag/category/*` if the baseline shows
-those indexed.
-
----
-
-## Step 6 — Cutover · ~1 hour, then 8–12 weeks monitoring
-
-The switch is one line on the frontend nginx:
+One line in `thefinance.ir.conf`:
 
 ```nginx
-location /mag {
-    proxy_pass http://127.0.0.1:3100;   # cutover
-    # proxy_pass http://127.0.0.1:9080; # rollback
-}
+set $mag_upstream 127.0.0.1:9080;   # WordPress — live
+set $mag_upstream 127.0.0.1:3100;   # Next.js  — after cutover
 ```
 
-Sequence: low-traffic window → switch → reload → within five minutes spot-check
-ten URLs for status, canonical, title, robots and rendered body → Search Console
-URL Inspection on two or three → submit the sitemap → watch the 404 log for an
-hour.
-
-**Roll back immediately, without debating, if:** any `noindex` appears on a
-public URL, canonicals point at `wp.`, more than a handful of URLs 404, or
-rendered HTML is missing article bodies. Diagnose on staging afterwards.
-
-**Never delete the old WordPress theme.** It's what makes rollback an nginx
-reload instead of a redeploy.
-
-Monitoring: 404 log and Coverage daily for 48 hours; then weekly against the
-baseline for 8–12 weeks. Expect fluctuation through weeks 3–8 and stabilisation
-around 4–12. A drop over 20% in indexed count is an incident.
-
----
-
-## What protects the SEO
-
-Four properties, and each is load-bearing:
-
-**Nothing changes that doesn't have to.** Article URLs, image URLs, and the
-permalink structure all stay identical. Only the rendering layer moves.
-
-**Rollback is a config reload.** Old WordPress stays running on port 9080. The
-window between "something is wrong" and "it's back" is seconds.
-
-**A baseline exists.** Regression becomes detectable rather than felt.
-
-**The silent failures have automated checks.** All four ways a headless
-migration loses rankings are invisible in a browser — the page renders
-perfectly while it happens:
+A variable rather than two commented `proxy_pass` directives, because that
+shape is a **two**-line edit and a half-finished one is either two active
+directives (nginx refuses to load) or none (every `/mag` request 500s).
 
 ```bash
-curl -sI https://wp.thefinance.ir/ | grep -qi noindex || echo 'ALERT: CMS indexable'
-curl -s https://thefinance.ir/mag/ | grep -q 'canonical[^>]*thefinance.ir' || echo 'ALERT: canonical'
-curl -s https://thefinance.ir/sitemap.xml | grep -q 'wp\.thefinance' && echo 'ALERT: CMS URLs in sitemap'
-curl -s https://thefinance.ir/robots.txt | grep -qi 'disallow:.*\/mag' && echo 'ALERT: /mag disallowed'
+nginx -t && systemctl reload nginx
+curl -sI https://thefinance.ir/mag/ | grep -i x-robots   # MUST be empty
 ```
 
-Run these as a cron with alerting. They cost nothing and catch the failures
-nobody notices.
+Rollback is the same line back to 9080 and another reload. Seconds, no
+redeploy — which is why the old WordPress theme is never deleted.
 
 ---
 
-## Deliberately deferred
+## Step 2 — Redirects ⚠️ corrects an earlier claim
 
-In `docs/backlog.md` with reasoning: `/mag/feed` (four requests in two weeks,
-none from a feed reader — no real subscribers), learning-path ordering, reader
-level, reports, MinIO, newsletter sending (blocked on SPF).
+**"No redirect map is needed" was wrong.** The permalink structure is
+`/%postname%/` and genuinely does not change — but that setting describes how
+WordPress builds a URL for a post it *has*. The slugs changed, and the URLs
+Google ranks are historical ones that resolve only because WordPress and Rank
+Math 301 them from inside WordPress.
+
+| | URLs | Clicks | Impressions |
+|---|---|---|---|
+| Indexed under `/mag` | 71 | 180 | 4,284 |
+| Slug exists today | 23 | 19 | 1,104 |
+| **Slug does not** | **48** | **161** | **3,154** |
+
+89% of `/mag` organic clicks. Implemented in
+`src/features/mag/lib/redirects.ts` (compiled floor) and
+`redirect-source.ts` (live from `magRedirects`, five-minute window, last known
+good on failure).
+
+Verify with `./scripts/verify-redirects.sh <origin>` before **and** after the
+switch, and diff the two.
 
 ---
 
-## One open decision
+## Step 5 — Rollback triggers
 
-**Should the content-type filter move from `?type=` to `/archive/type/<slug>`?**
+Roll back immediately, without debate, on any of:
 
-`/archive` is the last uncacheable route. A route can't be static and read
-`searchParams`, so as long as filtering lives in the query string, it stays
-dynamic.
+- a `noindex` on production
+- a wrong canonical, or the CMS host in one
+- a missing article body
+- **any legacy redirect 404ing, or taking more than one hop**
+- `/mag/health` reporting `source: "mock"`, or a non-empty
+  `redirectSource.missingKnown`
 
-My original argument was that four filter routes would be thin near-duplicates.
-Having seen the real distribution, that's weaker than I thought: `آموزش` has 27
-articles and `اخبار` has 3 — those are distinct pages, not duplicates.
+The last two are the ones that look fine from a browser. Everything renders.
 
-Moving it makes all four static. The cost is four URLs instead of one, and a
-small change to the filter bar.
+---
 
-Worth doing, but it's a URL-shape decision and therefore yours.
+## What is verified, and what is not
+
+Verified against the real config files, locally:
+
+- the standalone runtime layout the Dockerfile produces — all routes, plus the
+  hashed CSS and the IRANYekanX woff2, which is the check that catches the
+  `public/` and `.next/static` copies being missed
+- both nginx configs with `nginx -t` and then running, against a stand-in
+  WordPress on 9080 and the app on 3100
+- staging `noindex` present, production absent — in both directions, and again
+  after the cutover line was flipped
+- the cutover and rollback lines, each with a reload
+- the redirect map, preview (401 and 307), revalidation (401 and 200), and the
+  canonical pointing at `thefinance.ir` — all through nginx on the staging host
+
+Not verified, and needing the real server:
+
+- that the image builds — Docker Hub base images are unreachable here
+- **`source: "wpgraphql"` and real articles** — `wp.thefinance.ir` is blocked,
+  so everything above ran on mock data
+- preview end to end from wp-admin, and revalidation on a real publish
+- the redirect destinations, which came from a database export and have never
+  been resolved against the live site
+- TLS and certbot

@@ -9,14 +9,32 @@ contradicted the initial plan and changed it.
 
 ## The findings that changed the plan
 
-### Permalink structure is `/%postname%/` — no redirects needed
+### Permalink structure is `/%postname%/` — ⚠️ CORRECTED 2026-08-21
+
+> **The conclusion below was wrong and a redirect map IS required.** The
+> structure claim is accurate; what it missed is that the URLs Google ranks are
+> historical slugs, redirected by WordPress itself. See
+> `src/features/mag/lib/redirects.ts` and the 2026-08-21 changelog entry.
+>
+> 48 of the 71 indexed `/mag` URLs are slugs WordPress no longer has, and they
+> carry 161 of the 180 clicks — 89%. They resolve today only via
+> `wp_rank_math_redirections` and `_wp_old_slug`, both inside WordPress.
+>
+> The trailing slash is also part of the URL and also changes. See the backlog.
 
 Articles live at `thefinance.ir/mag/<slug>`. No date, no category in the path.
 
-This removes the largest risk in the migration. The entire 301 redirect-map
+~~This removes the largest risk in the migration. The entire 301 redirect-map
 phase is unnecessary: the URL structure doesn't change, only the rendering
-layer behind it. It also means adding the market taxonomy later cannot disturb
+layer behind it.~~ It also means adding the market taxonomy later cannot disturb
 article URLs, because the taxonomy never appears in the path.
+
+**Why the reasoning failed, since the shape recurs.** It checked the permalink
+*setting* and stopped. The setting describes how WordPress builds a URL for a
+post it has; it says nothing about URLs for posts whose slug has since changed.
+The check that would have caught it is the one now in
+`phase-0-verification.md`: take the ranking URLs from Search Console and ask
+whether each still resolves without a redirect.
 
 In Next.js this is `app/mag/[slug]/page.tsx` directly.
 

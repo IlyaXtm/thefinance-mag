@@ -22,6 +22,7 @@ New to the project, in this order:
 | File | What it is |
 |---|---|
 | `plan.md` | Current state and remaining phases. **The single source for what's next** |
+| `cutover-plan.md` | The cutover itself: steps, the one-line switch, rollback triggers, what is verified |
 | `decisions.md` | Architecture and product decisions with rationale |
 | `changelog.md` | What changed, when, and why |
 | `backlog.md` | Deferred items, with enough context to pick them up |
@@ -34,6 +35,9 @@ New to the project, in this order:
 | `handoff.md` | Checklist for picking the project up — verify, debug, measure |
 | `design-audit.md` | Auditing the built pages against the design decisions |
 | `phase-0-verification.md` | Executable checks against the live system |
+| `audit-2026-08-20.md` | The result of running the two above: what was measured, what was fixed, what is still open |
+| `audit-2026-08-20-pass2.md` | Second pass: adversarial content, interaction, theme switching and print |
+| `audit-seo-security-performance.md` | SEO, security and performance sweep before the next stage |
 
 ### Design
 
@@ -50,6 +54,7 @@ New to the project, in this order:
 | `infra/wp-vps.md` | CMS VPS provisioning, compose, nginx, hardening |
 | `infra/media.md` | The image-URL contract, and why MinIO is deferred |
 | `infra/seo-safety.md` | Cutover protocol: baseline, diff, reversible switch, monitoring |
+| `infra/frontend-deploy.md` | Frontend server: container, staging host, nginx, the cutover line |
 
 ---
 
@@ -59,7 +64,7 @@ Kept for history; do not act on them.
 
 | File | Superseded by | Why |
 |---|---|---|
-| `superseded/roadmap.md` | `plan.md` | Written before Phase 0. Assumed a redirect map was needed — permalinks turned out to be `/%postname%/`, so it isn't |
+| `superseded/roadmap.md` | `plan.md` | Written before Phase 0. Superseded on phasing — note its redirect-map requirement turned out to be RIGHT; the Phase 0 conclusion that dropped it was wrong (2026-08-21) |
 | `superseded/build-plan.md` | `plan.md` | Overlapping phase numbering with the roadmap; the two disagreed |
 | `superseded/decision-brief.md` | `decisions.md` | Folded into the decisions log |
 | `superseded/roadmap-review.md` | `decisions.md` | Review of an external roadmap; its conclusions are now decisions |

@@ -5,6 +5,80 @@ without re-deriving the reasoning.
 
 ---
 
+
+## B0 — Rewrite `introduction-to-persian-tradingview-inchart`
+
+**The single biggest organic entry point to the magazine**, and it has been
+404ing for some time: 77 clicks and 395 impressions in three months, roughly
+43% of all `/mag` clicks. This is bleeding traffic today, independently of the
+cutover.
+
+The keyword ranks and the demand is demonstrably there. Someone searching for a
+Persian TradingView alternative is exactly an InChart prospect, so rewriting it
+recovers traffic and feeds the product at once.
+
+Publish under the SAME slug — `introduction-to-persian-tradingview-inchart`.
+That is the URL with the history.
+
+**On publish, delete the matching entry from
+`src/features/mag/lib/redirects.ts`.** It is a 302 holding redirect to
+`آموزش-tradingview-2026`, deliberately temporary so Google keeps the source URL
+indexed and does not treat the two pages as equivalent. Leaving it after the
+article lands would consolidate the URL we just published into a different one.
+
+---
+
+## B0b — Decide the trailing-slash form before cutover
+
+Found while building the redirect map, and it is the same shape of oversight as
+the one that missed the map itself: the permalink *structure* was checked, the
+actual *URLs* were not.
+
+WordPress's `/%postname%/` serves `/mag/<slug>/` **with** a trailing slash. The
+Next app serves `/mag/<slug>` and 308s the slash form, and its canonicals and
+sitemap use the slash-free form. The trailing slash is part of the URL, so it
+changes at cutover — for **all 71 indexed URLs**, including the 23 whose slugs
+still exist and take no redirect at all today.
+
+The legacy map already targets the slash-free form directly, so those 48 are
+one hop either way. The question is the other 23, and the canonical form of
+every URL going forward.
+
+`decisions.md` says "Do not change URLs during the headless migration" and then
+"confirmed unnecessary anyway: the permalink structure is `/%postname%/`, so
+nothing changes." The trailing slash is the part that does change.
+
+Two options:
+
+- **`trailingSlash: true`** in `next.config.ts` — matches WordPress exactly, so
+  no indexed URL takes a redirect. Cost: every canonical, sitemap entry and
+  internal link gains a slash, and `magUrl()` has to build it.
+- **Accept one 308** on the slash form. Google follows it and updates, but it
+  is a redirect on every currently-ranking URL, added by us, during the one
+  release where we most want to change nothing.
+
+Not decided here because it changes URL shape product-wide.
+
+**First confirm the premise** — it is inferred from the permalink setting, not
+measured, because the build environment cannot reach the site:
+
+```bash
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku/
+```
+
+If the slash-free form already 301s to the slash form, the premise holds.
+
+---
+
+## B0c — Check whether `/mag/category/*` needs redirecting
+
+The Search Console export shows five such URLs with impressions and zero
+clicks. Probably not worth redirecting, but it should be a decision rather than
+an omission. `scripts/verify-redirects.sh` prints their current status.
+
+---
+
 ## B1 — Reader level («سطح»)
 
 **Status:** deferred 2026-08-20 · **Blocks:** nothing

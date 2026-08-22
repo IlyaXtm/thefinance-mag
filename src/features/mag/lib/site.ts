@@ -7,7 +7,19 @@
  * typed inline per page.
  */
 
-export const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir';
+/*
+ * Server-only name first, `NEXT_PUBLIC_` kept as a fallback so an existing
+ * deployment keeps working. Nothing that reads this ships to the browser —
+ * the header, footer and metadata builders are all server components — so the
+ * public prefix buys nothing and only invites the value into a client bundle
+ * later.
+ *
+ * Note this value is the SAME in staging and production on purpose: canonicals
+ * must always point at the production origin, never at the environment serving
+ * them. See CLAUDE.md.
+ */
+export const SITE_ORIGIN =
+  process.env.SITE_ORIGIN ?? process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir';
 
 /** The magazine section, not the whole platform. */
 export const MAG_NAME = 'مجله فایننس';
@@ -40,6 +52,35 @@ export const ORGANIZATION = {
     'https://www.instagram.com/thefinance.ir/',
   ] as string[],
 } as const;
+
+/**
+ * Href for a plain HTML form `action` or a raw `<a>`.
+ *
+ * next/link and the router prefix basePath automatically; a native form
+ * action does NOT. `<form action="/search">` therefore posts to
+ * thefinance.ir/search — the main site — instead of the magazine, and the
+ * search box silently leaves the app. Every native action goes through here.
+ */
+export function magPath(path = ''): string {
+  const clean = path.startsWith('/') ? path : `/${path}`;
+  return `${MAG_PATH}${clean === '/' ? '' : clean}`;
+}
+
+/**
+ * The feed alternate, for `Metadata.alternates.types`.
+ *
+ * It has to be repeated on every page that sets `alternates` at all, because
+ * Next REPLACES the whole `alternates` object from a page rather than merging
+ * its sub-fields — so a page declaring only `canonical` silently drops the
+ * layout's feed link. Exported from here so there is one string to change.
+ */
+export function feedAlternate(): Record<string, Array<{ url: string; title: string }>> {
+  /* A fresh object each call — Next's Metadata type wants a mutable array, and
+     a shared literal would be one object handed to every page. */
+  return {
+    'application/rss+xml': [{ url: `${MAG_URL}/feed`, title: `${MAG_NAME} — RSS` }],
+  };
+}
 
 /** Absolute URL for a Mag path. Canonicals must never point at the CMS host. */
 export function magUrl(path = ''): string {

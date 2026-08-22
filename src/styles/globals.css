@@ -39,6 +39,19 @@
     line-height: 1.9;
     color: var(--text-secondary);
     text-align: start;
+
+    /*
+     * A single unbreakable token — a wallet address, a long ticker string, a
+     * bare URL — is otherwise laid out as one atomic inline box wider than the
+     * column. Because the column's overflow is `visible`, it doesn't clip or
+     * scroll: it paints outside and drags the whole PAGE's scroll width with
+     * it. Measured on a 390px viewport before this rule: document scrollWidth
+     * 692 against a 390 client width, from one 72-character token.
+     *
+     * Tables and <pre> handle their own overflow by scrolling internally.
+     * Running prose has nowhere to scroll, so it has to wrap.
+     */
+    overflow-wrap: break-word;
   }
 
   @media (min-width: 768px) {
@@ -159,5 +172,243 @@
   .article-body strong {
     font-weight: 600;
     color: var(--text-primary);
+  }
+
+  /*
+   * Code.
+   *
+   * Long unbroken tokens — a contract address, a formula, an API path — are
+   * the one thing that can still blow out a 700px column, because nothing in
+   * them is a break opportunity. The block scrolls inside its own box rather
+   * than widening the page, the same treatment tables get.
+   */
+  .article-body pre {
+    overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1em;
+    font-size: 14px;
+    line-height: 1.7;
+    /* Code is Latin and reads left to right even inside a Persian article. */
+    direction: ltr;
+    text-align: start;
+    unicode-bidi: isolate;
+  }
+
+  .article-body :not(pre) > code {
+    border-radius: 4px;
+    background: var(--surface-raised);
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+    direction: ltr;
+    unicode-bidi: isolate;
+    /* `anywhere` rather than `break-word`: an inline code span is exactly the
+       case where there is no break opportunity to find. */
+    overflow-wrap: anywhere;
+  }
+
+  /*
+   * In-body blocks.
+   *
+   * WordPress delivers these as <div data-block="thefinance/…"> inside the
+   * article HTML, so — like everything else in .article-body — they are styled
+   * by attribute selector rather than by a class we control.
+   *
+   * Without these rules the blocks render as ordinary paragraphs: the callout
+   * is indistinguishable from the prose around it, and the disclaimer, which
+   * exists for legal reasons rather than editorial ones, reads as a closing
+   * sentence of the article.
+   *
+   * None of them introduces a heading element. As <h3> their titles would
+   * enter the table of contents and break the article's outline.
+   */
+  .article-body [data-block] {
+    margin-block: 2em;
+  }
+
+  /*
+   * Callout — ONE variant, no severity colours. Four options means an editor
+   * chooses correctly once and wrongly three times.
+   */
+  .article-body [data-block='thefinance/callout'] {
+    border: 1px solid var(--border-subtle);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1.15em 1.25em;
+  }
+
+  .article-body [data-block='thefinance/callout'] > strong {
+    display: block;
+    margin-block-end: 0.4em;
+    font-size: 15px;
+  }
+
+  .article-body [data-block] > * + * {
+    margin-block-start: 0.8em;
+  }
+
+  /*
+   * Disclaimer — compliance copy, so it must be visibly separate from the
+   * article's own voice. Quiet rather than loud: a rule and muted text, no
+   * warning colour. It is a statement of scope, not an alert.
+   */
+  .article-body [data-block='thefinance/disclaimer'] {
+    border-block-start: 1px solid var(--border-subtle);
+    padding-block-start: 1.25em;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.9;
+  }
+
+  /*
+   * CTA — points at InChart or Academy. Capability, never outcome: no profit,
+   * urgency or scarcity language reaches this block.
+   */
+  .article-body [data-block='thefinance/cta'] {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+    padding: 1.25em;
+  }
+
+  .article-body [data-block='thefinance/cta'] a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    border-radius: 999px;
+    background: var(--accent);
+    padding-inline: 1.25em;
+    color: var(--accent-contrast);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+}
+
+/**
+ * Print.
+ *
+ * WHY THIS EXISTS. Nothing was defined, and the default was not "plain but
+ * fine" — it was blank paper. Browsers drop background colours when printing
+ * but keep text colours, so a dark-theme page prints its foreground onto white:
+ *
+ *   headings   #ffffff on white paper   1.00:1   invisible
+ *   body       #d4d4d4 on white paper   1.48:1   illegible
+ *   muted      #a3a3a3 on white paper   2.52:1   illegible
+ *
+ * People print financial explainers — a 41-minute technical-analysis piece is
+ * exactly the kind of thing that gets printed and marked up.
+ *
+ * The fix is one block because the tokens are two-tier: redefining the
+ * semantic roles for print re-colours every component at once, and no
+ * component needs to know print exists.
+ */
+@media print {
+  :root,
+  [data-theme='v1'],
+  [data-theme='v2-dark'],
+  [data-theme='v2-light'] {
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-hover: #ffffff;
+    --border-subtle: #cccccc;
+    --border-strong: #999999;
+    --border-interactive: #666666;
+    --text-primary: #000000;
+    --text-secondary: #1a1a1a;
+    --text-muted: #444444;
+    --accent: #00308f;
+    --accent-contrast: #ffffff;
+    --danger: #8b0000;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  /*
+   * Site chrome and anything interactive. None of it can be used on paper, and
+   * the table of contents is a list of links to positions that no longer
+   * exist once the page is a sheet.
+   */
+  header,
+  footer,
+  nav[aria-label='در این مقاله'],
+  nav[aria-label='فیلتر مطالب'],
+  nav[aria-label='صفحه‌بندی'],
+  nav[aria-label='مسیر'],
+  details,
+  form,
+  #newsletter-heading,
+  #newsletter-heading ~ *,
+  #comment-form-heading,
+  #comment-form-heading ~ * {
+    display: none !important;
+  }
+
+  /* The parent sections of the two forms, which would otherwise print as an
+     empty bordered box. */
+  section[aria-labelledby='newsletter-heading'],
+  section[aria-labelledby='comment-form-heading'] {
+    display: none !important;
+  }
+
+  /*
+   * The standing disclaimer is legal protection, not decoration. It prints.
+   */
+  .article-body [data-block='thefinance/disclaimer'] {
+    display: block !important;
+    border: 1px solid #999999;
+  }
+
+  .article-body {
+    font-size: 11pt;
+    color: #000000;
+  }
+
+  .article-body h2,
+  .article-body h3,
+  h1 {
+    color: #000000;
+    /* A heading stranded at the foot of a page is the most common print
+       defect after colour. */
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .article-body figure,
+  .article-body img,
+  .article-body table,
+  .article-body pre,
+  .article-body blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Tables and code scroll on screen; on paper there is nowhere to scroll. */
+  .article-body table,
+  .article-body pre {
+    overflow: visible !important;
+    white-space: pre-wrap;
+  }
+
+  /*
+   * A printed link that reads «اینجا» is a dead end on paper. The href is
+   * Latin, so it is isolated to keep it out of the surrounding Persian run.
+   */
+  .article-body a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: #444444;
+    unicode-bidi: isolate;
+    direction: ltr;
   }
 }

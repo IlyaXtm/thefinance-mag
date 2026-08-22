@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
+import { feedAlternate, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { MagFooter, MagHeader } from '@/shared/ui';
 import '@/styles/globals.css';
 
@@ -40,12 +41,18 @@ const iranYekan = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_ORIGIN ?? 'https://thefinance.ir'),
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: 'مجله فایننس',
     template: '%s | مجله فایننس',
   },
   description: 'تحلیل، گزارش و آموزش برای بازارهای مالی',
+  /*
+    Feed autodiscovery. This is how a reader offered the site's URL finds the
+    feed without being told where it is — and how the existing WordPress
+    subscriptions keep resolving after the cutover.
+  */
+  alternates: { types: feedAlternate() },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

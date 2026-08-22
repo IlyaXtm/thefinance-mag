@@ -13,7 +13,7 @@ type CommentSource = {
   submitComment: typeof mock.submitComment;
 };
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true';
 
 const source: CommentSource = USE_MOCK ? mock : real;
 

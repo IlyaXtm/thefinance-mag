@@ -193,8 +193,13 @@ answer is a larger block library, not an architecture change.
 - Roll back immediately, without debate, on any `noindex`, wrong canonical, or
   missing article body
 
-No redirect map is needed: the permalink structure is `/%postname%/` and doesn't
-change.
+**A redirect map IS needed** — this previously said it wasn't. The permalink
+structure is `/%postname%/` and doesn't change, but the slugs did, and the URLs
+Google ranks are the historical ones, redirected by WordPress. 89% of `/mag`
+organic clicks land on slugs WordPress no longer has. Implemented in
+`src/features/mag/lib/redirects.ts`; verify with
+`./scripts/verify-redirects.sh` before AND after the switch, and roll back if
+any of them 404s.
 
 ---
 

@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getArticle, getArticles } from '@/features/mag/api/v1/mag.service';
+import { getArticle, getArticles, getPreviewArticle } from '@/features/mag/api/v1/mag.service';
+import { hasPreviewSecret, previewSecret } from '@/features/mag/lib/preview-secret';
 import { getComments } from '@/features/mag/api/v1/mag.comments.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
+import { PreviewBanner } from './_components/PreviewBanner';
 import {
   ArticleBody,
   ArticleGrid,
@@ -33,6 +36,39 @@ import {
  */
 
 export const revalidate = 300;
+
+/**
+ * WITHOUT THIS THE ARTICLE PAGE IS NOT CACHED AT ALL.
+ *
+ * A dynamic segment with no `generateStaticParams` is treated as fully
+ * dynamic: Next server-renders it on every request and sends
+ * `Cache-Control: private, no-cache, no-store, must-revalidate`. Measured
+ * before this existed — the route was absent from `dynamicRoutes` in
+ * prerender-manifest.json entirely, so `revalidate = 300` above was dead
+ * code.
+ *
+ * That is the worst place in the product for it to happen. Articles are where
+ * search traffic lands, so this meant: the ArvanCloud CDN could never hold an
+ * article, every request re-ran the article, related and comment queries, and
+ * all of it went at a /graphql that nginx limits to 10 r/s. A crawl burst
+ * would spend that budget on pages that had not changed in months.
+ *
+ * Returning the slugs prerenders the archive at build time. `dynamicParams`
+ * stays at its default of true, so anything published after the build is still
+ * generated on demand and then ISR-cached.
+ *
+ * The catch matters: a build machine that cannot reach WordPress degrades to
+ * an empty list — every article generated on demand and cached — rather than
+ * failing the build outright.
+ */
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  try {
+    const articles = await getArticles({ page: 1, perPage: 200 });
+    return articles.items.map((article) => ({ slug: article.slug }));
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Slugs are percent-encoded Persian for most of the archive, e.g.
@@ -68,15 +104,61 @@ async function fetchArticle(slug: string) {
   }
 }
 
+/**
+ * The article, or the draft an editor is previewing.
+ *
+ * In Draft Mode the route segment is a POST ID rather than a slug — see
+ * `api/draft`. `magPreview` returns the newest autosave, so the editor sees
+ * what they just typed rather than the last saved revision.
+ *
+ * Reading `draftMode()` does NOT make this route dynamic. During static
+ * generation `isEnabled` is false and Next does not bail out; the page only
+ * switches to per-request rendering once the cookie is actually set. Verified
+ * against the build output rather than assumed, because getting this wrong
+ * silently un-caches the most important page in the product.
+ */
+async function fetchArticleOrPreview(segment: string) {
+  const { isEnabled } = await draftMode();
+
+  if (isEnabled && hasPreviewSecret()) {
+    try {
+      return await getPreviewArticle(segment, previewSecret());
+    } catch (error) {
+      if (error instanceof MagNotFoundError) return null;
+      /*
+        A preview failure must not 500. An editor whose CMS session or secret
+        has drifted should still see the published article rather than an error
+        page they cannot interpret.
+      */
+      return fetchArticle(normaliseSlug(segment));
+    }
+  }
+
+  return fetchArticle(normaliseSlug(segment));
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = await fetchArticle(normaliseSlug(slug));
+  const { isEnabled: isPreview } = await draftMode();
+  const article = await fetchArticleOrPreview(slug);
 
   if (!article) return { title: 'مقاله پیدا نشد' };
+
+  /*
+    A preview must never be indexable. An indexed draft is worse than having no
+    preview at all — it puts unpublished editorial in front of readers and
+    competes with the real URL once it publishes.
+  */
+  if (isPreview) {
+    return {
+      title: `پیش‌نمایش — ${article.title}`,
+      robots: { index: false, follow: false, nocache: true },
+    };
+  }
 
   return toMetadata({
     seo: article.seo,
@@ -95,7 +177,8 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = await fetchArticle(normaliseSlug(slug));
+  const { isEnabled: isPreview } = await draftMode();
+  const article = await fetchArticleOrPreview(slug);
 
   if (!article) notFound();
 
@@ -125,6 +208,8 @@ export default async function ArticlePage({
 
   return (
     <main>
+      {isPreview && <PreviewBanner />}
+
       {/*
         Structured data. Article, not NewsArticle — most of this archive is
         evergreen education, and NewsArticle would signal a freshness the

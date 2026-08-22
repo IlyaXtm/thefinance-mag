@@ -8,33 +8,447 @@ why it was made.
 
 ---
 
-## 2026-08-21 — Audit follow-ups
+## 2026-08-21 — Staging re-verification, and two proxy-only bugs
 
-**`NewsArticle` schema implemented.** It had been promised in a comment and
-never written — every article got `Article`, including translated news. For
-time-bound reporting the publication date is the primary signal; `Article`
-sends the wrong freshness signal. The type is now derived from the content
-type, so a new news item is labelled correctly the moment it publishes.
+The deploy artifacts were built earlier; this re-ran them against the current
+app, which has since gained middleware, preview, revalidation and the feed. Two
+bugs surfaced that only appear behind a proxy — both invisible on localhost,
+which is why they had survived.
 
-**`CLAUDE.md` corrected.** It still listed `اخبار` as deliberately excluded.
-That was true when written and stopped being true when the RSS automation
-turned out to publish ~2 indexed items a day. The doc was stale, not the code.
+**Preview redirected editors to the container's internal address.** Behind
+nginx, `/mag/api/draft` answered:
 
-**ESLint config added.** None existed, so `ignoreDuringBuilds: false` was a
-no-op — a quality gate that had never once run. The config encodes constraints
-that were previously only prose a reviewer had to remember: physical
-`left`/`right` in classNames, `font-style: italic`, `text-align: justify`,
-browser storage, and importing a mock outside the service layer. `npm run lint`
-now runs it and passes clean.
+```
+Location: https://0.0.0.0:3100/mag/a7
+```
 
-**`middleware.ts` → `proxy.ts` recorded.** Next 16 renamed the convention. We
-have no such file yet — redirects are planned, not written — so it costs
-nothing today, but the SEO agent and backlog now say `proxy.ts`.
+A route handler's `request.url` in the standalone server is built from the
+address the process is BOUND to, not from the `Host` nginx forwarded. An editor
+clicking Preview in wp-admin would be sent somewhere their browser cannot
+reach. On localhost the internal address IS the public one, so it passed every
+earlier test.
 
-The rename is not cosmetic: it followed CVE-2025-29927, where a header could
-bypass every middleware authorisation check, and CVE-2025-66478, the remote
-code execution advisory that prompted our own bump from 15.1.0 to 15.5.23. The
-layer is for routing at the network boundary, not auth or data access.
+Fixed by emitting a **relative** `Location`. Valid per RFC 7231, resolved by
+every browser against the request URL, and it cannot name the wrong host
+because it names none — which is better than reconstructing the origin from
+`X-Forwarded-*` and depending on proxy headers being right.
+
+**And the same fix broke middleware.** Next's middleware runtime parses the
+header as a URL and throws `ERR_INVALID_URL` on a relative one, turning every
+redirect into a 500. So the two layers genuinely differ: middleware must emit
+absolute, route handlers must not. That is safe, because a middleware
+`request.url` IS reconstructed from the forwarded `Host` — exactly what a route
+handler's is not. Both directions are now documented where someone will hit
+them.
+
+**`WP_PREVIEW_SECRET` accepted alongside `TF_MAG_PREVIEW_SECRET`.** The deploy
+brief names the frontend variable `WP_PREVIEW_SECRET` and the `wp-config.php`
+one `TF_MAG_PREVIEW_SECRET`, holding the same value. Both are read here, so
+whichever name someone typed on the server works — a mismatch would otherwise
+be a silent 401 with nothing to diagnose it by.
+
+**`docs/cutover-plan.md` now exists.** Four briefs have referenced it and it
+was in no repo, including the two that attributed to it the claim that no
+redirect map was needed. That claim is corrected in the file itself rather than
+left to be rediscovered.
+
+**The cutover line got its reasoning inline.** The brief specified two
+commented `proxy_pass` directives while also requiring a one-line edit; those
+pull against each other, since commenting one and uncommenting the other is two
+edits and a half-finished one either refuses to load or 500s every request. The
+variable stays, with the alternative written above it and the reason why.
+
+**Verified against the real config files, running:** staging noindexed and
+production not, in both directions and again after the cutover line was
+flipped; cutover and rollback each with a reload; and through nginx on the
+staging host — the index, an article with its canonical on `thefinance.ir`, the
+mfi redirect at one hop, preview 401 and 307, revalidation 401 and 200.
+
+**Still not deployed.** The frontend server is unreachable from the build
+environment: every request returns the sandbox's 403 and there is no SSH
+client. A raw TCP check appears to connect, but it does so against a bogus
+address too, so it proves nothing — worth recording, since it looks like
+evidence of reachability and is not.
+
+---
+
+## 2026-08-21 — Preview, revalidation, and a live redirect map
+
+The frontend half of `thefinance-mag-redirects.php`. All three of these break
+silently the moment the frontend stops being WordPress: the editor clicks the
+same button, sees no error, and nothing happens.
+
+**Redirects now read from WordPress, with the compiled table as the floor.**
+
+The twelve rules could have stayed a constant, and that works exactly once —
+every redirect after it would need a deploy. The SEO team adds one in Rank Math
+today and it is live immediately; after cutover they would add one, see no
+error, and nothing would happen. So `magRedirects` is fetched on a five-minute
+window.
+
+But a CMS blip must not turn ranked URLs into 404s, and those twelve carry 89%
+of the section's organic clicks. So the fetch is **never in the request's
+path**: a redirect is answered from cache, and a stale cache triggers a
+background refresh whose failure is swallowed. Cold start serves the
+compiled-in table. Verified by killing the stub CMS mid-session — rules fetched
+before the failure kept serving, and pages kept rendering.
+
+Deliberately standalone from `mag.api.ts`. This runs in front of every request;
+pulling the data layer into that bundle would put the article mapper, the
+sanitiser and the SEO mapper on the critical path of a static asset request.
+
+**One sharp edge, made visible rather than papered over.** Once WordPress
+answers, its map REPLACES the compiled one rather than merging. That is
+deliberate: merging would make a redirect impossible to delete — the SEO team
+would remove one in Rank Math and it would keep redirecting, the same silent
+failure pointing the other way. The cost is that an under-returning
+`magRedirects` silently drops ranked URLs, so `/mag/health` now lists
+`redirectSource.missingKnown`: compiled-in rules WordPress is not returning.
+Tested with a stub returning 3 of 12 — health named the missing 9. **It must be
+empty before cutover.**
+
+The two rules whose targets no longer exist in the database are code-only and
+always win, so a stale row cannot resurrect a 404. Verified against a stub that
+deliberately tried to override one.
+
+**Preview.** `/mag/api/draft` validates the secret with a constant-time
+comparison over SHA-256 digests — `timingSafeEqual` throws on a length
+mismatch, which would leak the length through an exception, so both sides are
+hashed to a fixed width first. Every failure is one generic 401 and the secret
+is never echoed back, in a message, a redirect or a log line.
+
+The redirect carries the POST ID in the slug position rather than the slug: a
+draft may not have one yet, and an editor renaming a slug is exactly when
+preview matters most. In Draft Mode the article route treats that segment as an
+ID and fetches through `magPreview`, which returns the newest autosave — a
+preview showing the last saved revision looks broken, which is worse than none.
+
+`/mag/api/exit-draft` needs no secret, because turning draft mode OFF is not a
+privileged action and requiring one would mean the escape hatch fails exactly
+when someone needs it. A banner on every preview says the page is not what
+readers see and carries the way out; without it, an editor who previews once is
+served uncached drafts everywhere and reports the site as broken.
+
+**Reading `draftMode()` does not un-cache the article route.** That was the
+real risk in this change — the ISR fix on that page was hard-won — so it was
+checked against the build output rather than assumed. `/[slug]` is still `●`
+SSG at 5m, and a published article still answers `s-maxage=300` while a preview
+answers `no-store`.
+
+**Revalidation** hits the article, the index, the archive, the feed, the
+market archive and the sitemap — the sitemap because `lastModified` comes from
+the revision date, and a stale one tells Google there is nothing to crawl. It
+is an optimisation, never a dependency: the ISR window stays underneath, so a
+call lost to a restart means "a few minutes later", never "never".
+
+**Not verified, and not in this repo.** `thefinance-mag-redirects.php` is not
+in `wordpress/mu-plugins/` — the frontend is written against the contract as
+described in the brief (`magRedirects { from to status }`,
+`magPreview(id, secret)`). If the real field or argument names differ, this
+fails quietly, which is the failure mode the work exists to prevent. PHP 8.4 IS
+available in the build environment, so `php -l` can be run here the moment the
+file lands.
+
+---
+
+## 2026-08-21 — Redirect map: correcting a Phase 0 conclusion
+
+**Phase 0 concluded no redirect map was needed. That was wrong, and it would
+have cost most of the section's organic traffic at cutover.**
+
+The reasoning was not careless, it was incomplete. The permalink structure is
+`/%postname%/` and genuinely does not change — but that setting describes how
+WordPress builds a URL for a post it *has*. It says nothing about posts whose
+slug has since changed. The slugs did change, Persian to English or the
+reverse, and the URLs Google ranks are the historical ones. They resolve today
+only because WordPress and Rank Math 301 them, from
+`wp_rank_math_redirections` and `_wp_old_slug` — both entirely inside
+WordPress, both gone the moment the rendering layer moves.
+
+From three months of Search Console:
+
+| | URLs | Clicks | Impressions |
+|---|---|---|---|
+| Indexed under `/mag` | 71 | 180 | 4,284 |
+| Slug exists in WordPress today | 23 | 19 | 1,104 |
+| **Slug does not exist** | **48** | **161** | **3,154** |
+
+89% of `/mag` organic clicks land on URLs WordPress no longer has a post for.
+
+Corrected in `phase-0-findings.md`, `plan.md`, `phase-0-verification.md`,
+`README.md` and the original 2026-08-19 changelog entry — struck through rather
+than deleted, because the failure shape is worth keeping visible. The check
+that would have caught it is now in `phase-0-verification.md`: take the ranking
+URLs from Search Console and ask whether each still resolves *without* a
+redirect. Checking the permalink setting is not the same question.
+
+**Fourteen rules, flattened to twelve entries and one hop each.** Some URLs
+take two hops in WordPress today — Rank Math points at a slug that
+`_wp_old_slug` then redirects again. Google does not penalise a short chain,
+but every hop spends crawl budget and delays the reader, and since the map was
+being rebuilt there was no reason to reproduce it. Each entry names the final
+destination.
+
+**In middleware, not `next.config.ts`.** The SEO team has to be able to change
+the map without a rebuild and a redeploy. Nothing else goes in that file: the
+`middleware.ts` → `proxy.ts` rename followed CVE-2025-29927, where one header
+bypassed every authorisation check implemented in middleware, and the lesson is
+that the layer is for routing at the network boundary. A redirect table belongs
+there; its worst failure is a wrong destination.
+
+**One deliberate exception to 301-only.**
+`introduction-to-persian-tradingview-inchart` is a 302. It is the biggest
+single organic entry point — 77 clicks, 43% of `/mag` — currently 404ing, and
+the decision is to rewrite the article under that same slug. A 301 to the
+holding page would tell Google the two URLs are one, consolidate the signals
+into the destination and drop the source from the index — which is precisely
+the URL we intend to publish at. 302 keeps the source indexed and its identity
+intact, which is what "the content is coming back here" means in HTTP. Every
+other entry is 301. Remove this one when the article ships (backlog B0).
+
+**A trailing-slash bug found while testing, and it was the common case.**
+Next's automatic trailing-slash 308 runs BEFORE middleware, so every legacy URL
+arriving with a slash took two hops:
+
+```
+/mag/what-is-the-mfi-indicator/  →308→  /mag/what-is-the-mfi-indicator
+                                 →301→  /mag/mfi-indicator
+```
+
+Not an edge case: `/%postname%/` means the historical URLs Google ranks END IN
+A SLASH, so the two-hop path was the normal one.
+`skipTrailingSlashRedirect: true` hands normalisation to middleware, which
+answers a legacy slug in one 301 and 308s everything else exactly as before.
+
+Building the destination with `nextUrl.clone()` then caused an infinite loop —
+`NextURL` remembers the request's trailing slash and re-applies it on
+serialisation, so `/mag/archive/` redirected to `/mag/archive/`. curl followed
+it fifty times. Destinations are now built with a plain `URL` against
+`request.url`.
+
+**A second URL-shape change, flagged not decided** (backlog B0b). The trailing
+slash is itself part of the URL and it also changes at cutover — for all 71
+indexed URLs, not just the 48 legacy ones. `decisions.md` says "do not change
+URLs during the headless migration"; this is the part that does. Whether to set
+`trailingSlash: true` to match WordPress exactly is a product decision about
+URL shape, so it is written up rather than taken.
+
+**Not verified: any of it, against the live site.** The build environment
+cannot reach `thefinance.ir`, so every destination in the map is unconfirmed —
+they came from a database export, and a typo'd slug is a 404 that looks exactly
+like a working redirect until someone follows it.
+`scripts/verify-redirects.sh` runs the whole check against any origin and must
+be run against production BEFORE the switch, to capture a baseline, and after.
+If any of these 404s post-cutover, roll back: it is 89% of the section's
+organic traffic, not a cosmetic regression.
+
+---
+
+## 2026-08-21 — Containerised, and a staging host
+
+Step 1 of the cutover. Nothing was deployed — the build sandbox reaches neither
+Docker Hub nor the frontend server — so this is the reviewable artifact set plus
+what could be verified without them. `docs/infra/frontend-deploy.md` is explicit
+about which is which.
+
+**The frontend nginx config is in the repository now.**
+
+It previously existed only on the server, which meant the cutover — the riskiest
+single action in this project — depended on a file nobody could review, diff or
+roll back. `thefinance.ir.conf` and `new.thefinance.ir.conf` fix that.
+
+The cutover is deliberately one line: the port in `set $mag_upstream`. A
+variable rather than two commented `proxy_pass` lines, so switching under
+pressure is one edit and a reload rather than a two-line dance where half a
+change is a broken site. Rollback is the same line back. Both were exercised
+against a running nginx, in both directions.
+
+Both configs set `X-Real-IP` from `$remote_addr`, and that is load-bearing
+rather than boilerplate: the comment rate limit keys on it precisely because
+`X-Forwarded-For` is built with `$proxy_add_x_forwarded_for` and so begins with
+whatever the client sent. Verified through nginx — a spoofed `X-Forwarded-For`
+was still limited on the fourth request.
+
+**Staging is a host, not a path prefix.**
+
+The brief asked for a staging path. `basePath: '/mag'` is inlined at build time,
+so an image served under `/mag-staging/` still emits links to `/mag/...` — which
+on that server is WordPress. Staging would render once and then navigate into
+production on the first click. A path prefix needs a second image with a
+different basePath, at which point staging is no longer testing the artifact
+that gets promoted. `new.thefinance.ir` was already the documented staging host.
+
+The whole staging host is `noindex, nofollow` and serves nothing but `/mag`.
+Staging carries the same articles as production, so a leak into the index means
+the same content competing with itself — and like the CMS-host case, it fails
+silently because every page renders perfectly throughout. Verified in both
+directions: staging noindexed, production carrying no such header.
+
+**`NEXT_PUBLIC_*` moved to server-only names.**
+
+Raised in the brief as possibly awkward for the pipeline, and it was: those
+variables are inlined at build time, so "env comes from a file on the server"
+and `NEXT_PUBLIC_` are in tension. `USE_MOCK`, `WP_GRAPHQL_ENDPOINT` and
+`SITE_ORIGIN` are now read server-side first, with the public names kept as
+fallbacks so an existing deployment keeps working. Confirmed nothing reading
+them reaches the browser — the SWR hooks that import the data service are
+referenced by no rendered component, and the endpoint appears in no client
+chunk. The public prefix was buying nothing and only invited the value into a
+client bundle later.
+
+What renaming does NOT fix, recorded so it is not rediscovered: `SITE_ORIGIN`
+is baked into prerendered HTML regardless, because canonical and `og:url` are
+written at build time. It does not bite here because all three values are the
+same in staging and production — canonicals must name the production origin
+even when staging serves the page — so the image stays portable and staging
+validates byte-for-byte what production will run. It would bite on review-apps
+with a different origin each, which is why the Dockerfile takes them as build
+args.
+
+**The Dockerfile copies three things, and two of them are easy to miss.**
+
+`public/` and `.next/static` are not inside `.next/standalone`. A Dockerfile
+that omits either serves HTML with no CSS, no JavaScript and no font — which
+reads as a broken build rather than a missing copy step. Verified by
+reconstructing the runtime stage on disk and running `node server.js` against
+it: every route served, and the hashed stylesheet and the IRANYekanX woff2 both
+returned 200.
+
+The healthcheck hits `/mag/health`, which reports the data SOURCE and not just
+liveness. A container quietly serving mock data in staging is a
+misconfiguration that would otherwise look perfectly healthy.
+
+---
+
+## 2026-08-21 — Lead slot, feed, and cacheable archives
+
+Four items from `audit-seo-security-performance.md`. The fourth — the Next 16
+upgrade — was deliberately not done; see the end of this entry.
+
+**The lead slot no longer carries news.**
+
+An RSS automation files roughly two «اخبار» items a day. The index led with the
+newest article, so the hero was almost always a three-minute translated
+headline — meaning a publication whose identity is analysis and education would
+never show either in the largest editorial statement on its front page. Because
+the automation runs daily, that degrades on its own rather than correcting.
+
+The featured article is now chosen from `analysis`, `education` and `report`.
+News keeps its place in the latest list and the archive; it just never takes
+the hero.
+
+The selection window is the newest 20 rather than the newest 7, because the
+window has to outrun the automation: at two news items a day, 20 covers about
+ten days of uninterrupted filing before a genuine article could fall out of
+range. The same request feeds the latest list, so widening it costs no extra
+round trip. The API has no "not this type" filter, and inventing one against a
+field WordPress doesn't expose would be worse than filtering a window already
+fetched.
+
+Accepted cost, stated so nobody treats it as a bug: with infrequent human
+publishing the lead can go stale for weeks. A good article from last week beats
+an automated headline from this morning.
+
+If the window somehow holds nothing but news there is no hero at all and the
+page opens on the latest list — verified by building with an empty type list.
+Falling back to a news item would defeat the rule this exists to enforce.
+
+**`/mag/feed` exists again.**
+
+WordPress generates `thefinance.ir/mag/feed` today; readers, aggregators and
+Telegram bots consume it. After cutover the Next app had no such route, so it
+404'd — and it breaks **silently**: a subscriber sees no error, just no new
+articles, for months, by which point they are gone. A 404 where content used to
+be is a regression whether or not anyone is currently subscribed.
+
+RSS 2.0 from the same `getArticles` everything else uses, newest 20, absolute
+`thefinance.ir/mag/…` URLs by construction, cached like the index rather than
+rebuilt per request.
+
+Item descriptions are built from the article's own H2 headings, for the same
+reason «در این مقاله» is: the content model has no excerpt, deliberately, since
+the live site's excerpts are auto-truncated mid-sentence. Headings are derived
+from real content, always accurate, and descriptive rather than promotional.
+
+Autodiscovery took a second pass. Declaring it once in the root layout did not
+work: Next **replaces** a page's `alternates` object wholesale rather than
+merging its sub-fields, so every page that set `canonical` silently dropped the
+layout's feed link. It now comes from `feedAlternate()` in `lib/site.ts`,
+applied by `toMetadata` and by the two routes that build metadata directly.
+
+We could not check whether anyone currently subscribes — the old frontend
+server is unreachable from the build environment, so the nginx access-log
+counts in the brief still need running by someone with shell on that box.
+
+**Pagination moved back into the path, so archives can be cached.**
+
+This corrects an earlier decision of ours rather than defending it. The archive
+was built with `?page=` because the content-type filter needed a query string
+anyway. What that missed: reading `searchParams` makes a Next route fully
+dynamic — the server cannot know which query strings will arrive, so it cannot
+prerender. Market and author archives were consequently uncacheable, running a
+GraphQL query against a `/graphql` that nginx limits to 10 r/s for a page-one
+view identical for everybody.
+
+The two concerns are now split: the page number is part of the resource's
+identity and lives in the path; a filter is a view over that resource and stays
+in the query string. Page one keeps the base URL — `/archive/page/1` and its
+siblings 404, because two URLs for one page is a duplicate-content problem.
+
+Result in the build output:
+
+| route | before | after |
+|---|---|---|
+| `/market/[slug]` | `ƒ` dynamic | **`●` SSG**, all six prerendered |
+| `/author/[slug]` | `ƒ` dynamic | **`●` SSG** |
+| `/archive` | `ƒ` dynamic | `ƒ` — see below |
+
+`/archive` stayed dynamic and the reason is worth recording, because it will
+come up again: **one route cannot be both static and `searchParams`-reading.**
+Awaiting `searchParams` at all opts a route out of prerendering, so `/archive`
+cannot be static while also serving `/archive?type=education`. Making it static
+requires the type filter to leave the query string too — a product decision
+about URL shape, not a technical one. Moving the page number out was still
+worth doing on its own: it is what made market and author static.
+
+Both archives also needed `generateStaticParams` on top of the path change. A
+dynamic segment without it is treated as fully dynamic no matter what
+`revalidate` says — the same defect the article route had.
+
+Two things this change nearly broke, caught before they shipped:
+
+- Search paginates by query string on purpose and has no `/search/page/[n]`
+  route. Switching the shared href builder pointed its pagination at a 404.
+  Search now uses `pageParamHref`, which keeps `?page=` — it reads `q` so it is
+  dynamic regardless, and it is `noindex`, so neither reason for the path shape
+  applies to it. A `/search/page/[n]` would be a route that exists only to look
+  consistent.
+- Pagination was untestable locally. Seven hand-written fixtures against page
+  sizes of nine and fifteen meant there was never a page two in development —
+  which is exactly how the previous round of pagination bugs survived. Added
+  generated filler so the boundary can actually be crossed, clearly marked and
+  dated older than every designed fixture so it never displaces a real one.
+
+**Next 16: deliberately NOT upgraded.**
+
+Three high-severity advisories sit in Next's own dependency tree and the only
+fix is a major bump. The exposure assessment stands: postcss is effectively
+nil, since only our own CSS is ever compiled; sharp is genuinely reachable
+through `next/image` at request time, narrowed to an authenticated editor
+uploading a malicious image because the optimizer only accepts our own hosts
+(verified — every SSRF shape tried returns 400).
+
+Not now, because the upgrade brings Turbopack as default, async `params` and
+changed `next/image` defaults, and there is currently nowhere to find out what
+breaks: staging does not exist yet. When it does, as its own change with its
+own test pass, then re-run the full audit sweep against it.
+
+Carried context for whoever does it: the `middleware.ts` → `proxy.ts` rename
+followed CVE-2025-29927, where a single header bypassed every middleware
+authorisation check, and CVE-2025-66478, the RCE that prompted our own bump
+from 15.1.0. That layer is for routing at the network boundary — not auth, not
+data access. If redirects are ever added they go in `proxy.ts` and contain
+nothing else.
 
 ---
 
@@ -292,9 +706,10 @@ admin recovery — hence `php -l` before every deploy.
 
 Three findings changed the plan:
 
-**Permalinks are `/%postname%/`.** No redirect map is needed — the URL
-structure doesn't change, only the rendering layer. This removed the largest
-risk in the migration and an entire phase from the roadmap.
+**Permalinks are `/%postname%/`.** ~~No redirect map is needed~~ — **corrected
+2026-08-21: this was wrong, see that day's entry.** The structure doesn't
+change, but the slugs did, and 89% of organic clicks land on historical slugs
+that only WordPress knows how to redirect.
 
 **Most slugs are percent-encoded Persian.** An early assumption that they were
 Latin was wrong, drawn from the five most recent posts. The `[slug]` param needs
