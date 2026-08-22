@@ -46,8 +46,8 @@ const nextConfig: NextConfig = {
      * and every external hotlink. nginx proxies that path to the CMS host.
      */
     remotePatterns: [
-      { protocol: 'https', hostname: 'thefinance.ir', pathname: '/wp-content/uploads/**' },
-      { protocol: 'https', hostname: 'wp.thefinance.ir', pathname: '/wp-content/uploads/**' },
+      { protocol: 'https', hostname: 'thefinance.ir', pathname: '/mag/wp-content/uploads/**' },
+      { protocol: 'https', hostname: 'wp.thefinance.ir', pathname: '/mag/wp-content/uploads/**' },
     ],
   },
 
