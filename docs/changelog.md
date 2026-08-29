@@ -8,6 +8,126 @@ why it was made.
 
 ---
 
+## 2026-08-29 — Blog v4 merge conditions
+
+Six items before v4 merges. One was a real bug, one reversed a decision v4 had
+made, four were small.
+
+**The card dek rendered on nothing but the mock, and that is the finding.**
+`cardDek()` reads `article.outline`. `SUMMARY_FIELDS` never fetched `content`,
+and `mapSummary` set `outline: []` unconditionally — so with `USE_MOCK=false`
+every card on the home page, the archive and every market archive had an empty
+outline and no dek. The dek is one of three things the v4 card is built around.
+
+It survived review because **the mock offered more than the source did**: some
+mock summaries carried a populated `outline`, so the feature looked finished in
+every environment anyone develops in. That asymmetry, not the missing field, is
+the actual defect, and it now has a comment at the top of the fixtures saying
+so.
+
+The fix is a server-side field, not a frontend change and not a bigger query:
+`outlineHeadings` on `Post`, registered by the mu-plugin the way `readingTime`
+is, computed with the same regex `extractHeadings()` uses so the card dek and
+the article ToC cannot disagree about what an article contains. Fetching full
+`content` in the listing would have put nine article bodies on the page that
+carries LCP and ISR.
+
+`do_blocks()` rather than `the_content`, deliberately: the result has to match
+what the article page derives from WPGraphQL's `content`, but running the full
+filter chain per post on a listing request drags in oEmbed resolution —
+outbound HTTP, per post. `do_blocks()` expands block markup, including dynamic
+blocks, and stops there.
+
+**A deploy-ordering hazard came out of that, and it is worth more than the
+feature.** GraphQL rejects an unknown field outright rather than returning null,
+so a frontend asking for `outlineHeadings` against a CMS that does not have the
+plugin version gets `Cannot query field "outlineHeadings" on type "Post"` — and
+`gql()` turns that into a MagFetchError. The listing, the archive and search
+**fail**, they do not degrade. Verified against a stub returning exactly that
+error: `/mag/search` answered 500, while `/mag/archive` answered 200 purely
+because ISR was still holding a page generated before the field existed, which
+is the most misleading pass available. **WordPress deploys first, frontend
+second.** Written next to the field list, not only here.
+
+**Verified end-to-end on the non-mock path**, against a stand-in CMS returning
+the field: an article with three headings and one with two both render a dek;
+one with `outlineHeadings: []` renders none and the card closes up. Before this
+change all three would have been empty.
+
+**The typeface goes back to IRANYekanX, and the column back to 700px.** v4 had
+switched to Vazirmatn because the handoff named it, and the switch worked. The
+reason for reverting is not technical: IRANYekanX is the design system's face
+across the whole product, and changing it in Mag alone rebuilds exactly the
+visual detachment this project exists to remove — the same reason headless was
+chosen over Elementor. A typeface is a product-wide decision, not a
+per-section one.
+
+The 570px measurement stands and was not the reason. Vazirmatn is narrower, so
+700px measured 89 characters per line there against 70–73 in IRANYekanX, and
+570px was the correct response *to that face*. The column is calibrated to the
+typeface, so reverting one reverts the other. `tailwind.config.ts` and
+`CLAUDE.md` both now say the two move together, and the two vendored Vazirmatn
+subsets are removed.
+
+**`/news` was missing from the sitemap.** A new, indexable route that the RSS
+automation refills roughly twice a day, and Google would have had to find it by
+crawling alone. Added at `daily`, above `/archive`, because it genuinely turns
+over faster than anything else on the site.
+
+**`public/mock` no longer enters the production image.** 252 KB of placeholder
+cover art that `public/` publishes at `/mag/mock/covers/*.jpg` — publicly
+reachable and crawlable on the production domain, from an image that never runs
+the mock. Excluded in `.dockerignore` rather than disallowed in `robots.ts`: a
+robots rule is a request not to index something still being served, and not
+shipping the bytes is both the stronger statement and the smaller image. The
+consequence is stated in the file — an image built from this Dockerfile cannot
+serve the mock's artwork.
+
+**Three things the mock was inventing are now null.** `author.role` has no
+source at all — not in the content model, nothing in WPGraphQL, `mapAuthor`
+returns null unconditionally — so `AuthorBox`'s role line can never render in
+production and only ever appeared because the mock filled it in. `avatar` is
+also always null, but that one is a decision rather than a gap (Gravatar was
+dropped: a third-party request per author, a hash of their email sent abroad,
+unreliable from Iran). `bio` is deliberately NOT nulled, because
+`author.node.description` is a real field the API really fetches — it just
+happens to be empty for all six current users. Backlog B13 carries the `role`
+decision.
+
+**A null-image card is now in the listing fixtures**, not only reachable by
+slug. `CardImage`'s placeholder branch had never once rendered inside a grid,
+which is the only place it can cause the failure worth checking. Measured in a
+real browser at 1440px: the placeholder card is 984×208 with a 270×170 image
+box — identical to every image card in the same grid, so a missing featured
+image cannot reflow the row. v4 is image-led, so that state reads as broken
+rather than as restraint, and it belongs where it can be seen.
+
+**Two backlog items opened rather than decided in a component.** `source` on
+news rows (B12) — the "render only if present" conditional is right, but
+`source` is excluded from the content model, so it is permanently false and
+every news row ships with less metadata than v4 specifies. With an RSS
+automation publishing translated items twice a day the field probably should
+exist, and the decision includes whether it links out, which is a `rel`
+question on a publication whose own SEO is the first priority. And cover art
+(B14) — reversing the one-image-index rule converted a design constraint into a
+content-production commitment, and the size of it is still unmeasured.
+
+### Not measured, and why
+
+Two counts the brief asks for need real data, and `wp.thefinance.ir` is
+unreachable from this environment:
+
+- how many cards on `/mag` and `/mag/archive` render a dek against the live
+  archive
+- how many of the ~32 articles have a featured image **without** the headline
+  baked into the artwork
+
+Both need `USE_MOCK=false npm start` pointed at the real CMS. The dek plumbing
+is verified against a stand-in; the count is not, and B14 has a scope but not a
+size until someone runs it.
+
+---
+
 ## 2026-08-29 — Blog v4 redesign
 
 A full rebuild of `/mag` against the `design_handoff_mag_blog_v4` bundle: four
@@ -24,7 +144,8 @@ surface) and `--text-muted` to `.50` (5.34). One was NOT adopted: the spec uses
 SC 1.4.11 wants 3.0 for a control whose border is its only boundary. Interactive
 boundaries use `--border-interactive` (3.95), which is why that token exists.
 
-**Typeface: Vazirmatn, self-hosted, two subsets.** The spec names Vazirmatn from
+**Typeface: Vazirmatn, self-hosted, two subsets.** ⚠️ REVERTED — see the entry
+above; the face is IRANYekanX. The spec names Vazirmatn from
 Google Fonts; it is vendored as woff2 instead, because CLAUDE.md rules out
 foreign CDNs on the LCP path and the spec's own asset note asks for the same.
 Two files, because one subset does not cover Persian typography — verified by
@@ -35,7 +156,8 @@ arabic is preloaded. One variable axis replaces IRANYekanX's per-weight files,
 and the pair is 79 KB against its 93.
 
 **The reading measure had to be recalibrated, and this is the finding worth
-keeping.** The content column was 700px, documented as 70–73 Persian characters
+keeping.** ⚠️ The column is back at 700px with the face — the measurement below
+is still correct *for Vazirmatn*, which is no longer in use. The content column was 700px, documented as 70–73 Persian characters
 in IRANYekanX. Vazirmatn is narrower: the same column measured **89** characters
 per line — counted directly off the rendered text with Range geometry, not
 estimated. 570px restores ~70 at every breakpoint. The typographic target never

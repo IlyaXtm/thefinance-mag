@@ -340,3 +340,96 @@ wpc option update comment_moderation 1
 
 Also confirm `comment_registration` stays `0` — the guest comment form depends
 on it.
+
+---
+
+## B12 — `source` on news rows is a content-model decision, not an `if`
+
+**Status:** decision needed before the news template can be judged complete
+
+`NewsRow` renders «منبع: …» only when `article.source` is present, and it never
+is. `source` and `sourceUrl` are listed in `CLAUDE.md` under fields
+deliberately excluded, so the condition is permanently false and every news row
+ships with less metadata than the v4 design specifies.
+
+The conditional itself is correct and should stay — the standing rule is not to
+build against a field that does not exist, and rendering a real one when it
+arrives is the honest half of that. What is not correct is leaving the question
+inside a component.
+
+**Why it probably should exist now.** The exclusion was decided when news was
+itself excluded. It isn't: an RSS automation publishes roughly two translated
+items a day, and a translated item genuinely has a source. Attribution is also
+the thing that separates a translated wire item from an original piece, which
+is a distinction an anti-hype publication has an interest in making visible.
+
+**What deciding it involves**, and why it is not a small change:
+
+- a field on `Post`, exposed through the mu-plugin the way `readingTime` and
+  `outlineHeadings` are, populated by the RSS importer rather than by hand
+- `sourceUrl` alongside it, and then the question of whether the source links
+  out — an outbound link per news row, on a publication whose own SEO is the
+  first priority, is a `rel` decision (`nofollow`? `ugc`? nothing?) rather than
+  a styling one
+- back-filling the existing news archive, or accepting that older rows have no
+  source and the row closes up for them
+
+Do not add the field without answering the link question. A source that is
+plain text is a smaller commitment than one that is a link, and the two are
+hard to swap once published.
+
+---
+
+## B13 — `author.role` renders nothing and has no source
+
+`AuthorBox` draws a role line under the author's name. `mapAuthor` returns
+`role: null` unconditionally, because WordPress exposes nothing for it and the
+content model does not list it. The mock used to fill it in, which is the only
+reason the line ever appeared.
+
+Two honest options, and a third that is not:
+
+1. Add an author-role field to the CMS (a user meta field, exposed through the
+   mu-plugin) and populate it for the six users.
+2. Delete the line from `AuthorBox` and the field from `Author`.
+3. ~~Leave it~~ — a component branch that can never render is dead code that
+   reads as a feature.
+
+Related, and deliberately kept: `avatar` is also always null, but that is a
+*decision* rather than a gap — Gravatar was dropped (a third-party request per
+author, a hash of their email sent abroad, unreliable from Iran) and the
+initial-based fallback is the intended design. `role` has no such decision
+behind it; it was simply never sourced.
+
+---
+
+## B14 — Cover art: the v4 grid needs artwork without the headline in it
+
+**Status:** count not yet measured — see below
+
+Blog v4 is image-led: a featured image on every card. The previous listing
+showed artwork exactly once, and the reason was concrete — the existing
+featured images have **the article's headline baked into the artwork**, so a
+card grid prints every title twice, once as text and once as pixels.
+
+Reversing that rule (recorded in `CLAUDE.md`) does not make the problem go
+away; it converts it from a design constraint into a content-production
+commitment. Roughly 32 articles are in the archive.
+
+**The number is not in this document because it could not be measured here.**
+It requires rendering `/mag` and `/mag/archive` against real data and counting
+how many featured images carry no headline. Run:
+
+```bash
+USE_MOCK=false npm start
+```
+
+then count on `/mag` and `/mag/archive`, and write the figure in here. Until
+then this item has a scope but not a size.
+
+What *is* verified: `CardImage` renders a fixed-size placeholder panel when
+`featuredImage` is null, structurally identical in layout to the image branch
+(`h-full w-full` in both, with every call site fixing the box height), so a
+missing image cannot reflow the grid. A null-image fixture is now in the mock
+listing rather than only reachable by slug, so that path is exercised in
+development.

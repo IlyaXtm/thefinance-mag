@@ -121,17 +121,36 @@ const TYPES = {
   education: { slug: 'education', name: 'آموزش' },
 } as const;
 
+/*
+  THE MOCK MUST NEVER OFFER MORE THAN THE SOURCE.
+
+  That rule is here because breaking it cost a release. `outline` was populated
+  on some mock summaries and hardcoded to `[]` in `mag.api.ts`, so the v4 card
+  dek rendered perfectly in every review and would have rendered on nothing in
+  production. The fix was a real server-side field; the lesson is this comment.
+
+  Two fields are held at null for the same reason:
+
+  - `role` has NO source. It is not in the content model (`CLAUDE.md`), WPGraphQL
+    exposes nothing for it, and `mapAuthor` returns null unconditionally. A mock
+    value here makes `AuthorBox`'s role line look implemented when it can never
+    render. Backlog: either add an author-role field to the CMS or delete the
+    line.
+  - `avatar` is deliberately always null — Gravatar is dropped (see
+    `decisions.md`): a third-party request per author, a hash of their email
+    sent abroad, and unreliable from Iran. Every author renders an initial.
+
+  `bio` is NOT held at null: `author.node.description` is a real field the API
+  really fetches. It happens to be empty for all six current users, which is why
+  AUTHOR_NO_BIO is the realistic case — but an editor filling it in tomorrow
+  would show up, so the mock is allowed to exercise it.
+*/
 const AUTHOR: Author = {
   slug: 'maryam-rezaei',
   name: 'مریم رضایی',
-  role: 'تحلیل‌گر بازار سرمایه',
+  role: null,
   bio: 'پژوهشگر بازار سرمایه با تمرکز بر صورت‌های مالی و ارزش‌گذاری. پیش‌تر در حوزه تحلیل بنیادی صنایع بانکی و پتروشیمی فعالیت داشته است.',
-  avatar: {
-    url: '/mock/authors/maryam.jpg',
-    alt: 'مریم رضایی',
-    width: 160,
-    height: 160,
-  },
+  avatar: null,
   articleCount: 12,
 };
 
@@ -140,17 +159,21 @@ const AUTHOR: Author = {
 const AUTHOR_NO_BIO: Author = {
   slug: 'no-bio-author',
   name: 'سارا کاظمی',
-  role: 'دبیر بخش اخبار',
+  role: null,
   bio: null,
   avatar: null,
   articleCount: 3,
 };
 
-/** Second author without an avatar — exercises the initial-based fallback. */
+/**
+ * Kept under its original name for the diff's sake, but no author has an avatar
+ * any more — see the note on AUTHOR. The initial-based fallback is now the only
+ * path, which is what production has always done.
+ */
 const AUTHOR_NO_AVATAR: Author = {
   slug: 'ali-mohammadi',
   name: 'علی محمدی',
-  role: 'تحلیل‌گر بازارهای جهانی',
+  role: null,
   bio: 'تمرکز بر داده‌های کلان اقتصادی و اثر آن‌ها بر بازارهای نوظهور.',
   avatar: null,
   articleCount: 5,
@@ -337,6 +360,33 @@ const SUMMARIES: ArticleSummary[] = [
     author: AUTHOR,
     // Single-entry outline — consumers must omit the block, not render one item.
     outline: ['روش‌شناسی داده‌ها'],
+  },
+  {
+    /*
+      NO FEATURED IMAGE, IN THE GRID.
+
+      A null-image article already existed as a stress fixture, but it was
+      reachable only by slug — so `CardImage`'s placeholder branch had never
+      once been rendered inside a card grid, which is the only place it can
+      cause the failure worth checking: a card that collapses and reflows the
+      row around it.
+
+      v4 is image-led, so this is the state that reads as broken rather than as
+      restraint. It belongs in the listing where it can be seen, not in a
+      by-slug corner.
+    */
+    /* a8 — a7 is FULL_ARTICLE's id. */
+    id: 'a8',
+    slug: 'no-featured-image-report',
+    title: 'گزارشی بدون تصویر شاخص — آزمون چیدمان کارت',
+    featuredImage: null,
+    market: null,
+    contentType: TYPES.report,
+    readingTime: 6,
+    publishedAt: '2026-08-12T08:30:00+03:30',
+    modifiedAt: '2026-08-12T08:30:00+03:30',
+    author: AUTHOR_NO_BIO,
+    outline: ['چه چیزی اندازه‌گیری شد', 'محدودیت‌های داده'],
   },
 ];
 

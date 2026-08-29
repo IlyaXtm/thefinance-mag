@@ -20,3 +20,18 @@ CLAUDE.md
 .vscode
 .idea
 *.tsbuildinfo
+
+# Mock fixtures. 252 KB of placeholder cover art that `public/` would otherwise
+# publish at /mag/mock/covers/*.jpg — publicly reachable and crawlable on the
+# production domain, from an image that never runs the mock: the container sets
+# USE_MOCK=false and /mag/health confirms `source: "wpgraphql"`.
+#
+# Excluded rather than robots-disallowed, because a robots rule is a request not
+# to index something that is still being served. Not shipping the bytes is the
+# stronger statement and the smaller image.
+#
+# The consequence, stated so it is not a surprise: an image built from this
+# Dockerfile CANNOT serve the mock's artwork. Mock development runs `next dev`
+# from the repo, where public/mock is present. If a mock-backed container is
+# ever wanted, this line has to come out deliberately.
+public/mock

@@ -73,6 +73,25 @@ async function gql<T>(
 
 /* ------------------------------------------------------------------ */
 
+/*
+  DEPLOY ORDER IS NOT OPTIONAL: the mu-plugin ships BEFORE this does.
+
+  `outlineHeadings` is registered by `wordpress/mu-plugins/thefinance-mag.php`.
+  GraphQL rejects an unknown field outright rather than returning null for it,
+  so against a CMS without that plugin version every query built from these
+  fields comes back as:
+
+      Cannot query field "outlineHeadings" on type "Post".
+
+  `gql()` turns that into a MagFetchError, which means the listing, the archive
+  and search all fail — not degrade. Verified against a stub that returns
+  exactly that error: /mag/search answered 500, and /mag/archive only answered
+  200 because ISR was still holding a page from before the field existed, which
+  is the worst kind of pass.
+
+  Adding a field to a listing query is therefore a two-step deploy: WordPress
+  first, frontend second.
+*/
 const SUMMARY_FIELDS = `
   databaseId
   slug
@@ -80,6 +99,7 @@ const SUMMARY_FIELDS = `
   date
   readingTime
   modifiedAtIso
+  outlineHeadings
   categories { nodes { slug name } }
   markets { nodes { slug name } }
   author { node { name slug description } }
@@ -108,6 +128,7 @@ interface WpSummary {
   date: string;
   readingTime: number | null;
   modifiedAtIso: string | null;
+  outlineHeadings: string[] | null;
   categories: { nodes: WpTerm[] } | null;
   markets: { nodes: WpTerm[] } | null;
   author: { node: { name: string; slug: string; description: string | null } | null } | null;
@@ -206,8 +227,18 @@ function mapSummary(node: WpSummary): ArticleSummary {
     publishedAt: node.date,
     modifiedAt: node.modifiedAtIso,
     author: mapAuthor(node.author),
-    /* Only the full article parses its body for headings. */
-    outline: [],
+    /*
+      Server-derived, by `tf_mag_outline_headings()` in the mu-plugin.
+
+      It cannot be derived here: the listing query deliberately does not fetch
+      `content` — nine full article bodies on the page that carries LCP and
+      ISR — and this used to be a hardcoded `[]`, which meant `cardDek()`
+      returned null for every card in production while the mock filled the
+      field in and hid it. The article and preview paths override this with
+      `extractHeadings(content)`, which they can afford because they already
+      have the body.
+    */
+    outline: node.outlineHeadings ?? [],
   };
 }
 

@@ -84,19 +84,17 @@ Two tokens are new system additions introduced by Mag: `--border-interactive` (i
 3. Real font weights only (400/600/700) — no synthetic bold.
 4. ZWNJ (نیم‌فاصله) must render: «می‌شود», «نمی‌کند», «سرمایه‌گذاری». A mid-word fallback break is the fastest sign of a font failure.
 5. Line-height: body `1.9`, headings `1.5`, captions `1.7`.
-6. Body `18px` desktop / `17px` mobile. Content column `570px` — **was 700px**,
-   which measured 70–73 characters in IRANYekanX. Blog v4 moved the typeface to
-   Vazirmatn, which is narrower: the same 700px column measured **89** characters
-   per line, counted off the rendered text with Range geometry. 570px restores
-   ~70. The target did not change; the typeface did, and the pixel value is
-   downstream of both. Re-measure it if the face ever changes again.
+6. Body `18px` desktop / `17px` mobile. Content column `700px` (measures 70–73
+   characters in IRANYekanX). The column is calibrated to the face — a typeface
+   change means re-measuring it. Blog v4 tried Vazirmatn and had to cut the
+   column to `570px` to stay near 70; both were reverted together.
 7. Persian digits (۱۲۳) for dates, read time, counts. Latin digits for tickers and prices.
 8. Font self-hosted and subset via `next/font`, preloaded. **No Google Fonts, no
-   foreign CDN.** Blog v4 uses **Vazirmatn** (two vendored woff2 subsets —
-   arabic preloaded, latin on demand for the guillemets « » and Latin runs),
-   with IRANYekanX kept as the fallback. Verified by reading the cmap: the
-   arabic subset carries ZWNJ, Persian digits and Persian punctuation; it does
-   NOT carry « », which is why both files are loaded.
+   foreign CDN.** The face is **IRANYekanX**, and it is not Mag's to change:
+   it is the design system's typeface across the whole product, so swapping it
+   here alone rebuilds the visual detachment this project exists to remove.
+   Blog v4 shipped Vazirmatn and it was reverted for that reason, not a
+   technical one — see `docs/changelog.md`, 2026-08-29.
 
 ---
 

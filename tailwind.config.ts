@@ -39,14 +39,7 @@ const config: Config = {
       },
       fontFamily: {
         // The variable set by next/font in layout.tsx.
-        sans: [
-          'var(--font-fa)',
-          'var(--font-latin)',
-          'IRANYekanX',
-          'Tahoma',
-          'system-ui',
-          'sans-serif',
-        ],
+        sans: ['var(--font-fa)', 'Tahoma', 'system-ui', 'sans-serif'],
       },
       lineHeight: {
         // Persian needs more than Latin defaults.
@@ -60,18 +53,19 @@ const config: Config = {
       },
       maxWidth: {
         /*
-         * The reading measure, RECALIBRATED FOR VAZIRMATN.
+         * 700px measures 70–73 characters in IRANYekanX — mid-range of 65–75.
          *
-         * This was 700px, which measured 70–73 Persian characters in
-         * IRANYekanX. Vazirmatn is a narrower face, and at 700px the same
-         * column measured 89 characters per line — counted directly off the
-         * rendered text with Range geometry, not estimated. That is well past
-         * the comfortable 65–75 and the line becomes hard to track back.
+         * Blog v4 briefly cut this to 570px, because it had switched the face
+         * to Vazirmatn, which is narrower: 700px measured 89 characters there,
+         * counted off the rendered text with Range geometry. That measurement
+         * was right and is not the reason this is back at 700 — the face is.
+         * IRANYekanX is the product-wide typeface and the switch was reverted,
+         * so the column that was calibrated for it comes back with it.
          *
-         * 570px brings it to ~72. The typographic target did not change; the
-         * typeface did, and the pixel value is downstream of both.
+         * The pair moves together. Never change one without re-measuring the
+         * other.
          */
-        prose: '570px',
+        prose: '700px',
       },
     },
   },
