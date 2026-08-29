@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
 import { formatJalali, formatReadingTime, toDateTimeAttr } from '../lib/format';
+import { imageSrc } from '../lib/site';
 
 /**
  * The lead article — and the ONLY card on the page that shows an image.
@@ -30,7 +31,7 @@ export function FeaturedArticle({ article }: { article: ArticleSummary }) {
         {featuredImage && (
           <div className="relative aspect-[4/3] w-full overflow-hidden rounded-card bg-surface-raised lg:aspect-[3/2]">
             <Image
-              src={featuredImage.url}
+              src={imageSrc(featuredImage.url)}
               alt={featuredImage.alt}
               fill
               sizes="(max-width: 1023px) 100vw, 55vw"

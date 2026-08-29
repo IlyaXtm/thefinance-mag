@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Author } from '../types/mag.types';
+import { imageSrc } from '../lib/site';
 
 /**
  * Author box.
@@ -42,7 +43,7 @@ export function AuthorBox({
       >
         {author.avatar ? (
           <Image
-            src={author.avatar.url}
+            src={imageSrc(author.avatar.url)}
             alt={author.avatar.alt}
             fill
             sizes={`${px}px`}

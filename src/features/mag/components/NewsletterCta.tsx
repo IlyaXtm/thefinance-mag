@@ -46,23 +46,29 @@ export function NewsletterCta() {
 
   return (
     <section
+      id="newsletter"
       aria-labelledby="newsletter-heading"
-      className="rounded-card border border-border-subtle bg-surface-raised p-6"
+      className="scroll-mt-24 rounded-card border border-border-subtle p-[22px]"
+      /* The one gradient in the system. It marks the single conversion surface
+         on the page without introducing a second accent colour. */
+      style={{
+        background: 'linear-gradient(160deg, rgba(77,154,254,.16), rgba(77,154,254,.02))',
+      }}
     >
-      <h2 id="newsletter-heading" className="text-[20px] font-bold text-text-primary">
-        خلاصه هفتگی بازارها
+      <h2 id="newsletter-heading" className="text-[17px] font-bold text-text-primary">
+        خبرنامه‌ی هفتگی
       </h2>
-      <p className="mt-2 text-text-secondary">
-        هر هفته یک ایمیل: چه چیزی در بازارها اتفاق افتاد و چرا.
+      <p className="mt-2 text-[14px] font-light leading-[1.85] text-text-secondary">
+        هفته‌ای یک ایمیل، خلاصه‌ی بازار با منبع هر عدد. بدون سیگنال، بدون تبلیغ.
       </p>
 
       {state === 'done' ? (
-        <p role="status" className="mt-4 font-semibold text-text-primary">
-          عضو شدید
+        <p role="status" className="mt-4 text-[13px] font-medium text-accent">
+          ثبت شد؛ ایمیل تأیید برایتان ارسال شد.
         </p>
       ) : (
         <>
-          <form onSubmit={handleSubmit} noValidate className="mt-4 flex flex-col gap-2 md:flex-row">
+          <form onSubmit={handleSubmit} noValidate className="mt-4 flex flex-col gap-2.5">
             <label htmlFor="newsletter-email" className="sr-only">
               ایمیل شما
             </label>
@@ -79,13 +85,13 @@ export function NewsletterCta() {
               }}
               aria-invalid={error ? 'true' : undefined}
               aria-describedby={error ? 'newsletter-error' : undefined}
-              className="min-h-11 flex-1 rounded-full border bg-transparent px-4 text-[15px] text-text-primary placeholder:text-text-muted"
+              className="h-[46px] rounded-lg border bg-surface px-3.5 text-[14px] text-text-primary placeholder:text-text-muted"
               style={{ borderColor: error ? 'var(--danger)' : 'var(--border-interactive)' }}
             />
             <button
               type="submit"
               disabled={state === 'sending'}
-              className="min-h-11 rounded-full bg-accent px-6 text-[15px] font-semibold text-accent-contrast transition-opacity disabled:opacity-60"
+              className="h-[46px] rounded-lg bg-accent text-[14.5px] font-medium text-accent-contrast transition-[filter,opacity] hover:brightness-110 disabled:opacity-60 motion-reduce:transition-none"
             >
               {state === 'sending' ? '…' : 'عضویت'}
             </button>
@@ -102,7 +108,7 @@ export function NewsletterCta() {
             </p>
           )}
 
-          <p className="mt-3 text-[13px] text-text-muted">
+          <p className="mt-3 text-[12.5px] leading-[1.7] text-text-muted">
             هر زمان بخواهید می‌توانید لغو عضویت کنید.
           </p>
         </>

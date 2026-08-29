@@ -82,6 +82,29 @@ export function feedAlternate(): Record<string, Array<{ url: string; title: stri
   };
 }
 
+/**
+ * Normalise an image src for `next/image`.
+ *
+ * THE TRAP, which has now cost two separate rounds: with `basePath` set, the
+ * image optimizer resolves a root-relative `src` against the SERVER root, not
+ * the app. `/mock/covers/x.jpg` therefore 400s with "The requested resource
+ * isn't a valid image" while `/mag/mock/covers/x.jpg` returns 200 — and the
+ * page still renders, just with every image missing.
+ *
+ * The first real deployment hit the remote-pattern half of this (the CMS
+ * uploads path was allow-listed without `/mag`, so every optimised image
+ * 400'd). This is the local half.
+ *
+ * Absolute URLs pass through untouched — WordPress already returns
+ * `https://thefinance.ir/mag/wp-content/uploads/…`. Idempotent, so a src that
+ * already carries the prefix is not given a second one.
+ */
+export function imageSrc(url: string): string {
+  if (!url.startsWith('/')) return url;
+  if (url === MAG_PATH || url.startsWith(`${MAG_PATH}/`)) return url;
+  return `${MAG_PATH}${url}`;
+}
+
 /** Absolute URL for a Mag path. Canonicals must never point at the CMS host. */
 export function magUrl(path = ''): string {
   const clean = path.startsWith('/') ? path : `/${path}`;

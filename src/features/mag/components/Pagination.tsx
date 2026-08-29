@@ -143,8 +143,11 @@ export function Pagination({
 
   if (totalPages <= 1) return null;
 
+  /* Drawn as 40px squares with an 8px radius. min-h-11/min-w-11 keeps the
+     44px touch target on a phone — the design's own responsive note requires
+     it — so these are 44px squares below md and 40px above. */
   const itemClass =
-    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm transition-colors';
+    'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border px-3 text-sm transition-colors md:min-h-10 md:min-w-10';
 
   return (
     <nav aria-label="صفحه‌بندی" className="mt-10">
@@ -154,7 +157,7 @@ export function Pagination({
             <Link
               href={hrefFor(currentPage - 1)}
               rel="prev"
-              className={`${itemClass} border-border-interactive text-text-secondary hover:bg-surface-hover`}
+              className={`${itemClass} border-border-interactive text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary`}
               aria-label="صفحه قبل"
             >
               <Chevron direction="prev" />
@@ -182,8 +185,8 @@ export function Pagination({
                 aria-current={page === currentPage ? 'page' : undefined}
                 className={
                   page === currentPage
-                    ? `${itemClass} border-accent bg-accent text-accent-contrast`
-                    : `${itemClass} border-border-interactive text-text-secondary hover:bg-surface-hover`
+                    ? `${itemClass} border-accent bg-accent font-medium text-accent-contrast`
+                    : `${itemClass} border-border-interactive text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary`
                 }
               >
                 {toPersianDigits(page)}
@@ -197,7 +200,7 @@ export function Pagination({
             <Link
               href={hrefFor(currentPage + 1)}
               rel="next"
-              className={`${itemClass} border-border-interactive text-text-secondary hover:bg-surface-hover`}
+              className={`${itemClass} border-border-interactive text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary`}
               aria-label="صفحه بعد"
             >
               <Chevron direction="next" />

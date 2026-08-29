@@ -6,40 +6,53 @@ import { MagFooter, MagHeader } from '@/shared/ui';
 import '@/styles/globals.css';
 
 /**
- * IRANYekanX — variable font, self-hosted.
+ * Vazirmatn — self-hosted, two subsets, variable.
  *
- * ONE file covers weights 100–1000 (93 KB). Loading separate static weights
- * would cost several times that for the same result.
+ * The v4 design specifies Vazirmatn with IRANYekanX as fallback. It is loaded
+ * from vendored woff2 rather than Google Fonts: CLAUDE.md rules out foreign
+ * CDNs on the LCP path, and Google-hosted assets are unreachable from Iran.
+ * The design's own asset note asks for the same thing.
  *
- * Self-hosted deliberately, never a CDN: this sits on the LCP path and
- * Google-hosted and Cloudflare-fronted assets are intermittently unreachable
- * from Iran. next/font/local also inlines the @font-face and preloads it, so
- * there is no extra round trip to discover the file.
+ * TWO FILES, because one subset does not cover Persian typography. Verified by
+ * reading the cmap rather than assuming:
  *
- * Verified coverage: Persian letters, Persian digits ۰–۹, Arabic-Indic digits,
- * Latin letters and digits, ZWNJ (U+200C), and Persian punctuation. ZWNJ
- * matters most — «می‌شود» and «سرمایه‌گذاری» break visibly if the font falls
- * back mid-word.
+ *   arabic (45 KB, 366 glyphs) — Persian letters, Persian digits ۰–۹, ZWNJ,
+ *                                «،» and «؟». Missing the guillemets « ».
+ *   latin  (34 KB, 229 glyphs) — Latin, Latin digits, and the guillemets.
  *
- * The font's own default weight is 100 (thin). Body copy therefore sets 400
- * explicitly in globals.css; without it, Persian text renders anaemic.
+ * Persian body copy uses « » constantly, so both are needed and the browser
+ * falls through per glyph. Only the Arabic face is preloaded: it carries the
+ * script the page is actually written in, and preloading both would put two
+ * fonts on the LCP path to serve a handful of Latin runs.
+ *
+ * One variable axis, wght 100–900, covers the 300/400/500/600/700/800 the
+ * design uses — where IRANYekanX needed a separate file per weight.
+ *
+ * Vazirmatn is SIL OFL 1.1. IRANYekanX stays in the stack as the design's
+ * named fallback and for anything neither subset covers.
  */
-const iranYekan = localFont({
-  src: './fonts/IRANYekanX.woff2',
-  weight: '100 1000',
+const vazirmatn = localFont({
+  src: './fonts/Vazirmatn-arabic.woff2',
+  weight: '100 900',
   style: 'normal',
   display: 'swap',
   preload: true,
   variable: '--font-fa',
-  /*
-    Fallback metrics are adjusted automatically by next/font to reduce the
-    layout shift when the webfont swaps in — this is what keeps CLS low while
-    still using `swap` rather than blocking render.
-  */
+  adjustFontFallback: false,
+  fallback: ['IRANYekanX', 'Tahoma', 'system-ui', 'sans-serif'],
+});
+
+const vazirmatnLatin = localFont({
+  src: './fonts/Vazirmatn-latin.woff2',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  /* Not preloaded — see above. */
+  preload: false,
+  variable: '--font-latin',
   adjustFontFallback: false,
   fallback: ['Tahoma', 'system-ui', 'sans-serif'],
 });
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: {
@@ -71,7 +84,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       dir and lang live here, not per page. RTL is the base direction for this
       product, not a mode layered on an LTR default.
     */
-    <html lang="fa" dir="rtl" data-theme="v1" className={iranYekan.variable}>
+    <html lang="fa" dir="rtl" data-theme="v1" className={`${vazirmatn.variable} ${vazirmatnLatin.variable}`}>
       {/* flex column + mt-auto on the footer keeps it at the bottom on short
           pages without a fixed height or a viewport calculation. */}
       <body className="flex min-h-screen flex-col">

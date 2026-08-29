@@ -8,6 +8,97 @@ why it was made.
 
 ---
 
+## 2026-08-29 — Blog v4 redesign
+
+A full rebuild of `/mag` against the `design_handoff_mag_blog_v4` bundle: four
+templates (home, category/archive, news, single post), dark-only, image-led.
+Built on `claude-main` — PR #1 had already merged and been deployed.
+
+**The palette turned out to be v1 navy, exactly.** `--bg` `#040C1F`, `--card`
+`#071331`, `--card-2` `#111C39`, `--accent` `#4D9AFE` and `--accent-contrast`
+`#041024` are byte-identical to tokens already in the file, so v1 was refined
+rather than replaced and the other two themes keep working. Two v1 values moved
+to match the spec — `--text-secondary` to `rgba(255,255,255,.70)` (9.61 on
+surface) and `--text-muted` to `.50` (5.34). One was NOT adopted: the spec uses
+`--rule-2` (`.22`, measured 1.91) for inputs and outline buttons, and WCAG 2.2
+SC 1.4.11 wants 3.0 for a control whose border is its only boundary. Interactive
+boundaries use `--border-interactive` (3.95), which is why that token exists.
+
+**Typeface: Vazirmatn, self-hosted, two subsets.** The spec names Vazirmatn from
+Google Fonts; it is vendored as woff2 instead, because CLAUDE.md rules out
+foreign CDNs on the LCP path and the spec's own asset note asks for the same.
+Two files, because one subset does not cover Persian typography — verified by
+reading the cmap rather than assuming: the arabic subset (45 KB, 366 glyphs) has
+ZWNJ, Persian digits and Persian punctuation but NOT the guillemets « », which
+Persian body copy uses constantly and which live in the latin subset. Only
+arabic is preloaded. One variable axis replaces IRANYekanX's per-weight files,
+and the pair is 79 KB against its 93.
+
+**The reading measure had to be recalibrated, and this is the finding worth
+keeping.** The content column was 700px, documented as 70–73 Persian characters
+in IRANYekanX. Vazirmatn is narrower: the same column measured **89** characters
+per line — counted directly off the rendered text with Range geometry, not
+estimated. 570px restores ~70 at every breakpoint. The typographic target never
+changed; the typeface did, and the pixel value is downstream of both. Any future
+face change needs the same measurement.
+
+**Two components from the handoff were not built.** «پرخواننده‌های این ماه» is a
+most-read ranking, which CLAUDE.md lists under Never build — and which the
+handoff's own Compliance section rules out two paragraphs later ("no trending
+badges"), so the document contradicts itself. «تابلوی امروز» is a market-data
+board, and `decisions.md` excludes live price data because it invites a
+signal-channel reading of an anti-hype publication. Their sidebar slots carry
+editorially-chosen link lists instead. Recorded in CLAUDE.md so the next pass
+does not read their absence as an oversight.
+
+**The flat category nav maps onto the existing two axes.** The design draws one
+axis (طلا و ارز · بورس ایران · تحلیل تکنیکال · کریپتو · اخبار); the data model
+keeps `market` and `contentType` because taxonomy bloat is the documented
+failure of this category. `cardCategory()` resolves to one label at render —
+market when present, content type otherwise — so a card's chip and its
+destination page always agree, with no migration and no new URLs to redirect.
+One substitution is stated rather than fudged: there is no «تحلیل تکنیکال»
+term, and that content is filed as آموزش, so the nav says آموزش.
+
+**Fields with no producer are derived or omitted, never invented.** The design
+wants a written `dek`; there is none, and `decisions.md` explains why. On cards
+it falls back to the article's own H2 headings — the same source «در این مقاله»
+uses. On the POST page it is omitted entirely: the table of contents sits a few
+hundred pixels below and lists those same headings, so a derived lead would
+print the outline twice on one screen. News `source` renders only when present.
+
+**Three bugs found by measuring, all of which rendered perfectly.**
+
+The post page's three-column grid at `lg` left the article column **299px** —
+about 30 characters a line. The design's own responsive note says two columns
+between 1024 and 1279; the grid is now `xl` and the contents collapse to a
+`<details>` below that.
+
+Reading progress measured `document.querySelector('article')`, which after this
+redesign matches a related-post CARD, not the body — cards are `<article>`
+elements now. The bar tracked a card's geometry. It reads `[data-article-body]`.
+
+Local images 400'd at the optimizer: with `basePath`, a root-relative `src`
+resolves against the SERVER root, so `/mock/covers/x.jpg` fails while
+`/mag/mock/covers/x.jpg` works. This is the local half of the defect the first
+deployment hit on the remote half. `imageSrc()` normalises it, idempotently, and
+every `next/image` call site goes through it.
+
+**Verified:** 10 routes × 3 viewports — no horizontal overflow, one `<h1>` per
+page, no heading-level skips, no justified text, no italics, no broken images,
+exactly one `priority` image per page. 131 tab stops carry a visible focus ring
+and none is clipped. Contrast on rendered surfaces: body 9.61, h1 19.49,
+breadcrumb 5.34, muted meta 5.23 — all past 4.5. Reduced motion drops every
+transition. Touch targets ≥44px except inline links inside a sentence or
+breadcrumb trail, which are the documented exemption.
+
+**Mock fixtures added** so the templates are actually judgeable: generated cover
+art (the image-led design cannot be reviewed without pixels), an in-article
+figure, and five news items across three days — the day grouping is the whole
+point of the news template and one item cannot show it.
+
+---
+
 ## 2026-08-21 — Staging re-verification, and two proxy-only bugs
 
 The deploy artifacts were built earlier; this re-ran them against the current

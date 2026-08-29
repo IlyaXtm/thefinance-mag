@@ -1,86 +1,106 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import logo from '@/shared/assets/logo.png';
-import { HEADER_LINKS } from '@/features/mag/lib/nav';
-import { SITE_ORIGIN } from '@/features/mag/lib/site';
+import { CATEGORY_NAV } from '@/features/mag/lib/nav';
+import { magPath, MAG_NAME, SITE_ORIGIN } from '@/features/mag/lib/site';
 
 /**
- * Magazine header.
+ * Magazine header — 80px, one flex row.
  *
- * Lives in shared/ui rather than features/mag so that swapping in the
- * redesign's real site shell later is a single import change in layout.tsx,
- * not a hunt through the feature.
+ * Logo mark is a 9×24 accent bar, not an image: it is two DOM nodes instead of
+ * a network request on the LCP path, and it cannot 400 the way a misconfigured
+ * `next/image` src did on the first real deployment.
  *
- * THE ONE THING THIS MUST DO: give every page a visible route back to
- * thefinance.ir. Without it the magazine is a dead end — a reader arrives from
- * search, finishes an article, and has nowhere to go.
+ * The logo links to the MAIN SITE, which is the one thing this header must do.
+ * A reader arrives from search, finishes an article, and needs a route back to
+ * thefinance.ir — without it the magazine is a dead end.
  *
- * The logo is that route. It links to the main site on every breakpoint, which
- * is why the product links can disappear on mobile without stranding anyone.
+ * NOT STICKY. A fixed bar costs vertical space on mobile and would compete
+ * with the article page's sticky table of contents, which is the one thing on
+ * the site that genuinely benefits from staying put. The `top-[76px]` on every
+ * sticky sidebar is measured against this header NOT being fixed.
  *
- * NO HAMBURGER MENU. With two product links, a drawer is pure friction: an
- * extra tap, a JS bundle, a focus trap to get right, and an animation to
- * suppress under prefers-reduced-motion — all to hide two words.
- *
- * NOT STICKY. A fixed header costs vertical space on mobile and would compete
- * with the article page's sticky table of contents. Breadcrumbs at the top of
- * every article already carry the "where am I" job.
+ * The search field is a real GET form, so it works with JavaScript off and the
+ * browser's own history does what the reader expects. `magPath` is mandatory:
+ * Next does not apply `basePath` to a native form action, so a bare
+ * `action="/search"` posts to the main site and silently leaves the magazine.
  */
 export function MagHeader() {
   return (
     <header className="border-b border-border-subtle">
-      <div className="flex items-center justify-between gap-4 px-5 py-4 lg:px-[100px]">
-        {/* Reading-start side in RTL — where the eye lands first. */}
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-4 px-5 md:h-20 md:gap-9 lg:px-10">
         <a
           href={SITE_ORIGIN}
-          className="flex shrink-0 items-center gap-2.5"
-          aria-label="فایننس — بازگشت به سایت اصلی"
+          /* min-h-11: this is the route back to the main site, so it is a control
+             and gets a 44px target rather than the 26px the text alone gives. */
+          className="flex min-h-11 shrink-0 items-center gap-2.5 text-text-primary"
         >
-          <Image
-            src={logo}
-            alt=""
-            width={32}
-            height={32}
-            className="h-8 w-8"
-            /* Decorative: the accessible name comes from the link's aria-label,
-               so alt is empty to avoid announcing it twice. */
-            aria-hidden="true"
-          />
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-[17px] font-bold text-text-primary">فایننس</span>
-            <span className="text-[15px] text-text-muted">مجله</span>
-          </span>
+          <span aria-hidden="true" className="h-6 w-[9px] rounded-sm bg-accent" />
+          <span className="text-[17px] font-bold md:text-[18px]">{MAG_NAME}</span>
         </a>
 
-        <nav aria-label="پیوندهای فایننس" className="flex items-center gap-1">
-          {HEADER_LINKS.map((link) => (
-            <a
+        {/* The five category links. Hidden below lg — the design collapses the
+            header to logo + search there, and these are continuations rather
+            than escapes, so nobody is stranded without them. */}
+        <nav aria-label="دسته‌بندی‌ها" className="hidden items-center gap-6 lg:flex">
+          {CATEGORY_NAV.map((link) => (
+            <Link
               key={link.href}
               href={link.href}
-              /* Hidden on mobile. The logo still returns to the main site, so
-                 nobody is stranded — these are continuations, not escapes. */
-              className="hidden min-h-11 items-center rounded-full px-3 text-[14px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary md:inline-flex"
+              className="whitespace-nowrap text-[15px] text-text-secondary transition-colors hover:text-text-primary"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
-
-          <Link
-            href="/search"
-            aria-label="جستجو در مجله"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
-              <path
-                d="m13.5 13.5 3 3"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-          </Link>
         </nav>
+
+        <span className="flex-1" />
+
+        <form
+          action={magPath('/search')}
+          method="get"
+          role="search"
+          className="hidden h-[42px] items-center gap-2.5 rounded-full border border-border-subtle bg-surface-raised px-3.5 focus-within:border-border-interactive md:flex"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            className="shrink-0 text-text-muted"
+          >
+            <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M10.6 10.6L14 14" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+          <label htmlFor="mag-header-search" className="sr-only">
+            جست‌وجو در مجله
+          </label>
+          <input
+            id="mag-header-search"
+            name="q"
+            type="search"
+            placeholder="جست‌وجو در مجله"
+            className="w-[150px] min-w-0 bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-muted lg:w-[190px]"
+          />
+        </form>
+
+        {/* Mobile: the search page itself, at a 44px target. */}
+        <Link
+          href="/search"
+          aria-label="جست‌وجو در مجله"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary md:hidden"
+        >
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.75" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M10.6 10.6L14 14" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+        </Link>
+
+        <a
+          href="#newsletter"
+          className="hidden h-[42px] shrink-0 items-center rounded-full bg-accent px-5 text-[14px] font-medium text-accent-contrast transition-[filter] hover:brightness-110 motion-reduce:transition-none sm:inline-flex"
+        >
+          عضویت در خبرنامه
+        </a>
       </div>
     </header>
   );

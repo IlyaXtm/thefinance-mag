@@ -4,6 +4,7 @@ import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
 import { ContentTypeLabel } from './ContentTypeLabel';
 import { ArticleMeta } from './ArticleMeta';
+import { imageSrc } from '../lib/site';
 
 /**
  * Grid article card.
@@ -46,7 +47,7 @@ export function ArticleCard({
         <div className="relative aspect-[16/9] w-full bg-surface">
           {featuredImage ? (
             <Image
-              src={featuredImage.url}
+              src={imageSrc(featuredImage.url)}
               alt={featuredImage.alt}
               fill
               sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"

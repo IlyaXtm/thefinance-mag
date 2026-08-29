@@ -12,6 +12,11 @@
 export function ArticleBody({ html }: { html: string }) {
   return (
     <div
+      /* The hook the reading-progress bar measures against. NOT a bare
+         `article` selector: cards are `<article>` elements too, so
+         `querySelector('article')` on this page finds a related-post card and
+         the progress bar tracks that card's geometry instead of the text. */
+      data-article-body=""
       className="article-body max-w-prose"
       dangerouslySetInnerHTML={{ __html: html }}
     />

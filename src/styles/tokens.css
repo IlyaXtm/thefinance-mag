@@ -9,6 +9,21 @@
  * file is the only one that changes.
  *
  * Three themes. `v2-light` is the one that breaks: check contrast there first.
+ *
+ * BLOG v4. The v4 redesign is dark-only and its palette turned out to be v1
+ * navy exactly — `--bg`/`--card`/`--card-2`/`--accent`/`--accent-contrast` are
+ * byte-identical to what was already here. So v1 is the v4 theme, refined
+ * rather than replaced, and the other two keep working. Two changes were made
+ * to v1 to match the spec, both measured:
+ *
+ *   --text-secondary  #d4d4d4 → rgba(255,255,255,.70)   9.61 on surface
+ *   --text-muted      #a3a3a3 → rgba(255,255,255,.50)   5.34 on surface
+ *
+ * NOT adopted: the spec's `--rule-2` (rgba(255,255,255,.22)) for inputs and
+ * outline buttons. It measures 1.91 against the page and WCAG 2.2 SC 1.4.11
+ * wants 3.0 for a control whose border is its only boundary. `--rule-2` stays
+ * as a decorative strong hairline; anything interactive uses
+ * `--border-interactive` (3.95), which is why that token exists.
  */
 
 :root,
@@ -23,11 +38,14 @@
   --border-interactive: #63718a; /* 3.95 vs surface · 3.72 vs raised */
 
   --text-primary: #ffffff;
-  --text-secondary: #d4d4d4;
-  --text-muted: #a3a3a3;
+  --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 9.24 vs raised */
+  --text-muted: rgba(255, 255, 255, 0.5); /* 5.34 vs surface · 5.23 vs raised */
 
   --accent: #4d9afe;
   --accent-contrast: #041024; /* 6.67 on accent */
+  /* Category chip fill. Decorative only — the accent TEXT on top carries the
+     contrast (6.84), so this never has to clear a ratio on its own. */
+  --accent-soft: rgba(77, 154, 254, 0.14);
   --focus-ring: #4d9afe; /* 6.84 vs surface · 6.43 vs raised */
   --danger: #ff9e9e; /* 9.87 vs surface · 9.28 vs raised */
 
@@ -54,6 +72,7 @@
 
   --accent: #4d9afe;
   --accent-contrast: #06121f; /* 6.61 on accent */
+  --accent-soft: rgba(77, 154, 254, 0.14);
   --focus-ring: #4d9afe; /* 6.95 vs surface · 6.29 vs raised */
   --danger: #fca5a5; /* 10.43 vs surface · 9.45 vs raised */
 
@@ -76,6 +95,7 @@
 
   --accent: #1a5fbf;
   --accent-contrast: #ffffff; /* 6.12 on accent */
+  --accent-soft: rgba(26, 95, 191, 0.1);
 
   /*
    * NOT the dark-theme blue.

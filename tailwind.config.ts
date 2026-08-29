@@ -24,6 +24,7 @@ const config: Config = {
         'text-muted': 'var(--text-muted)',
         accent: 'var(--accent)',
         'accent-contrast': 'var(--accent-contrast)',
+        'accent-soft': 'var(--accent-soft)',
         'focus-ring': 'var(--focus-ring)',
         danger: 'var(--danger)',
         skeleton: 'var(--skeleton)',
@@ -38,7 +39,14 @@ const config: Config = {
       },
       fontFamily: {
         // The variable set by next/font in layout.tsx.
-        sans: ['var(--font-fa)', 'Tahoma', 'system-ui', 'sans-serif'],
+        sans: [
+          'var(--font-fa)',
+          'var(--font-latin)',
+          'IRANYekanX',
+          'Tahoma',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       lineHeight: {
         // Persian needs more than Latin defaults.
@@ -51,8 +59,19 @@ const config: Config = {
         body: '18px',
       },
       maxWidth: {
-        // 700px measures 70–73 characters in Persian — mid-range of 65–75.
-        prose: '700px',
+        /*
+         * The reading measure, RECALIBRATED FOR VAZIRMATN.
+         *
+         * This was 700px, which measured 70–73 Persian characters in
+         * IRANYekanX. Vazirmatn is a narrower face, and at 700px the same
+         * column measured 89 characters per line — counted directly off the
+         * rendered text with Range geometry, not estimated. That is well past
+         * the comfortable 65–75 and the line becomes hard to track back.
+         *
+         * 570px brings it to ~72. The typographic target did not change; the
+         * typeface did, and the pixel value is downstream of both.
+         */
+        prose: '570px',
       },
     },
   },

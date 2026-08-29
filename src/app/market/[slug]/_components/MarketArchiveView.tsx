@@ -3,26 +3,24 @@ import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 import {
-  ArticleGrid,
+  ArchiveCard,
   ArticleGridEmpty,
-  Breadcrumbs,
+  CategoryCover,
+  CategoryListCard,
   MarketFilterBar,
+  NewsletterCta,
   Pagination,
   pagePathHref,
-  Section,
-  SectionInner,
 } from '@/features/mag/components';
 
 /**
- * The market archive body, shared by `/market/<slug>` and
- * `/market/<slug>/page/<n>`.
+ * The market archive, shared by `/market/<slug>` and its paginated route.
  *
- * The two routes exist so that page one can be a static ISR route while the
- * rest paginate — see `pagePathHref`. They render the same thing, so the
- * markup lives here rather than being copied and left to drift.
+ * This is the v4 "category" template. The design draws one flat category axis
+ * and `market` is the axis that carries it — `cardCategory` resolves the same
+ * way, so a card's chip and this page's masthead always agree.
  */
 export async function MarketArchiveView({
   market,
@@ -32,68 +30,70 @@ export async function MarketArchiveView({
   page: number;
 }) {
   const [articles, markets] = await Promise.all([
-    getArticles({ page, perPage: 9, market: market.slug }),
+    getArticles({ page, perPage: 12, market: market.slug }),
     getMarkets(),
   ]);
 
-  /* Past the last page is a URL that does not exist — and without this the
-     empty state below would claim nothing has been published, which is false
-     whenever the reader simply asked for a page beyond the end. */
   if (isPageBeyondEnd(articles.page, articles.items.length)) notFound();
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },
+    { name: 'دسته‌بندی‌ها', href: '/archive' },
     { name: market.name, href: `/market/${market.slug}` },
   ];
 
   return (
-    <main>
+    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
       <JsonLdScript
         data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
       />
 
-      <Section className="!pb-0">
-        <Breadcrumbs items={crumbs} />
+      <div className="pt-6 lg:pt-8">
+        <CategoryCover
+          title={market.name}
+          crumbs={crumbs}
+          description={market.description}
+          count={market.count}
+          /* The taxonomy has no cover-image field, so this is always the
+             no-image variant today. It is wired rather than removed because
+             adding one is a mu-plugin change, not a template change. */
+          image={null}
+        />
+      </div>
 
-        <h1 className="mt-4 text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
-          {market.name}
-        </h1>
-
-        {/*
-          The description is a taxonomy field that may be empty. When absent the
-          heading and count still sit correctly — no placeholder, no gap.
-        */}
-        {market.description && (
-          <p className="mt-2 max-w-prose text-text-secondary">{market.description}</p>
-        )}
-
-        {market.count !== null && (
-          <p className="mt-2 text-[13px] text-text-muted">
-            {toPersianDigits(market.count)} مطلب
-          </p>
-        )}
-      </Section>
-
-      <SectionInner className="pt-8">
+      <div className="mt-7">
         <MarketFilterBar markets={markets} activeSlug={market.slug} />
-      </SectionInner>
+      </div>
 
-      <Section>
-        <h2 className="sr-only">مطالب {market.name}</h2>
+      <div className="mt-8 grid items-start gap-10 lg:grid-cols-[1fr_320px] lg:gap-14">
+        <section aria-labelledby="market-list-heading">
+          <h2 id="market-list-heading" className="sr-only">
+            مطالب {market.name}
+          </h2>
 
-        {articles.items.length > 0 ? (
-          <>
-            <ArticleGrid articles={articles.items} />
-            <Pagination
-              page={articles.page}
-              totalPages={articles.totalPages}
-              hrefFor={pagePathHref(`/market/${market.slug}`)}
-            />
-          </>
-        ) : (
-          <ArticleGridEmpty message={`هنوز مطلبی در ${market.name} منتشر نشده.`} />
-        )}
-      </Section>
+          {articles.items.length > 0 ? (
+            <>
+              <div className="flex flex-col gap-6">
+                {articles.items.map((article) => (
+                  <ArchiveCard key={article.id} article={article} />
+                ))}
+              </div>
+              <Pagination
+                page={articles.page}
+                totalPages={articles.totalPages}
+                hrefFor={pagePathHref(`/market/${market.slug}`)}
+              />
+            </>
+          ) : (
+            <ArticleGridEmpty message={`هنوز مطلبی در ${market.name} منتشر نشده.`} />
+          )}
+        </section>
+
+        <aside className="flex flex-col gap-6 lg:sticky lg:top-[76px]">
+          <CategoryListCard markets={markets} activeSlug={market.slug} />
+          <NewsletterCta />
+        </aside>
+      </div>
     </main>
   );
 }

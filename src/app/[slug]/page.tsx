@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getArticle, getArticles, getPreviewArticle } from '@/features/mag/api/v1/mag.service';
@@ -9,20 +8,24 @@ import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
+import { authorInitial, cardCategory } from '@/features/mag/lib/card';
+import { toPersianDigits } from '@/features/mag/lib/format';
+import Link from 'next/link';
 import { PreviewBanner } from './_components/PreviewBanner';
 import {
+  ArticleAside,
   ArticleBody,
-  ArticleGrid,
   ArticleMeta,
   AuthorBox,
   Breadcrumbs,
+  CardImage,
+  CategoryChip,
   CommentForm,
   CommentList,
-  ContentTypeLabel,
+  LinkListCard,
   NewsletterCta,
-  MarketChip,
-  Section,
-  TableOfContents,
+  PostCard,
+  ShareRow,
 } from '@/features/mag/components';
 
 /**
@@ -183,38 +186,36 @@ export default async function ArticlePage({
   if (!article) notFound();
 
   /*
-    Related articles and comments in parallel — neither depends on the other,
-    and sequential awaits would add a round trip on every ISR regeneration.
+    Related, onward reading and comments in parallel — none depends on another,
+    and sequential awaits would add round trips on every ISR regeneration.
 
     A comment fetch failure must not take the article down: comments are
-    supplementary, the article is the point. So it degrades to an empty thread,
+    supplementary, the article is the point. It degrades to an empty thread,
     which the list already handles by rendering nothing.
   */
-  const [related, comments] = await Promise.all([
+  const [related, onward, comments] = await Promise.all([
     getArticles({
       page: 1,
       perPage: 3,
       contentType: article.contentType.slug,
       excludeSlug: article.slug,
     }),
+    getArticles({ page: 1, perPage: 4, excludeSlug: article.slug }),
     getComments(article.slug).catch(() => ({ items: [], total: 0 })),
   ]);
 
+  const category = cardCategory(article);
+
   const crumbs = [
     { name: MAG_NAME, href: '/' },
-    ...(article.market ? [{ name: article.market.name, href: `/market/${article.market.slug}` }] : []),
+    { name: category.name, href: category.href },
     { name: article.title, href: `/${article.slug}` },
   ];
 
   return (
-    <main>
+    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
       {isPreview && <PreviewBanner />}
 
-      {/*
-        Structured data. Article, not NewsArticle — most of this archive is
-        evergreen education, and NewsArticle would signal a freshness the
-        content doesn't claim.
-      */}
       <JsonLdScript
         data={[
           articleJsonLd(article),
@@ -222,22 +223,51 @@ export default async function ArticlePage({
         ]}
       />
 
-      <Section width="article" className="!pb-0">
-        <div className="max-w-prose">
-          <Breadcrumbs items={crumbs} />
+      <div className="pt-6 lg:pt-8">
+        <Breadcrumbs items={crumbs} />
+      </div>
 
-          <div className="mt-5 flex items-center gap-2">
-            {article.market && <MarketChip market={article.market} />}
-            {article.market && <span className="text-text-muted" aria-hidden="true">·</span>}
-            <ContentTypeLabel contentType={article.contentType} />
-          </div>
+      {/* Title block, capped at 820 — the design's measure for a 44px h1. */}
+      <div className="mt-5 max-w-[820px]">
+        <CategoryChip name={category.name} href={category.href} />
 
-          {/* The page's only h1. No clamp — the full title always shows. */}
-          <h1 className="mt-3 text-[26px] font-bold leading-[1.5] text-text-primary md:text-[38px]">
-            {article.title}
-          </h1>
+        <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:pretty] md:text-[44px]">
+          {article.title}
+        </h1>
 
-          <div className="mt-4">
+        {/*
+          NO LEAD PARAGRAPH, and the omission is deliberate.
+
+          The design draws a 20px standfirst here. There is no `dek` field to
+          fill it — `decisions.md` dropped the idea because the live site's
+          excerpts are auto-truncated mid-sentence, which is the evidence that
+          this team does not write summaries. On a CARD the fallback is the
+          article's own H2 headings, which works: the card has nothing else.
+
+          Here it does not. The table of contents sits a few hundred pixels
+          below and lists those same headings, so a derived lead would print
+          the article's outline twice on one screen — and the body's first
+          paragraph, which follows immediately, is already the standfirst in
+          practice.
+
+          When a real dek field exists, it goes here.
+        */}
+
+        <div className="mt-6 flex flex-wrap items-center gap-4 border-b border-border-subtle pb-6">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[16px] text-text-secondary"
+          >
+            {authorInitial(article.author.name)}
+          </span>
+
+          <div className="flex min-w-0 flex-col gap-1">
+            <Link
+              href={`/author/${article.author.slug}`}
+              className="text-[15px] font-medium text-text-primary transition-colors hover:text-accent"
+            >
+              {article.author.name}
+            </Link>
             <ArticleMeta
               readingTime={article.readingTime}
               publishedAt={article.publishedAt}
@@ -246,61 +276,89 @@ export default async function ArticlePage({
             />
           </div>
 
-          {/*
-            Hero is the LCP element: priority, fixed 3:2 box, no text overlay.
-            Mag thumbnails frequently have the title baked into the image, so an
-            overlay would collide with it.
-          */}
-          {article.featuredImage && (
-            <div className="relative mt-6 aspect-[3/2] w-full overflow-hidden rounded-card bg-surface-raised">
-              <Image
-                src={article.featuredImage.url}
-                alt={article.featuredImage.alt}
-                fill
-                sizes="(max-width: 1023px) 100vw, 700px"
-                className="object-cover"
-                priority
-              />
-            </div>
-          )}
-        </div>
-      </Section>
-
-      <Section width="article" className="!pt-10">
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-          {/* min-w-0 lets the column shrink below its content width, which is
-              what stops a long unbroken string from blowing out the layout. */}
-          <div className="min-w-0 flex-1">
-            <div className="mb-8 lg:hidden">
-              <TableOfContents headings={article.outline} />
-            </div>
-
-            <ArticleBody html={article.content} />
-
-            <div className="mt-12 max-w-prose space-y-8">
-              <AuthorBox author={article.author} />
-
-              <NewsletterCta />
-
-              {/* Renders nothing when there are no approved comments. */}
-              <CommentList thread={comments} />
-
-              <CommentForm articleId={article.id} />
-            </div>
+          <div className="ms-auto">
+            <ShareRow slug={article.slug} title={article.title} />
           </div>
-
-          {/* Inline-end column — the LEFT side in RTL. */}
-          <aside className="hidden w-[260px] shrink-0 lg:block">
-            <TableOfContents headings={article.outline} />
-          </aside>
         </div>
-      </Section>
+      </div>
+
+      {/* Featured image — the ONE priority image on this page. */}
+      {article.featuredImage && (
+        <figure className="mt-7">
+          <div className="h-[220px] md:h-[420px]">
+            <CardImage
+              image={article.featuredImage}
+              sizes="(max-width: 1023px) 100vw, 1360px"
+              priority
+              rounded="rounded-card"
+            />
+          </div>
+          {article.featuredImage.alt && (
+            <figcaption className="mt-2.5 text-[12.5px] leading-[1.7] text-text-muted">
+              {article.featuredImage.alt}
+            </figcaption>
+          )}
+        </figure>
+      )}
+
+      {/*
+        THREE COLUMNS ONLY AT xl (1280+).
+
+        The obvious `lg:grid-cols-[260px_1fr_300px]` is wrong and measurably
+        so: at exactly 1024 it leaves the article column 299px wide — about 30
+        Persian characters a line, less than half the 70–73 the type scale is
+        built for. The design's responsive note says the post page drops to two
+        columns between 1024 and 1279, with the contents collapsing into a
+        `<details>` above the article, and this is why.
+
+        So: one column below lg, article + right rail at lg, all three at xl.
+      */}
+      <div className="mt-9 grid items-start gap-8 lg:mt-11 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[260px_1fr_300px]">
+        <div className="lg:order-2 lg:col-span-2 xl:order-1 xl:col-span-1">
+          <ArticleAside headings={article.outline} />
+        </div>
+
+        <div className="min-w-0 lg:order-3 xl:order-2">
+          <ArticleBody html={article.content} />
+
+          <div className="mt-10 flex flex-col gap-8">
+            <AuthorBox author={article.author} />
+            <CommentList thread={comments} />
+            <CommentForm articleId={article.id} />
+          </div>
+        </div>
+
+        <aside className="flex flex-col gap-6 lg:sticky lg:order-4 lg:top-[76px] xl:order-3">
+          <LinkListCard
+            title="ادامه‌ی مسیر"
+            items={onward.items.slice(0, 4).map((a) => ({
+              slug: a.slug,
+              title: a.title,
+              meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
+            }))}
+          />
+          <NewsletterCta />
+        </aside>
+      </div>
 
       {related.items.length >= 3 && (
-        <Section width="article" className="!pt-0">
-          <h2 className="mb-6 text-[22px] font-bold text-text-primary">مطالب مرتبط</h2>
-          <ArticleGrid articles={related.items} />
-        </Section>
+        <section aria-labelledby="related-heading" className="mt-16">
+          <div className="mb-6 flex items-center gap-4">
+            <h2
+              id="related-heading"
+              className="text-[22px] font-bold tracking-[-0.2px] text-text-primary md:text-[24px]"
+            >
+              مطالب مرتبط
+            </h2>
+            <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.items.map((item) => (
+              <PostCard key={item.id} article={item} />
+            ))}
+          </div>
+        </section>
       )}
     </main>
   );

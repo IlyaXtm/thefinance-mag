@@ -29,10 +29,13 @@ function Chip({ item, isActive }: { item: FilterItem; isActive: boolean }) {
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive || undefined}
       className={[
-        'inline-flex min-h-11 shrink-0 snap-start items-center rounded-full border px-4 text-sm whitespace-nowrap transition-colors',
+        /* 36px is the drawn height; min-h-11 keeps the 44px touch target the
+           accessibility floor requires, so the chip is padded rather than
+           shrunk on a phone. */
+        'inline-flex min-h-11 shrink-0 snap-start items-center rounded-full border px-4 text-[13.5px] whitespace-nowrap transition-colors md:min-h-9',
         isActive
-          ? 'border-accent bg-accent text-accent-contrast'
-          : 'border-border-interactive bg-transparent text-text-secondary hover:bg-surface-hover',
+          ? 'border-accent bg-accent font-medium text-accent-contrast'
+          : 'border-border-interactive bg-transparent text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary',
       ].join(' ')}
     >
       {item.name}
