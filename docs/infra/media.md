@@ -3,6 +3,39 @@
 **Date:** 2026-08-19
 **Supersedes:** the uploads section of `wp-vps-setup.md` — see the correction below
 **Related:** `seo-safety-protocol.md`
+**Corrected:** 2026-08-29 — every path in this document was missing the `/mag`
+prefix. See «The path this document originally got wrong» below before reading
+anything else; the reasoning holds, the paths it was written against did not.
+
+---
+
+## ⚠️ The path this document originally got wrong
+
+This document was written against `/wp-content/uploads/`. **The real path is
+`/mag/wp-content/uploads/`** — WordPress is installed under `/mag`, which is
+what `next.config.ts` allow-lists in `remotePatterns` and what the GraphQL
+endpoint's own path implies.
+
+That is not a typo with a cosmetic cost, because of how nginx matches: it picks
+the **longest matching prefix**, and `thefinance.ir` already has a
+`location /mag` block. So `/mag/wp-content/uploads/chart.jpg` matched
+`location /mag` and never reached the uploads block this document specified.
+Two consequences, both invisible until cutover:
+
+1. `proxy_hide_header X-Robots-Tag` — the entire reason the uploads block
+   exists — has never executed once.
+2. Today `/mag` proxies to WordPress, which serves the image anyway, so nothing
+   looks wrong. At cutover `/mag` starts pointing at Next.js, which has no such
+   file on disk, and **every image on the site 404s.**
+
+The fix, now in `infra/nginx/thefinance.ir.conf` and
+`infra/nginx/new.thefinance.ir.conf`, is a `location /mag/wp-content/uploads/`
+block placed alongside the un-prefixed one. `/mag/wp-content/uploads/` is
+longer than `/mag`, so it wins. The un-prefixed block is kept for any
+historical URL that still uses it.
+
+Every path below has been corrected. The architecture, the MinIO sequencing and
+the invariants are unchanged — only the prefix was wrong.
 
 ---
 
@@ -12,7 +45,7 @@
 
 ```
 Public, permanent, never changes:
-    https://thefinance.ir/wp-content/uploads/2026/08/chart.jpg
+    https://thefinance.ir/mag/wp-content/uploads/2026/08/chart.jpg
 
 Behind it, swappable at any time without touching a single URL:
     → WordPress VPS local disk        (today)
@@ -20,7 +53,7 @@ Behind it, swappable at any time without touching a single URL:
     → any other backend               (whenever)
 ```
 
-Every SEO-bearing asset lives on `thefinance.ir`. Articles at `/mag`, images at `/wp-content/uploads/`. `wp.thefinance.ir` carries editors and GraphQL only, and is fully de-indexed.
+Every SEO-bearing asset lives on `thefinance.ir`. Articles at `/mag`, images at `/mag/wp-content/uploads/`. `wp.thefinance.ir` carries editors and GraphQL only, and is fully de-indexed.
 
 Once this holds, the storage backend becomes a free choice. Break it once and you pay in image rankings that take months to recover.
 
@@ -30,13 +63,13 @@ Once this holds, the storage backend becomes a free choice. Break it once and yo
 
 The config in `wp-vps-setup.md` sets `X-Robots-Tag: noindex, nofollow` at the server level on `wp.thefinance.ir`, plus a `noindex` on the uploads location. That is correct **for that host**.
 
-But when `thefinance.ir` proxies `/wp-content/uploads/` to it, **nginx forwards the upstream's headers to the client by default**. The result: images served from `thefinance.ir` inherit `noindex` and drop out of Google Images. Self-inflicted, and silent — the images render perfectly the whole time.
+But when `thefinance.ir` proxies `/mag/wp-content/uploads/` to it, **nginx forwards the upstream's headers to the client by default**. The result: images served from `thefinance.ir` inherit `noindex` and drop out of Google Images. Self-inflicted, and silent — the images render perfectly the whole time.
 
 **Fix — on the `thefinance.ir` proxy, strip the upstream header:**
 
 ```nginx
 # On thefinance.ir
-location /wp-content/uploads/ {
+location /mag/wp-content/uploads/ {
     proxy_pass https://wp.thefinance.ir;
     proxy_set_header Host wp.thefinance.ir;
 
@@ -54,8 +87,8 @@ location /wp-content/uploads/ {
 **And remove the uploads-level noindex from the WordPress host** so the intent is unambiguous:
 
 ```nginx
-# On wp.thefinance.ir — uploads location
-location /wp-content/uploads/ {
+# On wp.thefinance.ir — uploads location (WordPress lives under /mag here too)
+location /mag/wp-content/uploads/ {
     expires 30d;
     add_header Cache-Control "public, immutable";
     # X-Robots-Tag deliberately NOT set here.
@@ -69,7 +102,7 @@ location /wp-content/uploads/ {
 
 ```bash
 # Public origin: must NOT contain noindex
-curl -sI https://thefinance.ir/wp-content/uploads/<known-file>.jpg | grep -i 'x-robots-tag\|^HTTP'
+curl -sI https://thefinance.ir/mag/wp-content/uploads/<known-file>.jpg | grep -i 'x-robots-tag\|^HTTP'
 
 # CMS HTML: must contain noindex
 curl -sI https://wp.thefinance.ir/ | grep -i 'x-robots-tag'
@@ -100,7 +133,7 @@ MinIO sits behind the unchanged path. The public URL never learns it exists:
 
 ```
 Browser
-   ↓  https://thefinance.ir/wp-content/uploads/2026/08/chart.jpg
+   ↓  https://thefinance.ir/mag/wp-content/uploads/2026/08/chart.jpg
 ArvanCloud (cache)
    ↓
 nginx on thefinance.ir
@@ -109,7 +142,7 @@ MinIO  ──fallback──▶  wp.thefinance.ir
 ```
 
 ```nginx
-location /wp-content/uploads/ {
+location /mag/wp-content/uploads/ {
     proxy_hide_header X-Robots-Tag;
     expires 30d;
     add_header Cache-Control "public";
@@ -150,7 +183,7 @@ Bring it forward only if disk pressure on the VPS forces it — and if that happ
 
 Images are the second-largest source of `/mag` search traffic after articles, and the easiest to lose by accident.
 
-- [ ] Public image URLs unchanged: `thefinance.ir/wp-content/uploads/...`
+- [ ] Public image URLs unchanged: `thefinance.ir/mag/wp-content/uploads/...`
 - [ ] `curl -sI` on a public image shows **no** `X-Robots-Tag`
 - [ ] `curl -sI` on `wp.thefinance.ir/` **does** show `noindex`
 - [ ] Real `alt` text on content images — never empty strings
@@ -158,7 +191,7 @@ Images are the second-largest source of `/mag` search traffic after articles, an
 - [ ] Fixed aspect-ratio boxes everywhere (CLS)
 - [ ] Hero and featured images marked `priority` (LCP)
 - [ ] Modern formats served, with fallbacks
-- [ ] ArvanCloud caching `/wp-content/uploads/` so image load never hits the WordPress VPS directly
+- [ ] ArvanCloud caching `/mag/wp-content/uploads/` so image load never hits the WordPress VPS directly
 - [ ] Baseline the Google Images impression count in Search Console **before** cutover, alongside the page baseline
 
 That last one matters: if image traffic drops after cutover and you never baselined it, you'll spend weeks arguing about whether it dropped at all.
@@ -169,7 +202,7 @@ That last one matters: if image traffic drops after cutover and you never baseli
 
 ```bash
 # Public images must NOT be noindex
-curl -sI https://thefinance.ir/wp-content/uploads/<known-file>.jpg \
+curl -sI https://thefinance.ir/mag/wp-content/uploads/<known-file>.jpg \
   | grep -qi 'x-robots-tag' && echo 'ALERT: public images are noindexed'
 
 # CMS HTML must be noindex
@@ -177,7 +210,7 @@ curl -sI https://wp.thefinance.ir/ \
   | grep -qi 'noindex' || echo 'ALERT: CMS is indexable'
 
 # A known image must still resolve at the unchanged public URL
-curl -sfo /dev/null https://thefinance.ir/wp-content/uploads/<known-file>.jpg \
+curl -sfo /dev/null https://thefinance.ir/mag/wp-content/uploads/<known-file>.jpg \
   || echo 'ALERT: image URL contract broken'
 ```
 
