@@ -8,6 +8,120 @@ why it was made.
 
 ---
 
+## 2026-08-29 — Cutover blockers: four path bugs that only fire at cutover
+
+Four defects, all of the same shape: correct-looking config that has never once
+executed, and whose failure is masked by the fact that `/mag` currently proxies
+to WordPress. At cutover `/mag` starts pointing at Next.js and all four surface
+at the same moment, which is the worst possible time to find them.
+
+**Uploads never matched their own nginx block.** Both configs carried
+`location /wp-content/uploads/`. WordPress is installed under `/mag`, so the
+real path is `/mag/wp-content/uploads/` — which is what `next.config.ts`
+allow-lists in `remotePatterns` and what the GraphQL endpoint's own path
+implies. nginx picks the **longest matching prefix**, so those requests matched
+`location /mag` and the uploads block was dead code from the day it was
+written. Two consequences: `proxy_hide_header X-Robots-Tag`, the entire reason
+the block exists, has never run — and at cutover Next.js has no such file on
+disk, so **every image on the site 404s at once.**
+
+Both paths are now present in `infra/nginx/thefinance.ir.conf` and
+`infra/nginx/new.thefinance.ir.conf`; `/mag/wp-content/uploads/` is longer than
+`/mag`, so it wins, and the un-prefixed block stays for any historical URL that
+still uses it. Production hides the CMS's `X-Robots-Tag` so images stay
+indexable; staging deliberately does not, because staging images should stay
+out of the index along with everything else on that host.
+
+`docs/infra/media.md` had its entire argument built on the wrong path. It is
+corrected rather than deleted — the URL-contract reasoning and the MinIO
+sequencing were right, only the prefix was wrong — and it now opens with the
+correction so nobody re-derives the old paths from it.
+
+**The GraphQL rate limit was never applied.** `wp.thefinance.ir.conf` had
+`location = /graphql`, an exact match, against a real endpoint of
+`/mag/graphql`. Every query fell through to `location /`, missing both
+`limit_req zone=graphql` and `Cache-Control: no-store`. The public schema was
+effectively unthrottled. Now `location = /mag/graphql`.
+
+**`mapImage` bypassed the host rewrite.** `url: image.sourceUrl` went out raw
+while every other URL goes through `toPublicUrl()`. `remotePatterns` allows
+`wp.thefinance.ir` too, so the day `siteurl` or a plugin returns a CMS-host
+media URL, images would be served silently from the de-indexed host and fall
+out of Google Images — rendering perfectly the whole time. Now wrapped.
+
+**`missingKnown` was a gate that passes when it cannot measure.** The cutover
+condition was "`redirectSource.missingKnown` must be empty". But until a
+`magRedirects` fetch has succeeded in that process, the cache **is** the
+compiled-in table, so the probe compares the seed against itself and returns
+`[]` by construction — the identical answer it gives when everything is
+healthy. With the mu-plugin absent, the gate that exists to catch exactly that
+absence would have passed. The condition is now
+`reachable === true && missingKnown.length === 0` in `docs/cutover-plan.md`,
+`docs/infra/frontend-deploy.md`, the `/mag/health` route comment and
+`probeRedirectSource`'s own doc comment. `reachable` says the measurement
+happened; `missingKnown` says what it found. Neither means anything alone.
+
+**Three doc drifts, corrected.** The changelog and the deploy runbook said
+"twelve rules" — the map holds **nine**, after three rules for URLs that never
+existed were removed (`69c979e`). `README.md` and `docs/handoff.md` named the
+branch `claude`; it is `claude-main`. `docs/cutover-plan.md` said step 1 was not
+deployed, but the deploy session brought the container up on `127.0.0.1:3100`
+serving real WPGraphQL data — "deployed" and "verified" are now stated
+separately there, because they are not the same claim.
+
+### Still open — and why, precisely
+
+**The redirect mu-plugin is still not in git, and this is the highest-priority
+item on the branch.** `wordpress/mu-plugins/thefinance-mag-redirects.php` lives
+only on the CMS VPS. Three fixes were applied to it there during the deploy
+session — normalising Rank Math's absolute `url_to`, decoding the Persian slug
+exactly once, and comparing slash-normalised paths in the flatten loop — and
+none of them exist anywhere else. One container rebuild takes redirects,
+preview and revalidation with it.
+
+It cannot be copied from this environment: the CMS host is unreachable from the
+build sandbox and there is no PHP binary here to lint with. On the server:
+
+```bash
+docker compose exec -T wordpress \
+  cat /var/www/html/wp-content/mu-plugins/thefinance-mag-redirects.php \
+  > wordpress/mu-plugins/thefinance-mag-redirects.php
+php -l wordpress/mu-plugins/thefinance-mag-redirects.php
+```
+
+The frontend half of the contract it has to satisfy is in the repo and was
+re-checked against the source: `redirect-source.ts` queries
+`{ magRedirects { from to status } }`, and `mag.api.ts` queries
+`magPreview(id: $id, secret: $secret)`. Nothing else is expected of it.
+
+**Three documents named in the brief are not in any repo** and could not be
+added, because this environment has never held them: `deployment-findings.md`
+(the deploy session log), `content-team-guide.md` (the Persian content-team
+guide, effectively the P7 output) and `ui-review-questions.md`. They are listed
+here so their absence is a known gap rather than an oversight.
+
+**`mag-master-plan.md` is likewise not in the repo.** If it ever lands, one
+sentence in it must be corrected on arrival: *"No redirect map is needed: the
+permalink structure is `/%postname%/` and doesn't change."* That is the exact
+claim that turned out to be wrong, and 89% of `/mag` organic clicks depend on
+it being wrong.
+
+**The two curl checks the brief asks for first were not run.** `thefinance.ir`
+is unreachable from here, so the assertion that `/mag/wp-content/uploads/...`
+is the live path rests on `remotePatterns`, the `/mag/graphql` endpoint and the
+`/mag/wp-admin` path — three independent pointers at the same answer, but not a
+measurement. Run both before reloading nginx:
+
+```bash
+curl -sI https://thefinance.ir/mag/wp-content/uploads/2026/08/aud-usd-upside-risk-analysis.jpg | head -1
+curl -sI https://thefinance.ir/wp-content/uploads/2026/08/aud-usd-upside-risk-analysis.jpg | head -1
+```
+
+`nginx -t` and `./scripts/verify-redirects.sh https://thefinance.ir` likewise
+need the server.
+
+---
+
 ## 2026-08-21 — Staging re-verification, and two proxy-only bugs
 
 The deploy artifacts were built earlier; this re-ran them against the current
@@ -80,13 +194,13 @@ same button, sees no error, and nothing happens.
 
 **Redirects now read from WordPress, with the compiled table as the floor.**
 
-The twelve rules could have stayed a constant, and that works exactly once —
+The nine rules could have stayed a constant, and that works exactly once —
 every redirect after it would need a deploy. The SEO team adds one in Rank Math
 today and it is live immediately; after cutover they would add one, see no
 error, and nothing would happen. So `magRedirects` is fetched on a five-minute
 window.
 
-But a CMS blip must not turn ranked URLs into 404s, and those twelve carry 89%
+But a CMS blip must not turn ranked URLs into 404s, and those nine carry 89%
 of the section's organic clicks. So the fetch is **never in the request's
 path**: a redirect is answered from cache, and a stale cache triggers a
 background refresh whose failure is swallowed. Cold start serves the
@@ -104,8 +218,11 @@ would remove one in Rank Math and it would keep redirecting, the same silent
 failure pointing the other way. The cost is that an under-returning
 `magRedirects` silently drops ranked URLs, so `/mag/health` now lists
 `redirectSource.missingKnown`: compiled-in rules WordPress is not returning.
-Tested with a stub returning 3 of 12 — health named the missing 9. **It must be
-empty before cutover.**
+Tested with a stub returning a subset — health named exactly the rules it
+left out. **It must be empty before cutover — and only when
+`redirectSource.reachable` is `true`, since before the first successful fetch
+the probe is comparing the compiled-in table against itself and returns `[]`
+by construction.**
 
 The two rules whose targets no longer exist in the database are code-only and
 always win, so a stale row cannot resurrect a 404. Verified against a stub that
@@ -182,7 +299,7 @@ that would have caught it is now in `phase-0-verification.md`: take the ranking
 URLs from Search Console and ask whether each still resolves *without* a
 redirect. Checking the permalink setting is not the same question.
 
-**Fourteen rules, flattened to twelve entries and one hop each.** Some URLs
+**Fourteen source URLs, flattened to nine entries and one hop each.** Some URLs
 take two hops in WordPress today — Rank Math points at a slug that
 `_wp_old_slug` then redirects again. Google does not penalise a short chain,
 but every hop spends crawl budget and delays the reader, and since the map was

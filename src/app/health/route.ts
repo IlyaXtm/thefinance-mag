@@ -34,8 +34,16 @@ export function GET() {
         reachable: redirects.reachable,
         count: redirects.count,
         ageMs: redirects.ageMs,
-        /* Compiled-in rules WordPress is not returning. Must be empty before
-           cutover — anything here is a ranked URL about to start 404ing. */
+        /*
+          Compiled-in rules WordPress is not returning. Anything here is a
+          ranked URL about to start 404ing.
+
+          READ IT TOGETHER WITH `reachable`, NEVER ALONE. Until a fetch has
+          succeeded, the cache IS the compiled-in table, so every known rule is
+          trivially present and this list is empty — an empty `missingKnown`
+          with `reachable: false` means "not measured yet", not "verified".
+          The cutover gate is `reachable === true && missingKnown.length === 0`.
+        */
         missingKnown: redirects.missingKnown,
       },
       time: new Date().toISOString(),
