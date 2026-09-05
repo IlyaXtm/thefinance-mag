@@ -25,6 +25,10 @@ const config: Config = {
         accent: 'var(--accent)',
         'accent-contrast': 'var(--accent-contrast)',
         'accent-soft': 'var(--accent-soft)',
+        /* Text over photography. Fixed across themes — see tokens.css. */
+        'on-media': 'var(--on-media)',
+        'on-media-secondary': 'var(--on-media-secondary)',
+        'on-media-muted': 'var(--on-media-muted)',
         'focus-ring': 'var(--focus-ring)',
         danger: 'var(--danger)',
         skeleton: 'var(--skeleton)',

@@ -52,7 +52,7 @@ export function NewsletterCta() {
       /* The one gradient in the system. It marks the single conversion surface
          on the page without introducing a second accent colour. */
       style={{
-        background: 'linear-gradient(160deg, rgba(77,154,254,.16), rgba(77,154,254,.02))',
+        background: 'linear-gradient(160deg, var(--accent-wash-from), var(--accent-wash-to))',
       }}
     >
       <h2 id="newsletter-heading" className="text-[17px] font-bold text-text-primary">

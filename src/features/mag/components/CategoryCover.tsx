@@ -39,12 +39,12 @@ export function CategoryCover({
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                'linear-gradient(to top, rgba(7,19,49,.96), rgba(7,19,49,.35))',
+                'linear-gradient(to top, var(--scrim-cover-from), var(--scrim-cover-to))',
             }}
           />
-          <div className="absolute inset-x-5 bottom-6 lg:inset-x-8">
+          <div className="absolute inset-x-5 bottom-6 lg:inset-x-8" data-on-media>
             <Breadcrumbs items={crumbs} />
-            <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-text-primary md:text-[34px]">
+            <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-on-media md:text-[34px]">
               {title}
             </h1>
           </div>
