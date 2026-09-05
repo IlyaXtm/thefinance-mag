@@ -264,6 +264,35 @@ cite {
   outline-offset: 3px;
 }
 
+/*
+ * Theme toggle, both states rendered.
+ *
+ * The server always emits the dark default — the route is statically rendered
+ * and there is no cookie telling it otherwise — so the button cannot pick its
+ * icon in React without either a hydration mismatch or a visible flip on
+ * mount. Both icons ship and CSS shows the one matching the live theme, so the
+ * markup is identical on both sides and the right icon is in the first frame.
+ *
+ * `display: none` on the inactive half also takes its sr-only label out of the
+ * accessibility tree, which is what keeps the button's accessible name equal
+ * to the action it will actually perform.
+ */
+[data-theme-when] {
+  display: contents;
+}
+
+[data-theme-when='light'] {
+  display: none;
+}
+
+[data-theme='v2-light'] [data-theme-when='light'] {
+  display: contents;
+}
+
+[data-theme='v2-light'] [data-theme-when='dark'] {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

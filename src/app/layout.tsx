@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
 import { feedAlternate, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { MagFooter, MagHeader } from '@/shared/ui';
+import { THEME_DARK, THEME_INIT_SCRIPT } from '@/features/mag/lib/theme';
 import '@/styles/globals.css';
 
 /**
@@ -79,7 +80,33 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       dir and lang live here, not per page. RTL is the base direction for this
       product, not a mode layered on an LTR default.
     */
-    <html lang="fa" dir="rtl" data-theme="v1" className={iranYekan.variable}>
+    <html
+      lang="fa"
+      dir="rtl"
+      /*
+        The DARK DEFAULT, always — this route is statically rendered and cached,
+        so the server has no way to know what the reader chose. THEME_INIT_SCRIPT
+        below corrects it before the first paint when they chose light.
+
+        suppressHydrationWarning is required and is scoped to this one element:
+        by the time React hydrates, that script may already have changed
+        `data-theme`, and React would otherwise warn about an attribute it did
+        not render. It suppresses the warning for attributes on <html> only —
+        nothing inside it.
+      */
+      data-theme={THEME_DARK}
+      suppressHydrationWarning
+      className={iranYekan.variable}
+    >
+      <head>
+        {/*
+          Blocking, and first. A reader on light would otherwise see a dark
+          flash on every navigation while waiting for hydration. Inline because
+          an external file is a round trip before paint; allowed by the CSP,
+          which already carries 'unsafe-inline' for Next's own bootstrap.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       {/* flex column + mt-auto on the footer keeps it at the bottom on short
           pages without a fixed height or a viewport calculation. */}
       <body className="flex min-h-screen flex-col">

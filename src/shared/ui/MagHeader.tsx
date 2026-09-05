@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CATEGORY_NAV } from '@/features/mag/lib/nav';
 import { magPath, MAG_NAME, SITE_ORIGIN } from '@/features/mag/lib/site';
+import { ThemeToggle } from './ThemeToggle';
 
 /**
  * Magazine header — 80px, one flex row.
@@ -94,6 +95,13 @@ export function MagHeader() {
             <path d="M10.6 10.6L14 14" stroke="currentColor" strokeWidth="1.4" />
           </svg>
         </Link>
+
+        {/* Between search and the newsletter CTA: a utility control, so it sits
+            with the other utilities rather than competing with the one
+            conversion target in the bar. Visible at every breakpoint — on
+            mobile the category nav and the search field both collapse, and
+            this is small enough to stay. */}
+        <ThemeToggle />
 
         <a
           href="#newsletter"
