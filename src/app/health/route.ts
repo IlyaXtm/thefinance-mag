@@ -21,6 +21,13 @@ export function GET() {
   return Response.json(
     {
       status: 'ok',
+      /*
+        Which build is actually running. Pages are generated at build time, so
+        a stale image serves stale content indefinitely and a restart does not
+        fix it — this is how you tell without guessing. Matches .next/BUILD_ID
+        on the machine that produced the image.
+      */
+      buildId: process.env.MAG_BUILD_ID ?? 'unknown',
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*

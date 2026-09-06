@@ -446,3 +446,52 @@ single outcome available in this migration.
 
 After fixing both in Rank Math, re-run `npm run redirects:sync` so the compiled
 fallback picks up the corrected destinations.
+
+---
+
+## B16 — Total Blocking Time is at roughly 2× its guideline
+
+**Status:** accepted for now, with a named cause and a named next step.
+
+Measured on the standalone build at 390px under a 4× CPU throttle and
+1.6 Mbps/150 ms — a mid-range Android on 3G:
+
+| route | TBT |
+|---|---|
+| `/mag` | 384–442 ms |
+| `/mag/archive` | 411–441 ms |
+| `/mag/news` | ~350 ms |
+| article | ~456 ms |
+
+Against a 200 ms guideline. Every content route is over it.
+
+**Do not compare these against earlier numbers.** The same commit range
+measured 199–229 ms in an earlier session and 365–442 ms in this one, with
+byte-identical bundles — verified by re-measuring the pre-change commit, which
+came back at 365–420 ms. TBT here is a property of the machine at least as much
+as of the app, so it is only meaningful as a within-session comparison. The
+earlier engineering report called it "at its guideline"; on the numbers it was
+flagged over on four of six routes, and that description was too generous.
+
+**What is stable and is the actual driver:** 123–125 KB of first-load
+JavaScript on every route, 103 KB of it shared. TBT is main-thread time
+parsing, compiling and hydrating that.
+
+**What would move it, roughly in order of return:**
+
+1. The listing pages ship the full client runtime to render what is almost
+   entirely static markup. The interactive parts are the theme toggle, the
+   comment form and the search box — everything else could be a server
+   component with no client bundle at all. Audit which components carry
+   `'use client'` and why.
+2. The 94 KB IRANYekanX woff2 is not JS but is on the critical path and
+   competes for the same early network budget. A subset covering only the
+   Persian and Latin ranges actually used would cut it substantially, and the
+   face is fixed by CLAUDE.md so subsetting is the only lever.
+3. Confirm against a real device or a lab with a stable CPU baseline before
+   spending effort on either — the numbers above cannot support a
+   before/after claim on their own.
+
+TBT is a lab proxy for INP, which is the metric CLAUDE.md actually targets.
+Field INP is not being collected; that gap is the reason this cannot be closed
+by measurement here.
