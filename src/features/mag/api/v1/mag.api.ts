@@ -162,7 +162,12 @@ function mapImage(node: WpSummary['featuredImage']): MagImage | null {
   if (!image?.sourceUrl) return null;
 
   return {
-    url: image.sourceUrl,
+    /* The CMS returns wp.thefinance.ir for media on some code paths. Serving
+       an image from the CMS host would both leak the de-indexed host into the
+       page and miss the `remotePatterns` entry the optimizer matches on, so it
+       goes through the same host rewrite as every other URL. The `??` is only
+       for the type — `sourceUrl` is already proven non-null above. */
+    url: toPublicUrl(image.sourceUrl) ?? image.sourceUrl,
     /* An empty alt is surfaced as-is rather than invented. Fabricated alt text
        is worse than none — it misdescribes the image to the people who rely
        on it. */

@@ -15,7 +15,7 @@ or linked from it. The one claim attributed to it that was **wrong** —
 
 | Step | State |
 |---|---|
-| 1. Deploy to staging | **Artifacts built and verified locally. Not deployed** — see below |
+| 1. Deploy to staging | **Deployed.** Container up on `127.0.0.1:3100` behind nginx, serving real WPGraphQL data — see below |
 | 2. Redirect map | Built, unverified against live URLs |
 | 3. Pre-cutover crawl diff | Blocked on step 1 |
 | 4. Next 16 upgrade | Blocked on step 1, deliberately |
@@ -40,11 +40,23 @@ Files, all in the repo and reviewable:
 
 Runbook with the exact commands: **`docs/infra/frontend-deploy.md`**.
 
-**Not deployed, and it cannot be from the build environment.** The frontend
-server (87.247.171.97) is unreachable — every request returns the sandbox's
-403, there is no SSH client, and a raw TCP check "succeeds" against any address
-including a bogus one, so it proves nothing. Everything below was verified
-against the real config files running locally.
+**Deployed — but not from this environment, and the distinction still
+matters.** The frontend server (87.247.171.97) is unreachable from the build
+sandbox: every request returns the sandbox's 403, there is no SSH client, and a
+raw TCP check "succeeds" against any address including a bogus one, so it
+proves nothing. Everything in this file was verified against the real config
+files running locally, and the deploy itself was carried out on the server in a
+separate session.
+
+What that session established, and what this file now assumes: the container is
+up on `127.0.0.1:3100` behind nginx and serving **real** WPGraphQL data, not
+mock. It also applied three fixes to
+`wp-content/mu-plugins/thefinance-mag-redirects.php` directly on the server —
+that file is still not in git, which is cutover blocker #1. See
+`docs/changelog.md`, entry 2026-08-29.
+
+Anything below marked "not verified" is still not verified: being deployed is
+not the same as having run the checks.
 
 ### Staging is a host, not a path
 
@@ -112,10 +124,18 @@ Roll back immediately, without debate, on any of:
 - a wrong canonical, or the CMS host in one
 - a missing article body
 - **any legacy redirect 404ing, or taking more than one hop**
-- `/mag/health` reporting `source: "mock"`, or a non-empty
-  `redirectSource.missingKnown`
+- `/mag/health` reporting `source: "mock"`, or anything other than
+  `redirectSource.reachable === true && redirectSource.missingKnown.length === 0`
 
 The last two are the ones that look fine from a browser. Everything renders.
+
+**`missingKnown: []` on its own is not a pass.** Until a `magRedirects` fetch
+has succeeded in that process, the cache is the compiled-in table, so the probe
+compares the seed against itself and the list is empty by construction — the
+same empty list you get when everything is fine. The two fields are one gate:
+`reachable` says the measurement happened, `missingKnown` says what it found.
+`reachable: false` with an empty list is the CMS being down, and is a rollback
+trigger in its own right.
 
 ---
 

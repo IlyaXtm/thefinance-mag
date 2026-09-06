@@ -118,7 +118,7 @@ diff before.txt after.txt
 - a wrong canonical, or the CMS host appearing in one
 - a missing article body
 - **any legacy redirect returning 404, or taking more than one hop.** Those
-  twelve URLs carry 89% of `/mag` organic clicks. Capture the baseline BEFORE
+  nine URLs carry 89% of `/mag` organic clicks. Capture the baseline BEFORE
   the switch:
 
   ```bash
@@ -274,11 +274,20 @@ curl -s https://new.thefinance.ir/mag/health | python3 -m json.tool
 
 - `source` — `wpgraphql`, not `mock`
 - `previewConfigured` — `true`
-- `redirectSource.reachable` — `true`. False means no new SEO redirect is
-  reaching the frontend and middleware is serving the compiled-in floor.
-- **`redirectSource.missingKnown` — MUST be empty.** Anything listed is a
-  compiled-in rule that `magRedirects` is not returning, i.e. a ranked URL
-  about to start 404ing. Do not cut over with a non-empty list.
+- **The redirect gate is both fields together:**
+  `redirectSource.reachable === true` **and**
+  `redirectSource.missingKnown.length === 0`. Neither one passes alone.
+  - `reachable: false` means no fetch has ever succeeded in that process, so no
+    new SEO redirect is reaching the frontend and middleware is serving the
+    compiled-in floor.
+  - It also means `missingKnown` has not actually been measured: with only the
+    seed in the cache, the probe compares the compiled-in table against itself
+    and returns `[]` — indistinguishable from a healthy result. Checking
+    `missingKnown` while `reachable` is false is how a broken CMS reads as
+    green.
+  - Anything listed in `missingKnown` (with `reachable: true`) is a compiled-in
+    rule that `magRedirects` is not returning, i.e. a ranked URL about to start
+    404ing. Do not cut over with a non-empty list.
 
 ```bash
 # Preview: wrong secret gives a bare 401 with no article content

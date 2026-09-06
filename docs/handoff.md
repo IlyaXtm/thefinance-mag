@@ -1,6 +1,6 @@
 # Handoff — مجله فایننس
 
-For Claude Code, working in `IlyaXtm/thefinance-mag`, branch `claude`.
+For Claude Code, working in `IlyaXtm/thefinance-mag`, branch `claude-main`.
 
 Read `CLAUDE.md` and `docs/decisions.md` before changing anything. The
 constraints there are not preferences — several are legal or accessibility
