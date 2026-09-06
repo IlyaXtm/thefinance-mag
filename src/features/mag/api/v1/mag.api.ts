@@ -355,7 +355,13 @@ async function cursorForPage(
 export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
-  const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
+  /*
+    `market` is accepted but no longer applied here — market archives go through
+    getMarketArticles(), which derives list, count and pagination from one
+    source. Filtering it here filtered a single unfiltered page and produced a
+    list that disagreed with its own count.
+  */
+  const { page = 1, perPage = 9, contentType, authorSlug, excludeSlug } = params;
 
   const filters = {
     category: contentType ?? null,
@@ -386,15 +392,6 @@ export async function getArticles(
 
   let items = data.posts.nodes.map(mapSummary);
 
-  /*
-    Market filtering happens here rather than in the query.
-
-    A taxQuery would be cleaner, but `market` is a custom taxonomy and a wrong
-    enum name would silently return nothing rather than erroring. Filtering a
-    single page in JS is honest and can't fail quietly. Revisit if the archive
-    outgrows a few hundred posts.
-  */
-  if (market) items = items.filter((a) => a.market?.slug === market);
   if (excludeSlug) items = items.filter((a) => a.slug !== excludeSlug);
 
   /*
@@ -410,6 +407,88 @@ export async function getArticles(
     perPage,
     total,
     totalPages: Math.max(1, Math.ceil(total / perPage)),
+  };
+}
+
+/**
+ * How many posts a whole-archive fetch will take. 53 published today.
+ *
+ * If the archive ever exceeds this the market pages under-report rather than
+ * erroring, so `magArchiveOverflowed()` below makes that visible instead of
+ * silent.
+ */
+const ARCHIVE_FETCH_MAX = 100;
+
+let archiveOverflowed = false;
+
+/** True when the archive outgrew ARCHIVE_FETCH_MAX — surfaced on /mag/health. */
+export function magArchiveOverflowed(): boolean {
+  return archiveOverflowed;
+}
+
+/**
+ * Every published summary, in one query.
+ *
+ * WHY THIS EXISTS. Market filtering used to happen in JS over a SINGLE PAGE of
+ * an unfiltered query, while the count came from the taxonomy term's own
+ * `count` field and pagination came from an unfiltered total. Three different
+ * sources for three numbers about the same list, and on
+ * `/mag/market/gold-usd` they disagreed on screen at once: the header said
+ * «۱ مطلب» above two rendered cards.
+ *
+ * It was worse than a wrong label. Filtering one page of `perPage` posts means
+ * a market whose articles sit further down the archive shows FEWER than it has,
+ * or none at all, and `totalPages` came from the unfiltered count so page 2 of
+ * a market re-filtered a different unfiltered page. At 32 posts that mostly
+ * hid; at 53 it does not.
+ *
+ * A taxQuery in the GraphQL layer would be the scalable fix. It is deliberately
+ * NOT what this does: `market` is a custom taxonomy, a wrong enum name returns
+ * nothing rather than erroring, and this build environment cannot reach the CMS
+ * to verify the name — so it would swap a visible wrong number for a silent
+ * empty page. Fetching the archive once and deriving everything from it is
+ * correct at this size, testable without the CMS, and cannot fail quietly.
+ *
+ * Revisit when the archive approaches ARCHIVE_FETCH_MAX.
+ */
+export async function getAllSummaries(): Promise<ArticleSummary[]> {
+  const data = await gql<{ posts: { nodes: WpSummary[] } }>(
+    `query AllArticles($size: Int!) {
+      posts(first: $size, where: { status: PUBLISH }) {
+        nodes { ${SUMMARY_FIELDS} }
+      }
+    }`,
+    { size: ARCHIVE_FETCH_MAX },
+  );
+
+  const nodes = data.posts.nodes;
+  archiveOverflowed = nodes.length >= ARCHIVE_FETCH_MAX;
+
+  return nodes.map(mapSummary);
+}
+
+/**
+ * A market's archive: list, count and pagination from ONE source.
+ *
+ * `total` here is the number of posts actually in this market, so the header
+ * strip, the sidebar and the rendered rows cannot disagree — they are three
+ * readings of the same array.
+ */
+export async function getMarketArticles(
+  marketSlug: string,
+  page: number,
+  perPage: number,
+): Promise<Paginated<ArticleSummary>> {
+  const all = await getAllSummaries();
+  const items = all.filter((a) => a.market?.slug === marketSlug);
+  const start = (Math.max(1, page) - 1) * perPage;
+
+  return {
+    items: items.slice(start, start + perPage),
+    page: Math.max(1, page),
+    perPage,
+    total: items.length,
+    totalPages: Math.max(1, Math.ceil(items.length / perPage)),
   };
 }
 
@@ -548,11 +627,31 @@ export async function getMarkets(): Promise<Market[]> {
     3600,
   );
 
+  /*
+    COUNTS COME FROM THE POSTS, NOT FROM `node.count`.
+
+    WordPress's term counter is a cached number maintained by term-relationship
+    bookkeeping. It disagreed with reality after the 53-post migration — the
+    gold-usd header read «۱ مطلب» over two rendered cards — and it counts
+    attachments to the term rather than "published posts the frontend will
+    show", so the two can drift apart for reasons that have nothing to do with
+    staleness.
+
+    Deriving from the same summaries the archives render means the sidebar, the
+    header strip and the rows are all reading one array.
+  */
+  const all = await getAllSummaries();
+  const perMarket = new Map<string, number>();
+  for (const article of all) {
+    const slug = article.market?.slug;
+    if (slug) perMarket.set(slug, (perMarket.get(slug) ?? 0) + 1);
+  }
+
   return data.markets.nodes.map((node) => ({
     slug: node.slug as MarketSlug,
     name: node.name,
     description: node.marketDescription,
-    count: node.count ?? 0,
+    count: perMarket.get(node.slug) ?? 0,
   }));
 }
 

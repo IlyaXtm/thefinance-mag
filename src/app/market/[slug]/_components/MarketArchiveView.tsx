@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
+import { getMarketArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
 import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
@@ -30,7 +30,10 @@ export async function MarketArchiveView({
   page: number;
 }) {
   const [articles, markets] = await Promise.all([
-    getArticles({ page, perPage: 12, market: market.slug }),
+    /* Not getArticles({ market }): that filtered one unfiltered page in JS and
+       took its total from an unfiltered count, so the header, the sidebar and
+       the rows could each report a different number. */
+    getMarketArticles(market.slug, page, 12),
     getMarkets(),
   ]);
 
@@ -53,7 +56,9 @@ export async function MarketArchiveView({
           title={market.name}
           crumbs={crumbs}
           description={market.description}
-          count={market.count}
+          /* articles.total, not market.count: the count and the list must be
+             two readings of one array or they drift apart on screen. */
+          count={articles.total}
           /* The taxonomy has no cover-image field, so this is always the
              no-image variant today. It is wired rather than removed because
              adding one is a mu-plugin change, not a template change. */

@@ -711,6 +711,25 @@ function paginate<T>(items: T[], page: number, perPage: number): Paginated<T> {
    real listing arrives in. */
 const ALL_SUMMARIES: ArticleSummary[] = [...SUMMARIES, ...FILLER];
 
+/** Mirrors the real API: one source for a market's list, count and pages. */
+export async function getMarketArticles(
+  marketSlug: string,
+  page: number,
+  perPage: number,
+): Promise<Paginated<ArticleSummary>> {
+  const items = ALL_SUMMARIES.filter((a) => a.market?.slug === marketSlug);
+  return simulate(paginate(items, page, perPage));
+}
+
+/** Mirrors the real API. Only used by the health probe. */
+export function magArchiveOverflowed(): boolean {
+  return false;
+}
+
+export async function getAllSummaries(): Promise<ArticleSummary[]> {
+  return simulate([...ALL_SUMMARIES]);
+}
+
 export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
@@ -786,7 +805,18 @@ export async function getPreviewArticle(id: string, _secret: string): Promise<Ar
 }
 
 export async function getMarkets(): Promise<Market[]> {
-  return simulate(Object.values(MARKETS));
+  /* Counts derived from the fixtures, exactly as the real API derives them
+     from the posts — otherwise the mock hides the disagreement the real one
+     had. MARKETS[].count is kept only as the declared shape. */
+  const perMarket = new Map<string, number>();
+  for (const a of ALL_SUMMARIES) {
+    const slug = a.market?.slug;
+    if (slug) perMarket.set(slug, (perMarket.get(slug) ?? 0) + 1);
+  }
+
+  return simulate(
+    Object.values(MARKETS).map((m) => ({ ...m, count: perMarket.get(m.slug) ?? 0 })),
+  );
 }
 
 export async function getMarket(slug: MarketSlug): Promise<Market> {

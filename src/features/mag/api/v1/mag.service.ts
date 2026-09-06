@@ -32,6 +32,9 @@ const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 
  */
 type MagSource = {
   getArticles: typeof mock.getArticles;
+  getMarketArticles: typeof mock.getMarketArticles;
+  getAllSummaries: typeof mock.getAllSummaries;
+  magArchiveOverflowed: typeof mock.magArchiveOverflowed;
   getArticle: typeof mock.getArticle;
   getPreviewArticle: typeof mock.getPreviewArticle;
   getMarkets: typeof mock.getMarkets;
@@ -77,4 +80,14 @@ export const searchArticles: MagSource['searchArticles'] = (params) =>
   source.searchArticles(params);
 
 /** Useful in dev banners and diagnostics. */
+/** A market's list, count and pagination from one source — see mag.api.ts. */
+export const getMarketArticles: MagSource['getMarketArticles'] = (slug, page, perPage) =>
+  source.getMarketArticles(slug, page, perPage);
+
+export const getAllSummaries: MagSource['getAllSummaries'] = () => source.getAllSummaries();
+
+/** True when the archive outgrew the single fetch market pages rely on. */
+export const magArchiveOverflowed: MagSource['magArchiveOverflowed'] = () =>
+  source.magArchiveOverflowed();
+
 export const magDataSource = USE_MOCK ? 'mock' : 'wpgraphql';

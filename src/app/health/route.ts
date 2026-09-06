@@ -1,4 +1,5 @@
 import { hasPreviewSecret } from '@/features/mag/lib/preview-secret';
+import { magArchiveOverflowed } from '@/features/mag/api/v1/mag.service';
 import { probeRedirectSource } from '@/features/mag/lib/redirect-source';
 
 /**
@@ -28,6 +29,12 @@ export function GET() {
         on the machine that produced the image.
       */
       buildId: process.env.MAG_BUILD_ID ?? 'unknown',
+      /*
+        True when the archive has outgrown the single fetch the market pages
+        derive their list and counts from. At that point markets under-report
+        instead of erroring, so it has to be visible somewhere — this is where.
+      */
+      archiveOverflowed: magArchiveOverflowed(),
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*
