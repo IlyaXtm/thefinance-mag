@@ -5,7 +5,10 @@ import { toPersianDigits } from '../lib/format';
 /**
  * Markets as a plain list of links with counts.
  *
- * NOT a filter bar. With 18 of 32 articles carrying no market at all, and
+ * NOT a filter bar. The figure behind that was 18 of 32 articles carrying no
+ * market at all — measured before the 2026-09-06 migration took the archive to
+ * 53 posts, and NOT re-measured since. See backlog B4: if the ratio moved, this
+ * decision is open again. With that ratio holding, and
  * housing at zero, a row of filter chips advertises how empty the taxonomy is.
  * A quiet list with honest counts says the same thing without the emptiness
  * being the visual point — and it reads as a magazine's subject index rather

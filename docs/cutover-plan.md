@@ -35,8 +35,7 @@ Files, all in the repo and reviewable:
 | `Dockerfile` | built on the server |
 | `infra/mag/compose.yaml` | `/root/mag/compose.yaml` |
 | `infra/mag/.env.example` | copy to `/root/mag/.env` |
-| `infra/nginx/thefinance.ir.conf` | `/etc/nginx/sites-available/` |
-| `infra/nginx/new.thefinance.ir.conf` | `/etc/nginx/sites-available/` |
+| `infra/nginx/thefinance.ir.conf` | **reference only — diff against `/etc/nginx/conf.d/thefinance.ir.conf`, never copy** |
 
 Runbook with the exact commands: **`docs/infra/frontend-deploy.md`**.
 
@@ -67,15 +66,15 @@ once, then navigates into production on the first click. A path prefix needs a
 second image with a different basePath, at which point staging is no longer
 testing the artifact that gets promoted.
 
-`new.thefinance.ir` is already the staging host in `CLAUDE.md`.
+Staging is now the PATH `https://thefinance.ir/mag-next/` on the production host, already serving with `noindex`. `new.thefinance.ir` was dropped and its config removed from this repo.
 
 ### The cutover line
 
 One line in `thefinance.ir.conf`:
 
 ```nginx
-set $mag_upstream 127.0.0.1:9080;   # WordPress — live
-set $mag_upstream 127.0.0.1:3100;   # Next.js  — after cutover
+proxy_pass http://127.0.0.1:9080/;    # WordPress — live (slash strips /mag)
+# proxy_pass http://127.0.0.1:3100;   # Next.js — cutover (NO slash)
 ```
 
 A variable rather than two commented `proxy_pass` directives, because that
@@ -87,7 +86,7 @@ nginx -t && systemctl reload nginx
 curl -sI https://thefinance.ir/mag/ | grep -i x-robots   # MUST be empty
 ```
 
-Rollback is the same line back to 9080 and another reload. Seconds, no
+Rollback is both changes back — port to 9080 AND the slash restored — then another reload. Seconds, no
 redeploy — which is why the old WordPress theme is never deleted.
 
 ---
@@ -116,6 +115,46 @@ switch, and diff the two.
 
 ---
 
+## The cutover is TWO nginx changes, not one
+
+Written out because getting this wrong 404s the entire magazine and looks like
+a Next.js fault rather than a proxy one.
+
+The live `location /mag/` block ends its `proxy_pass` with a trailing slash.
+That slash makes nginx replace the matched prefix, stripping `/mag` — which
+WordPress needs, because it is installed at the **root**. Next.js is built with
+`basePath: '/mag'` and needs the full path.
+
+```nginx
+# /etc/nginx/conf.d/thefinance.ir.conf   (NOT sites-available)
+location /mag/ {
+    proxy_pass http://127.0.0.1:9080/;    # WordPress — today. Slash strips /mag.
+    # proxy_pass http://127.0.0.1:3100;   # Next.js — cutover. NO slash.
+}
+```
+
+1. port `9080` → `3100`
+2. **remove the trailing slash**
+3. `location /mag/_next/static/` moves port too — three lines in all
+
+Measured under nginx with stand-ins for both upstreams:
+
+| config | Next.js receives | result |
+|---|---|---|
+| 9080 + slash | *(WordPress sees `/archive`)* | working today |
+| 3100 + slash | `/archive` | **404 — every route** |
+| 3100, no slash | `/mag/archive` | correct |
+
+Rollback is both changes back, then `nginx -t && systemctl reload nginx`.
+
+⚠️ **Do not copy `infra/nginx/thefinance.ir.conf` onto the server.** It is a
+reviewable reference. The live file also proxies the main site to
+`localhost:7902`, has no TLS (terminated upstream) and carries locale
+redirects. Copying the repo copy over it sends all of `thefinance.ir` to
+WordPress.
+
+---
+
 ## Step 5 — Rollback triggers
 
 Roll back immediately, without debate, on any of:
@@ -125,7 +164,12 @@ Roll back immediately, without debate, on any of:
 - a missing article body
 - **any legacy redirect 404ing, or taking more than one hop**
 - `/mag/health` reporting `source: "mock"`, or anything other than
-  `redirectSource.reachable === true && redirectSource.missingKnown.length === 0`
+  `redirectSource.reachable === true` **and** `missingKnown.length === 0`
+  **and** `missingCompiled.length === 0`. The third is new and is the one that
+  bites during a CMS blip rather than after one: a live rule with no compiled
+  floor under it simply 404s when the fetch fails.
+- **any image 404ing under `/mag/wp-content/uploads/`** — uploads live at the
+  root on the CMS, so the proxy must strip the `/mag` prefix
 
 The last two are the ones that look fine from a browser. Everything renders.
 

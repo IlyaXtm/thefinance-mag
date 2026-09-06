@@ -183,6 +183,27 @@ being protected.
 
 ---
 
+## URL shape
+
+**`trailingSlash` stays off.** Decided 2026-09-06; closes backlog B0b.
+
+WordPress's `/%postname%/` serves `/mag/<slug>/` with a trailing slash, and the
+Next app serves the slash-free form and 308s the other. So the trailing slash
+changes at cutover for every indexed URL — which is the one thing this release
+was supposed to avoid, and it is why the question was opened.
+
+Setting `trailingSlash: true` would have matched WordPress exactly and cost no
+redirect. It was rejected anyway: **a 308 passes full link equity and costs no
+ranking**, so the price of the extra hop is one round trip, not position. The
+alternative price was a slash on every canonical, every sitemap entry, every
+internal link and inside `magUrl()` — a product-wide URL-shape change, taken on
+during the release where the least should change.
+
+One hop on a URL Google already has beats reshaping every URL the product will
+ever emit. Do not set `trailingSlash: true`.
+
+---
+
 ## Repository
 
 **Flat structure, not a monorepo.** One app; `apps/web/` would add a level for

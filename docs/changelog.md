@@ -8,6 +8,125 @@ why it was made.
 
 ---
 
+## 2026-09-06 — Finishing v4: the media path was still wrong, twice over
+
+`claude-main` merged in first, bringing the four cutover blockers and the
+redirects mu-plugin — which until today existed only on the CMS VPS. The
+changelog conflicted at the shared anchor and both entries were kept.
+
+**THE MEDIA FIX FROM 2026-08-29 WAS HALF WRONG, AND THE WRONG HALF WAS THE
+UPSTREAM.** That entry concluded WordPress is installed under `/mag` and pointed
+the new block at `proxy_pass https://wp.thefinance.ir;` — no path, so nginx
+preserves the request URI and asks the CMS for `/mag/wp-content/uploads/…`.
+Measured against the real hosts today:
+
+```
+https://wp.thefinance.ir/wp-content/uploads/X.jpg      200
+https://wp.thefinance.ir/mag/wp-content/uploads/X.jpg  404
+```
+
+Uploads live at the **root** on the CMS. The `/mag` in `/mag/graphql` and
+`/mag/wp-admin` is nginx on the CMS host stripping a prefix, not a subdirectory
+install. So the previous fix moved the 404 one hop upstream instead of removing
+it — the same failure, somewhere that looks fixed. The block now carries a
+trailing path (`…/wp-content/uploads/`), which is what makes nginx replace the
+matched prefix, plus `proxy_ssl_server_name on` for SNI. `media.md` records both
+corrections rather than overwriting the first.
+
+The general lesson is the one the 29 August entry itself stated and then failed
+to apply: those before/after tables proved routing **semantics** against a
+stand-in, not what the live host serves. A stand-in cannot falsify an assumption
+about the upstream, because the stand-in was built from that assumption.
+
+**The repo's nginx config was not the server's, and copying it would have taken
+thefinance.ir down.** The live file is `/etc/nginx/conf.d/thefinance.ir.conf`,
+not `sites-available`. It proxies the main site to `localhost:7902` where the
+repo said `127.0.0.1:9080` — WordPress. It has no TLS at all (terminated
+upstream) where the repo had `listen 443 ssl` and Let's Encrypt paths. It
+carries `/fa` `/en` `/ar` → `/` redirects the repo did not have. All reconciled,
+and the file now opens with a header saying to diff it, never copy it.
+
+**Cutover is two changes, not one — and testing that claim found a third
+defect.** `location /mag/` on the live server ends `proxy_pass …:9080/` with a
+trailing slash, which strips `/mag` for WordPress (installed at the root).
+Next.js has `basePath: '/mag'` and needs the full path, so the slash must go
+when the port moves. Proven under nginx:
+
+```
+9080 + slash    WordPress sees /archive      OK
+3100 + slash    Next.js  sees /archive       404  ← the trap
+3100, no slash  Next.js  sees /mag/archive   OK
+```
+
+The third defect: this repo expressed the upstream as `set $mag_upstream` so the
+cutover would be one edit. **With a variable in `proxy_pass`, a URI part is sent
+as-is instead of replacing the matched prefix** — so the variable form plus the
+slash the live config needs sends `/` for every request, and every WordPress
+page renders the home page. Measured directly:
+
+```
+location /mag/  proxy_pass http://$var/;         upstream sees "/"
+location /mag/  proxy_pass http://127.0.0.1:P/;  upstream sees "/archive"
+```
+
+The convenience was never real once the slash mattered. Both upstreams are
+literals now and the cutover is two commented lines.
+
+**`missingCompiled` on `/mag/health`.** Only one direction was ever checked —
+compiled rules the CMS has stopped returning. The reverse, live rules with no
+compiled floor under them, was invisible, and it is the direction that fails
+during a CMS blip rather than after one. The live map returns 19 rules; the
+compiled fallback holds 9. A blip at the wrong moment would have 404'd ten
+ranked URLs while `missingKnown` reported everything fine.
+
+`scripts/sync-redirects.mjs` regenerates the table from the CMS —
+`npm run redirects:sync`. Generated rather than transcribed because nineteen
+Persian slugs typed by hand is how a wrong destination gets in; it decodes
+percent-encoding, strips slashes, and preserves the two code-only entries with
+their reasoning intact. It refuses to write on an error or an empty response,
+so it cannot empty a good fallback. Verified against a stub returning a
+19-rule payload — which caught a bug in its own first version: it anchored on
+`];` and matched a sequence inside a comment, producing a 28-rule file. It now
+anchors on the terminator line and preserves `as const`.
+
+**The dek gained a source that carries no deploy risk.** `cardDek` now prefers
+`excerpt(format: RAW)` — the hand-written field only, never WordPress's
+auto-truncated summary — and falls back to the derived H2 headings. `excerpt` is
+standard WPGraphQL, so unlike `outlineHeadings` it cannot fail against a CMS
+without the new plugin version. Whether the heading path can be dropped
+entirely, which would remove the deploy-order hazard, depends on how many of
+the 53 posts carry a manual excerpt. **That has not been measured** — the build
+environment's network policy denies both hosts — so both paths ship and the
+mock gives two of nineteen fixtures an excerpt rather than implying a
+proportion.
+
+**`trailingSlash` stays off; B0b closed.** A 308 passes full link equity and
+costs no ranking, so one hop on currently-ranking URLs beats reshaping every
+canonical, sitemap entry and internal link product-wide during the release where
+the least should change. Recorded in `docs/decisions.md`.
+
+**Staging moved to a path.** `new.thefinance.ir` was dropped; staging is
+`https://thefinance.ir/mag-next/` on the production host, already serving with
+`noindex`. Its config file is removed from the repo and the certbot step with
+it.
+
+**Stale counts corrected where they drive a decision.** The archive is 53 posts,
+not ~32. B4 (market filter bar) was deferred because 18 of 32 articles had no
+market; nobody has recounted at 53, so B4 is now marked **undecided rather than
+deferred**, with the query to settle it. B14's cover-art scope is re-based on 53.
+The dated audit documents keep their original figures — they are records of a
+measurement, not claims about today.
+
+**B15 opened: two live redirects point at destinations that 404.**
+`what-is-a-moving-average-indicator` targets a slug that does not exist, and
+`introduction-to-persian-tradingview-inchart` targets `/mag/mag/free-tradingview/`
+with `/mag` doubled — which WordPress cleans up today and Next.js will not.
+The second is 43% of all `/mag` clicks. CMS-side fixes, deliberately not
+patched in code: the live map is authoritative and a code patch would be
+overwritten by the next sync.
+
+---
+
 ## 2026-08-29 — Cutover blockers: four path bugs that only fire at cutover
 
 Four defects, all of the same shape: correct-looking config that has never once

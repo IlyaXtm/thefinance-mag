@@ -33,6 +33,9 @@ export function GET() {
       redirectSource: {
         reachable: redirects.reachable,
         count: redirects.count,
+        /* The compiled fallback's size, beside the live count. If these differ
+           the fallback is not a fallback — see missingCompiled below. */
+        compiledCount: redirects.compiledCount,
         ageMs: redirects.ageMs,
         /*
           Compiled-in rules WordPress is not returning. Anything here is a
@@ -45,6 +48,13 @@ export function GET() {
           The cutover gate is `reachable === true && missingKnown.length === 0`.
         */
         missingKnown: redirects.missingKnown,
+        /*
+          Live rules with no compiled floor under them. Empty is required
+          before cutover for the same reason missingKnown is — but this is the
+          direction that fails during a CMS blip rather than after one, and it
+          was invisible until now.
+        */
+        missingCompiled: redirects.missingCompiled,
       },
       time: new Date().toISOString(),
     },

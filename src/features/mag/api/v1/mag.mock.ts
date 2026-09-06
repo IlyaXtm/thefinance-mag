@@ -200,6 +200,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T14:10:00+03:30',
     modifiedAt: '2026-08-19T14:10:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: ['تصمیم نشست', 'واکنش بازارها'],
   },
   {
@@ -213,6 +214,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T16:40:00+03:30',
     modifiedAt: '2026-08-19T16:40:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: [],
   },
   {
@@ -226,6 +228,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T11:05:00+03:30',
     modifiedAt: '2026-08-19T11:05:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: [],
   },
   {
@@ -239,6 +242,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T15:20:00+03:30',
     modifiedAt: '2026-08-18T15:20:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: [],
   },
   {
@@ -252,6 +256,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T09:30:00+03:30',
     modifiedAt: '2026-08-18T09:30:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: [],
   },
   {
@@ -265,6 +270,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-17T13:15:00+03:30',
     modifiedAt: '2026-08-17T13:15:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: [],
   },
   {
@@ -278,6 +284,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T09:00:00+03:30',
     modifiedAt: '2026-08-18T09:00:00+03:30',
     author: AUTHOR,
+    excerpt: null,
     outline: [
       'چه چیزی در ترازنامه تغییر کرد',
       'سود تسهیلات و درآمد مشاع',
@@ -295,6 +302,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-17T11:30:00+03:30',
     modifiedAt: '2026-08-17T11:30:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: 'رابطه‌ی نرخ بهره آمریکا با قیمت طلای داخلی مستقیم نیست؛ از مسیر دلار و انتظارات تورمی می‌گذرد.',
     outline: ['کانال اثرگذاری نرخ بهره', 'نقش نرخ ارز', 'محدودیت‌های این رابطه'],
   },
   {
@@ -308,6 +316,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-16T08:15:00+03:30',
     modifiedAt: '2026-08-16T08:15:00+03:30',
     author: AUTHOR,
+    excerpt: null,
     outline: ['نات کوین چگونه کار می‌کند', 'مکانیزم توزیع توکن', 'ریسک‌های پروژه'],
   },
   {
@@ -321,6 +330,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-15T14:00:00+03:30',
     modifiedAt: '2026-08-15T14:00:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: ['تعریف اندیکاتور', 'تنظیم درصد بازگشت'],
   },
   {
@@ -334,6 +344,18 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-14T10:00:00+03:30',
     modifiedAt: '2026-08-14T10:00:00+03:30',
     author: AUTHOR,
+    /*
+      A HAND-WRITTEN EXCERPT, on two fixtures out of nineteen.
+      `cardDek` prefers this over the derived headings, so the branch has to be
+      reachable in development or it is only ever exercised in production.
+
+      Two, not most: what proportion of the real archive carries a manual
+      excerpt has NOT been measured — the build environment cannot reach the
+      CMS — so the mock must not imply an answer. If the measurement comes back
+      high, this is the field the dek should rely on and `outlineHeadings` can
+      leave the listing query entirely.
+    */
+    excerpt: 'دلار قوی‌تر پول را از بازارهای نوظهور بیرون می‌کشد. این گزارش سه دوره‌ی تاریخی را کنار هم می‌گذارد.',
     outline: [
       'شاخص دلار چه چیزی را می‌سنجد',
       'کانال انتقال به بازارهای نوظهور',
@@ -359,6 +381,7 @@ const SUMMARIES: ArticleSummary[] = [
     modifiedAt: '2026-08-13T09:45:00+03:30',
     author: AUTHOR,
     // Single-entry outline — consumers must omit the block, not render one item.
+    excerpt: null,
     outline: ['روش‌شناسی داده‌ها'],
   },
   {
@@ -386,6 +409,7 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-12T08:30:00+03:30',
     modifiedAt: '2026-08-12T08:30:00+03:30',
     author: AUTHOR_NO_BIO,
+    excerpt: null,
     outline: ['چه چیزی اندازه‌گیری شد', 'محدودیت‌های داده'],
   },
 ];
@@ -419,6 +443,7 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     publishedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
     modifiedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
     author: n % 2 === 0 ? AUTHOR : AUTHOR_NO_AVATAR,
+    excerpt: null,
     outline: ['بخش نخست', 'بخش دوم'],
   };
 });
@@ -443,6 +468,7 @@ const FULL_ARTICLE: Article = {
   publishedAt: '2024-11-02T08:00:00+03:30',
   modifiedAt: '2026-08-18T16:20:00+03:30',
   author: AUTHOR,
+  excerpt: null,
   outline: [
     'تحلیل فاندامنتال چیست',
     'تفاوت آن با تحلیل تکنیکال',
@@ -536,6 +562,7 @@ const STRESS: Article[] = [
     publishedAt: '2025-03-11T10:00:00+03:30',
     modifiedAt: '2026-07-02T09:15:00+03:30',
     author: AUTHOR,
+    excerpt: null,
     outline: [],
     secondaryMarkets: [],
     content: '__LONG__',
@@ -558,6 +585,7 @@ const STRESS: Article[] = [
     publishedAt: '2026-05-04T10:00:00+03:30',
     modifiedAt: '2026-05-04T10:00:00+03:30',
     author: AUTHOR,
+    excerpt: null,
     outline: [],
     secondaryMarkets: [],
     content: '<h2>مقدمه</h2><p>متن نمونه.</p><h2>ابزارها</h2><p>متن نمونه.</p>',
@@ -575,6 +603,7 @@ const STRESS: Article[] = [
     publishedAt: '2026-06-01T10:00:00+03:30',
     modifiedAt: '2026-06-01T10:00:00+03:30',
     author: AUTHOR,
+    excerpt: null,
     outline: [],
     secondaryMarkets: [],
     content: '<h2>تنها تیتر مقاله</h2><p>متن نمونه برای حالتی که مقاله فقط یک تیتر دارد.</p>',
@@ -593,6 +622,7 @@ const STRESS: Article[] = [
     publishedAt: '2026-06-02T10:00:00+03:30',
     modifiedAt: '2026-06-02T10:00:00+03:30',
     author: AUTHOR_NO_BIO,
+    excerpt: null,
     outline: [],
     secondaryMarkets: [],
     content: '<p>خبری کوتاه بدون هیچ تیتر داخلی و بدون تصویر شاخص.</p><p>پاراگراف دوم.</p>',

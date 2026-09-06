@@ -31,20 +31,36 @@ export function cardCategory(article: ArticleSummary): { name: string; href: str
 /**
  * The card's standfirst.
  *
- * The design asks for a `dek` — an editor-written summary. There is no such
- * field and `decisions.md` explains why: the live site's excerpts are
- * auto-truncated mid-sentence, which is the evidence that this team does not
- * write summaries, so a new mandatory field would ship empty.
+ * TWO SOURCES, IN ORDER OF HONESTY.
  *
- * So the dek is DERIVED from the article's own H2 headings — the same source
- * «در این مقاله» already uses. Always accurate, never empty on a structured
- * article, and inherently anti-hype because headings describe rather than
- * promote.
+ * 1. `excerpt` — what an editor actually wrote. Fetched as `format: RAW`, so
+ *    it is the manual field only: WordPress's auto-generated summary, which
+ *    truncates mid-sentence and is the reason `decisions.md` rejected excerpts
+ *    as a dek source in the first place, is never what arrives here.
  *
- * Returns null rather than a placeholder when an article has no headings. A
- * card with no dek closes up; a card with filler lies.
+ * 2. The article's own H2 headings, the same source «در این مقاله» uses.
+ *    Always accurate, never empty on a structured article, and inherently
+ *    anti-hype because headings describe rather than promote.
+ *
+ * An editor's sentence beats a list of headings whenever one exists, which is
+ * why the order is this way round and not the reverse.
+ *
+ * ── The reason both are here ──────────────────────────────────────────
+ *
+ * `outlineHeadings` comes from the mu-plugin, and GraphQL rejects an unknown
+ * field outright rather than returning null — so the listing query fails
+ * against a CMS that does not have that plugin version. `excerpt` is standard
+ * WPGraphQL and cannot fail. If the archive turns out to carry hand-written
+ * excerpts broadly, the heading path becomes redundant and `outlineHeadings`
+ * can come out of SUMMARY_FIELDS, which removes the deploy-order hazard
+ * entirely. That is a measurement, not a guess — see the PR.
+ *
+ * Returns null rather than a placeholder when there is neither. A card with no
+ * dek closes up; a card with filler lies.
  */
 export function cardDek(article: ArticleSummary, maxHeadings = 2): string | null {
+  if (article.excerpt) return article.excerpt;
+
   const headings = article.outline.slice(0, maxHeadings);
   if (headings.length === 0) return null;
 

@@ -28,46 +28,14 @@ article lands would consolidate the URL we just published into a different one.
 
 ---
 
-## B0b — Decide the trailing-slash form before cutover
+## B0b — Trailing-slash form ✅ CLOSED 2026-09-06
 
-Found while building the redirect map, and it is the same shape of oversight as
-the one that missed the map itself: the permalink *structure* was checked, the
-actual *URLs* were not.
+**Decided: `trailingSlash` stays off.** A 308 passes full link equity and costs
+no ranking, so the extra hop on currently-ranking URLs is accepted rather than
+reshaping every canonical, sitemap entry and internal link product-wide.
 
-WordPress's `/%postname%/` serves `/mag/<slug>/` **with** a trailing slash. The
-Next app serves `/mag/<slug>` and 308s the slash form, and its canonicals and
-sitemap use the slash-free form. The trailing slash is part of the URL, so it
-changes at cutover — for **all 71 indexed URLs**, including the 23 whose slugs
-still exist and take no redirect at all today.
-
-The legacy map already targets the slash-free form directly, so those 48 are
-one hop either way. The question is the other 23, and the canonical form of
-every URL going forward.
-
-`decisions.md` says "Do not change URLs during the headless migration" and then
-"confirmed unnecessary anyway: the permalink structure is `/%postname%/`, so
-nothing changes." The trailing slash is the part that does change.
-
-Two options:
-
-- **`trailingSlash: true`** in `next.config.ts` — matches WordPress exactly, so
-  no indexed URL takes a redirect. Cost: every canonical, sitemap entry and
-  internal link gains a slash, and `magUrl()` has to build it.
-- **Accept one 308** on the slash form. Google follows it and updates, but it
-  is a redirect on every currently-ranking URL, added by us, during the one
-  release where we most want to change nothing.
-
-Not decided here because it changes URL shape product-wide.
-
-**First confirm the premise** — it is inferred from the permalink setting, not
-measured, because the build environment cannot reach the site:
-
-```bash
-curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku
-curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku/
-```
-
-If the slash-free form already 301s to the slash form, the premise holds.
+Reasoning in full: `docs/decisions.md` → URL shape. Do not reopen without new
+evidence that a 308 costs position.
 
 ---
 
@@ -176,8 +144,26 @@ whether they're a WordPress CPT inside Mag or a separate system.
 
 **Status:** deferred until the taxonomy fills
 
-Built and working, but not the default. 18 of 32 articles have no market, and
-`housing` has zero — a market bar would advertise empty buckets.
+Built and working, but not the default. The figure that decided this was **18
+of 32 articles with no market**, with `housing` at zero — a market bar would
+advertise empty buckets.
+
+⚠️ **That figure is stale and this item is therefore UNDECIDED, not deferred.**
+A content migration on 2026-09-06 took the archive to **53 published posts, 21
+of them new**. Nobody has counted how many of the 53 carry a market. If the
+ratio moved, the reason for deferring B4 has gone with it.
+
+Measure before deciding — one query, no build required:
+
+```bash
+curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:100){ nodes { slug markets { nodes { slug } } } } }"}' \
+  | python3 -c "import sys,json,collections
+n=json.load(sys.stdin)['data']['posts']['nodes']
+c=collections.Counter(m['slug'] for p in n for m in p['markets']['nodes'])
+print(f'{sum(1 for p in n if not p[\"markets\"][\"nodes\"])} of {len(n)} have no market')
+print(c.most_common())"
+```
 
 Content type is the visible filter axis for now. Markets appear as chips on
 cards and as archive pages, and only terms with `count > 0` are ever linked.
@@ -414,7 +400,9 @@ card grid prints every title twice, once as text and once as pixels.
 
 Reversing that rule (recorded in `CLAUDE.md`) does not make the problem go
 away; it converts it from a design constraint into a content-production
-commitment. Roughly 32 articles are in the archive.
+commitment. **The archive is 53 posts as of 2026-09-06, not the ~32 this item
+was scoped against** — the count below has to be re-taken at the new size, and
+the production commitment is correspondingly larger.
 
 **The number is not in this document because it could not be measured here.**
 It requires rendering `/mag` and `/mag/archive` against real data and counting
@@ -433,3 +421,28 @@ What *is* verified: `CardImage` renders a fixed-size placeholder panel when
 missing image cannot reflow the grid. A null-image fixture is now in the mock
 listing rather than only reachable by slug, so that path is exercised in
 development.
+
+---
+
+## B15 — Two live redirects point at destinations that 404
+
+**Status:** CMS-side content fix. Do **not** patch these in code — the live map
+is authoritative and a code patch would be overwritten on the next sync.
+
+Both are in the Rank Math table on the CMS and both are currently broken:
+
+1. **`what-is-a-moving-average-indicator`** → points at
+   `اندیکاتور-میانگین-متحرک-moving-average-چیست؟`, which does not exist.
+   Correct destination: **`moving-average-indicator`**
+
+2. **`introduction-to-persian-tradingview-inchart`** → points at
+   `/mag/mag/free-tradingview/`, with `/mag` doubled. WordPress happens to
+   clean the doubled prefix up today; **Next.js will not**, so this breaks at
+   cutover rather than now. Correct destination: **`/mag/free-tradingview/`**
+
+The second is the single biggest organic entry point to the magazine — 77
+clicks, roughly 43% of all `/mag` clicks. A 404 there at cutover is the worst
+single outcome available in this migration.
+
+After fixing both in Rank Math, re-run `npm run redirects:sync` so the compiled
+fallback picks up the corrected destinations.

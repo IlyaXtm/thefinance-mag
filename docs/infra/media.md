@@ -3,39 +3,68 @@
 **Date:** 2026-08-19
 **Supersedes:** the uploads section of `wp-vps-setup.md` — see the correction below
 **Related:** `seo-safety-protocol.md`
-**Corrected:** 2026-08-29 — every path in this document was missing the `/mag`
-prefix. See «The path this document originally got wrong» below before reading
-anything else; the reasoning holds, the paths it was written against did not.
+**Corrected twice:** 2026-08-29 and 2026-09-06. The second correction reverses
+part of the first. Read the block below before anything else.
 
 ---
 
-## ⚠️ The path this document originally got wrong
+## ⚠️ Read this before anything below: two corrections, in opposite directions
 
-This document was written against `/wp-content/uploads/`. **The real path is
-`/mag/wp-content/uploads/`** — WordPress is installed under `/mag`, which is
-what `next.config.ts` allow-lists in `remotePatterns` and what the GraphQL
-endpoint's own path implies.
+This document has been wrong twice, and the second correction reverses half of
+the first. Both are recorded because the shape of the mistake matters more than
+the answer.
 
-That is not a typo with a cosmetic cost, because of how nginx matches: it picks
-the **longest matching prefix**, and `thefinance.ir` already has a
-`location /mag` block. So `/mag/wp-content/uploads/chart.jpg` matched
-`location /mag` and never reached the uploads block this document specified.
-Two consequences, both invisible until cutover:
+**First pass.** The document was written against `/wp-content/uploads/`. The
+browser actually requests `/mag/wp-content/uploads/`, because that is what
+GraphQL returns in `sourceUrl` and what `next.config.ts` allow-lists in
+`remotePatterns`. nginx picks the **longest matching prefix**, and
+`thefinance.ir` has a `location /mag` block, so those requests matched `/mag`
+and never reached the uploads block this document specified. Two consequences,
+invisible until cutover: `proxy_hide_header X-Robots-Tag` — the entire reason
+the block exists — had never executed, and at cutover `/mag` starts pointing at
+Next.js, which has no such file, so **every image on the site 404s**. That part
+still stands: a `location /mag/wp-content/uploads/` block is required.
 
-1. `proxy_hide_header X-Robots-Tag` — the entire reason the uploads block
-   exists — has never executed once.
-2. Today `/mag` proxies to WordPress, which serves the image anyway, so nothing
-   looks wrong. At cutover `/mag` starts pointing at Next.js, which has no such
-   file on disk, and **every image on the site 404s.**
+**Second pass, and this is the part the first got backwards.** The first fix
+concluded that WordPress must be installed under `/mag`, and pointed the new
+block at `proxy_pass https://wp.thefinance.ir;` with no path — which preserves
+the request URI and asks the CMS for `/mag/wp-content/uploads/…`. Measured
+against the real hosts on 2026-09-06:
 
-The fix, now in `infra/nginx/thefinance.ir.conf` and
-`infra/nginx/new.thefinance.ir.conf`, is a `location /mag/wp-content/uploads/`
-block placed alongside the un-prefixed one. `/mag/wp-content/uploads/` is
-longer than `/mag`, so it wins. The un-prefixed block is kept for any
-historical URL that still uses it.
+```
+https://thefinance.ir/mag/wp-content/uploads/X.jpg     200   (nginx strips /mag)
+https://wp.thefinance.ir/wp-content/uploads/X.jpg      200   ✅
+https://wp.thefinance.ir/mag/wp-content/uploads/X.jpg  404   ❌
+```
 
-Every path below has been corrected. The architecture, the MinIO sequencing and
-the invariants are unchanged — only the prefix was wrong.
+**Uploads live at the ROOT on the CMS.** The `/mag` visible in `/mag/graphql`
+and `/mag/wp-admin` is nginx on the CMS host stripping the prefix, not a
+subdirectory install. So the first fix moved the 404 one hop upstream rather
+than removing it — the same failure, in a place that looks fixed.
+
+The block now carries a trailing path, which is what makes nginx replace the
+matched prefix:
+
+```nginx
+location /mag/wp-content/uploads/ {
+    proxy_pass https://wp.thefinance.ir/wp-content/uploads/;   # slash strips /mag
+    proxy_set_header Host wp.thefinance.ir;
+    proxy_ssl_server_name on;
+    proxy_hide_header X-Robots-Tag;
+    proxy_cache_valid 200 30d;
+    add_header Cache-Control "public, max-age=2592000" always;
+}
+```
+
+The un-prefixed block keeps `proxy_pass https://wp.thefinance.ir;` with **no**
+path, deliberately: its request URI is already the form the CMS serves.
+
+**What this document says about paths is therefore split.** Public URLs are
+`/mag/wp-content/uploads/…` — that is the contract, and it does not change.
+CMS-side paths are `/wp-content/uploads/…`. Where the text below shows a path
+on `wp.thefinance.ir`, read it as the root form.
+
+The architecture, the MinIO sequencing and the invariants are unchanged.
 
 ---
 
@@ -70,8 +99,10 @@ But when `thefinance.ir` proxies `/mag/wp-content/uploads/` to it, **nginx forwa
 ```nginx
 # On thefinance.ir
 location /mag/wp-content/uploads/ {
-    proxy_pass https://wp.thefinance.ir;
+    # Trailing path, not a bare host — see the correction at the top.
+    proxy_pass https://wp.thefinance.ir/wp-content/uploads/;
     proxy_set_header Host wp.thefinance.ir;
+    proxy_ssl_server_name on;
 
     # ── Required. Without this the CMS's noindex reaches the client
     #    and de-indexes images that should be indexable.
@@ -87,8 +118,9 @@ location /mag/wp-content/uploads/ {
 **And remove the uploads-level noindex from the WordPress host** so the intent is unambiguous:
 
 ```nginx
-# On wp.thefinance.ir — uploads location (WordPress lives under /mag here too)
-location /mag/wp-content/uploads/ {
+# On wp.thefinance.ir — uploads location. ROOT, not /mag: the /mag in
+# /mag/graphql is nginx stripping a prefix, not a subdirectory install.
+location /wp-content/uploads/ {
     expires 30d;
     add_header Cache-Control "public, immutable";
     # X-Robots-Tag deliberately NOT set here.
@@ -155,7 +187,8 @@ location /mag/wp-content/uploads/ {
 }
 
 location @wp_uploads {
-    proxy_pass https://wp.thefinance.ir;
+    # Root path on the CMS — see the correction at the top of this file.
+    proxy_pass https://wp.thefinance.ir/wp-content/uploads/;
     proxy_set_header Host wp.thefinance.ir;
     proxy_hide_header X-Robots-Tag;
 }

@@ -99,6 +99,10 @@ const SUMMARY_FIELDS = `
   date
   readingTime
   modifiedAtIso
+  # RAW, not RENDERED: only the hand-written field, never WordPress's
+  # auto-truncated summary. Standard WPGraphQL — no plugin dependency, so
+  # this line is safe to deploy ahead of the mu-plugin.
+  excerpt(format: RAW)
   outlineHeadings
   categories { nodes { slug name } }
   markets { nodes { slug name } }
@@ -128,6 +132,7 @@ interface WpSummary {
   date: string;
   readingTime: number | null;
   modifiedAtIso: string | null;
+  excerpt: string | null;
   outlineHeadings: string[] | null;
   categories: { nodes: WpTerm[] } | null;
   markets: { nodes: WpTerm[] } | null;
@@ -244,6 +249,10 @@ function mapSummary(node: WpSummary): ArticleSummary {
       have the body.
     */
     outline: node.outlineHeadings ?? [],
+
+    /* Trimmed to null: WordPress returns '' for an unset excerpt, and an empty
+       string would read as "present" at every call site. */
+    excerpt: node.excerpt?.trim() || null,
   };
 }
 

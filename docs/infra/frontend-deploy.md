@@ -1,12 +1,18 @@
 # Frontend server — staging deploy and cutover
 
 Step 1 of the cutover: build the Mag app into a container, run it on port 3100
-alongside the existing apps, and reach it at `new.thefinance.ir/mag` while
+alongside the existing apps, and reach it at `thefinance.ir/mag-next/` while
 `thefinance.ir/mag` stays on WordPress.
 
-**Nothing here has been run on the real server.** It was built and verified in
-a sandbox that cannot reach the frontend host. What was verified, and how, is
-at the bottom.
+**Staging is a PATH on the production host now, not a separate hostname.**
+`new.thefinance.ir` was dropped; `/mag-next/` already serves with `noindex`.
+That removes the certbot step this document used to carry.
+
+**The commands here have not been run from the build environment.** Its network
+policy denies `thefinance.ir` and `wp.thefinance.ir` outright — the proxy
+answers 403 to CONNECT — so everything below has to be run on the server or
+from a machine that can reach it. What *was* verified here, and how, is at the
+bottom.
 
 ---
 
@@ -17,8 +23,7 @@ at the bottom.
 | `Dockerfile` | repo root; built on the server |
 | `infra/mag/compose.yaml` | `/root/mag/compose.yaml` |
 | `infra/mag/.env.example` | copy to `/root/mag/.env` |
-| `infra/nginx/thefinance.ir.conf` | `/etc/nginx/sites-available/` |
-| `infra/nginx/new.thefinance.ir.conf` | `/etc/nginx/sites-available/` |
+| `infra/nginx/thefinance.ir.conf` | **reference only — diff against `/etc/nginx/conf.d/thefinance.ir.conf`, never copy** |
 
 The two nginx files did not previously exist in any repository — they lived
 only on the server, which meant the cutover depended on an artifact nobody
@@ -51,13 +56,10 @@ perfectly healthy otherwise.
 ### Certificate and nginx
 
 ```bash
-certbot certonly --nginx -d new.thefinance.ir
 
 nginx -v    # needs >= 1.25.1 for `http2 on;` — see the note in the config
 
-cp /root/mag-src/infra/nginx/new.thefinance.ir.conf /etc/nginx/sites-available/
 cp /root/mag-src/infra/nginx/thefinance.ir.conf     /etc/nginx/sites-available/
-ln -sf /etc/nginx/sites-available/new.thefinance.ir.conf /etc/nginx/sites-enabled/
 
 nginx -t && systemctl reload nginx
 ```
@@ -72,13 +74,13 @@ needs; the server's may carry rules for the other apps that must be kept.
 
 ```bash
 # Reachable, real data
-curl -s  https://new.thefinance.ir/mag/health            # "wpgraphql"
-curl -sI https://new.thefinance.ir/mag/ | head -1        # 200
+curl -s  https://thefinance.ir/mag-next/health            # "wpgraphql"
+curl -sI https://thefinance.ir/mag-next/ | head -1        # 200
 
 # Staging is noindexed
-curl -sI https://new.thefinance.ir/mag/ | grep -i x-robots
+curl -sI https://thefinance.ir/mag-next/ | grep -i x-robots
 #   → X-Robots-Tag: noindex, nofollow
-curl -s  https://new.thefinance.ir/robots.txt
+curl -s  https://thefinance.ir/mag-next/robots.txt
 #   → Disallow: /
 
 # Production is NOT noindexed, and is still WordPress
@@ -86,8 +88,8 @@ curl -sI https://thefinance.ir/mag/ | grep -i x-robots    # → nothing
 curl -s  https://thefinance.ir/mag/ | grep -c wp-content  # → non-zero
 
 # Real articles render
-curl -s https://new.thefinance.ir/mag/ | grep -o '<h1[^>]*>[^<]*'
-curl -s https://new.thefinance.ir/mag/sitemap.xml | grep -c wp.thefinance.ir   # → 0
+curl -s https://thefinance.ir/mag-next/ | grep -o '<h1[^>]*>[^<]*'
+curl -s https://thefinance.ir/mag-next/sitemap.xml | grep -c wp.thefinance.ir   # → 0
 ```
 
 Both directions matter. A staging URL in the index competes with the real one;
@@ -101,8 +103,8 @@ fail silently — the pages render perfectly either way.
 One line in `thefinance.ir.conf`:
 
 ```nginx
-set $mag_upstream 127.0.0.1:9080;   # WordPress — live
-set $mag_upstream 127.0.0.1:3100;   # Next.js  — after cutover
+proxy_pass http://127.0.0.1:9080/;    # WordPress — live (slash strips /mag)
+# proxy_pass http://127.0.0.1:3100;   # Next.js — cutover (NO slash)
 ```
 
 ```bash
@@ -129,7 +131,7 @@ diff before.txt after.txt
   section's traffic, and it fails silently: the page still renders for anyone
   arriving from an internal link.
 
-Rollback is the same line back to 9080 and another reload — seconds, no
+Rollback is both changes back — port to 9080 AND the slash restored — then another reload. Seconds, no
 redeploy. That is why the old WordPress theme is never deleted.
 
 ---
@@ -179,7 +181,7 @@ Making a path prefix work needs a second image built with a different
 `basePath` — at which point staging is no longer testing the artifact that gets
 promoted. A separate host keeps the path identical.
 
-`new.thefinance.ir` is already the documented staging host in `CLAUDE.md`.
+Staging is now the PATH `https://thefinance.ir/mag-next/` on the production host, already serving with `noindex`. `new.thefinance.ir` was dropped and its config removed from this repo.
 
 ---
 
@@ -269,7 +271,7 @@ secret is visible rather than silent.
 
 ```bash
 # Health now reports configuration, not just liveness
-curl -s https://new.thefinance.ir/mag/health | python3 -m json.tool
+curl -s https://thefinance.ir/mag-next/health | python3 -m json.tool
 ```
 
 - `source` — `wpgraphql`, not `mock`
@@ -292,10 +294,10 @@ curl -s https://new.thefinance.ir/mag/health | python3 -m json.tool
 ```bash
 # Preview: wrong secret gives a bare 401 with no article content
 curl -s -o /dev/null -w '%{http_code}\n' \
-  "https://new.thefinance.ir/mag/api/draft?secret=wrong&id=123"
+  "https://thefinance.ir/mag-next/api/draft?secret=wrong&id=123"
 
 # Revalidation
-curl -s -X POST https://new.thefinance.ir/mag/api/revalidate \
+curl -s -X POST https://thefinance.ir/mag-next/api/revalidate \
   -H 'Content-Type: application/json' \
   -d '{"secret":"<secret>","slug":"<slug>","market":"<market>"}'
 ```

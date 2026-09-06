@@ -153,7 +153,7 @@ LCP is the featured card image (listing) and hero (article): `priority` + `next/
 
 ## Working agreements
 
-- Staging (`new.thefinance.ir`) validates everything before production.
+- Staging validates everything before production. It is a **path on the production host** — `https://thefinance.ir/mag-next/`, served with `noindex` — not a separate hostname. `new.thefinance.ir` was dropped on 2026-09-06.
 - Production repo `xthefinance/thefinance-front` is not touched without explicit instruction. Work happens on `new` in `IlyaXtm/thefinance-front-redesign`; `main` is the release branch.
 - Ambiguities get flagged, not assumed.
 - Decisions get logged as briefs in `docs/`.
