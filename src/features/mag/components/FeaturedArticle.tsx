@@ -4,6 +4,7 @@ import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
 import { formatJalali, formatReadingTime, toDateTimeAttr } from '../lib/format';
 import { imageSrc } from '../lib/site';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * The lead article — and the ONLY card on the page that shows an image.
@@ -54,7 +55,7 @@ export function FeaturedArticle({ article }: { article: ArticleSummary }) {
             it — clamping tighter would truncate mid-thought.
           */}
           <h2 className="mt-3 text-[24px] font-bold leading-[1.5] text-text-primary transition-colors group-hover:text-accent md:text-[32px]">
-            {title}
+            {bidiTitle(title)}
           </h2>
 
           <div className="mt-4 flex items-center gap-2 text-[14px] text-text-muted">

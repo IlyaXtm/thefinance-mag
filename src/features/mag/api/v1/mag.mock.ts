@@ -294,7 +294,7 @@ const SUMMARIES: ArticleSummary[] = [
   {
     id: 'a2',
     slug: 'us-rates-and-domestic-gold',
-    title: 'رابطه نرخ بهره آمریکا با قیمت طلای داخلی',
+    title: 'هج فاند (Hedge Fund) چیست؟ ساختار، کارمزد و ریسک',
     featuredImage: img('gold', 'شمش طلا روی سطح تیره'),
     market: MARKETS['gold-usd'],
     contentType: TYPES.analysis,
@@ -322,6 +322,8 @@ const SUMMARIES: ArticleSummary[] = [
   {
     id: 'a4',
     slug: 'zig-zag-indicator',
+    /* One of the titles the bidi bracket defect was reported on — kept
+       verbatim so the fix stays regression-testable at 390px. */
     title: 'اندیکاتور زیگ زاگ (Zig Zag) چیست؟',
     featuredImage: img('zigzag', 'نمودار با نوسانات پی‌درپی'),
     market: MARKETS.forex,
@@ -336,7 +338,7 @@ const SUMMARIES: ArticleSummary[] = [
   {
     id: 'a5',
     slug: 'dxy-and-emerging-markets',
-    title: 'شاخص دلار (DXY) و اثر آن بر بازارهای نوظهور',
+    title: 'میکر و تیکر (Maker & Taker) چه تفاوتی دارند',
     featuredImage: img('dxy', 'نمودار شاخص دلار'),
     market: MARKETS.global,
     contentType: TYPES.analysis,

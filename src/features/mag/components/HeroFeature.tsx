@@ -4,6 +4,7 @@ import { CategoryChip } from './CategoryChip';
 import { cardCategory, cardDek } from '../lib/card';
 import { formatJalaliShort, formatReadingTime, toDateTimeAttr } from '../lib/format';
 import type { ArticleSummary } from '../types/mag.types';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * The lead card: full-bleed image, gradient, content bottom-aligned.
@@ -64,7 +65,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
 
         <h2 className="max-w-[20ch] text-[26px] font-bold leading-[1.35] tracking-[-0.4px] text-on-media [text-wrap:pretty] md:text-[36px]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {article.title}
+            {bidiTitle(article.title)}
           </Link>
         </h2>
 
@@ -113,7 +114,7 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
 
         <h3 className="text-[16px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty] md:text-[18px]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {article.title}
+            {bidiTitle(article.title)}
           </Link>
         </h3>
 

@@ -5,6 +5,7 @@ import { MarketChip } from './MarketChip';
 import { ContentTypeLabel } from './ContentTypeLabel';
 import { ArticleMeta } from './ArticleMeta';
 import { imageSrc } from '../lib/site';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * Grid article card.
@@ -82,7 +83,7 @@ export function ArticleCard({
             row up and breaking row alignment.
           */}
           <h3 className="mt-2 min-h-[51px] text-[17px] font-semibold leading-[1.5] text-text-primary [display:-webkit-box] [overflow:hidden] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            {title}
+            {bidiTitle(title)}
           </h3>
 
           <div className="mt-auto pt-3">

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { toPersianDigits } from '../lib/format';
 import type { Market } from '../types/mag.types';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * The sidebar panel shell — one border, one background, one title.
@@ -112,7 +113,7 @@ export function LinkListCard({
               className="group flex min-h-11 flex-col justify-center gap-1.5 py-1 text-text-primary transition-colors hover:text-accent"
             >
               <span className="text-[14.5px] font-medium leading-[1.6] [text-wrap:pretty]">
-                {item.title}
+                {bidiTitle(item.title)}
               </span>
               {item.meta && <span className="text-[12px] text-text-muted">{item.meta}</span>}
             </Link>

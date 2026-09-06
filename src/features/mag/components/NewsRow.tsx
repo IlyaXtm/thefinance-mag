@@ -3,6 +3,7 @@ import { CardImage } from './CardImage';
 import { cardCategory } from '../lib/card';
 import { formatJalali, formatReadingTime, toDateTimeAttr, toPersianDigits } from '../lib/format';
 import type { ArticleSummary } from '../types/mag.types';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * One news item: `clock | thumbnail | title + meta`.
@@ -46,7 +47,7 @@ export function NewsRow({ article }: { article: ArticleSummary }) {
       <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-span-1">
         <h3 className="text-[16px] font-medium leading-[1.6] text-text-primary [text-wrap:pretty] sm:text-[18px]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {article.title}
+            {bidiTitle(article.title)}
           </Link>
         </h3>
 

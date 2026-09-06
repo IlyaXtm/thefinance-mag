@@ -4,6 +4,7 @@ import { CardByline, CardDate } from './CardMeta';
 import { CategoryChip } from './CategoryChip';
 import { cardCategory, cardDek } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * The home grid card: 190px image, chip + date, title, dek, byline.
@@ -42,7 +43,7 @@ export function PostCard({ article }: { article: ArticleSummary }) {
 
         <h3 className="text-[19px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {article.title}
+            {bidiTitle(article.title)}
           </Link>
         </h3>
 
@@ -112,7 +113,7 @@ export function ArchiveCard({
 
         <h3 className="text-[19px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty] lg:text-[21px]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {article.title}
+            {bidiTitle(article.title)}
           </Link>
         </h3>
 

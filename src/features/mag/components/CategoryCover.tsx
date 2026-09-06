@@ -2,6 +2,7 @@ import { CardImage } from './CardImage';
 import { Breadcrumbs, type Crumb } from './Breadcrumbs';
 import { toPersianDigits } from '../lib/format';
 import type { MagImage } from '../types/mag.types';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * The category masthead: cover image, breadcrumb and h1 over a scrim, then a
@@ -45,7 +46,7 @@ export function CategoryCover({
           <div className="absolute inset-x-5 bottom-6 lg:inset-x-8" data-on-media>
             <Breadcrumbs items={crumbs} />
             <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-on-media md:text-[34px]">
-              {title}
+              {bidiTitle(title)}
             </h1>
           </div>
         </div>
@@ -53,7 +54,7 @@ export function CategoryCover({
         <div className="px-5 pb-5 pt-6 lg:px-8">
           <Breadcrumbs items={crumbs} />
           <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-text-primary md:text-[34px]">
-            {title}
+            {bidiTitle(title)}
           </h1>
         </div>
       )}

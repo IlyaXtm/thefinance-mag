@@ -7,6 +7,7 @@ import { getComments } from '@/features/mag/api/v1/mag.comments.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { bidiTitle } from '@/features/mag/lib/bidi-title';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { authorInitial, cardCategory } from '@/features/mag/lib/card';
 import { toPersianDigits } from '@/features/mag/lib/format';
@@ -232,7 +233,7 @@ export default async function ArticlePage({
         <CategoryChip name={category.name} href={category.href} />
 
         <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:pretty] md:text-[44px]">
-          {article.title}
+          {bidiTitle(article.title)}
         </h1>
 
         {/*
