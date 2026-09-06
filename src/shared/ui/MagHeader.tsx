@@ -38,9 +38,8 @@ export function MagHeader() {
           <span className="text-[17px] font-bold md:text-[18px]">{MAG_NAME}</span>
         </a>
 
-        {/* The five category links. Hidden below lg — the design collapses the
-            header to logo + search there, and these are continuations rather
-            than escapes, so nobody is stranded without them. */}
+        {/* The five category links at lg and up. Below that they move to the
+            scrollable strip under this row — see the note on it. */}
         <nav aria-label="دسته‌بندی‌ها" className="hidden items-center gap-6 lg:flex">
           {CATEGORY_NAV.map((link) => (
             <Link
@@ -109,6 +108,66 @@ export function MagHeader() {
         >
           عضویت در خبرنامه
         </a>
+      </div>
+
+      {/*
+        MOBILE NAVIGATION.
+
+        Below lg the header carried the logo, a search icon and the theme
+        toggle, and nothing else. Every section was reachable only from the
+        footer — roughly 4,000px of scroll down the home page. The reasoning
+        recorded against a hamburger («with two links, a drawer costs a tap, a
+        JS bundle, a focus trap and a motion-preference case, all to hide two
+        words») was sound when there were two links. There are five now, and
+        that argument does not carry.
+
+        A STRIP, NOT A DRAWER — and the old note is the reason why. Every cost
+        it lists is a cost of hiding things: the tap, the JS, the focus trap,
+        the motion-preference case. A scrollable row pays none of them, because
+        it hides nothing. It is markup and one CSS property.
+
+        Horizontal scroll and RTL: NO manual scrollLeft arithmetic — its sign
+        differs across browsers, which CLAUDE.md rules out. Native overflow
+        handles direction correctly on its own. The edge fade is a mask-image
+        rather than a coloured gradient so it works on any theme's surface
+        without knowing which one it is on.
+      */}
+      <div className="border-b border-border-subtle lg:hidden">
+        <nav
+          aria-label="دسته‌بندی‌ها"
+          className="mx-auto max-w-[1440px] overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{
+            maskImage:
+              'linear-gradient(to left, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to left, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)',
+          }}
+        >
+          <ul className="flex w-max items-center gap-1.5 py-2">
+            {CATEGORY_NAV.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  /* h-11: a control, so it takes the 44px target. */
+                  className="inline-flex h-11 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary motion-reduce:transition-none"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              {/* The newsletter CTA is a primary header action on desktop and
+                  was absent below sm entirely. Last in the strip rather than
+                  in the top row, where the 390px header has no space left. */}
+              <a
+                href="#newsletter"
+                className="inline-flex h-11 items-center whitespace-nowrap rounded-full bg-accent px-4 text-[14px] font-medium text-accent-contrast sm:hidden"
+              >
+                عضویت در خبرنامه
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </header>
   );
