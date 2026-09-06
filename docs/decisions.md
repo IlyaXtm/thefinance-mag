@@ -183,6 +183,60 @@ being protected.
 
 ---
 
+## Mobile navigation
+
+**A scrollable category strip, not a drawer.** Decided 2026-09-06.
+
+Below `lg` the header carried the logo, a search icon and the theme toggle and
+nothing else. Every section was reachable only from the footer — roughly
+4,000px of scroll down the home page.
+
+The standing note against a hamburger said: *"with two links, a drawer costs a
+tap, a JS bundle, a focus trap and a motion-preference case, all to hide two
+words."* That was right for two links. There are five, and the argument does
+not carry at five.
+
+But the note is also the reason the answer is a strip rather than a drawer:
+**every cost it lists is a cost of hiding things.** The tap, the JavaScript,
+the focus trap, the `prefers-reduced-motion` case — all of them exist because a
+drawer conceals. A horizontally scrollable row pays none of them, because it
+conceals nothing. It is markup and one CSS property, and the links are visible
+rather than behind an affordance.
+
+Native `overflow-x` handles RTL direction on its own; no `scrollLeft`
+arithmetic, whose sign differs across browsers. The edge fade is `mask-image`
+rather than a coloured gradient, so it works over any theme's surface without
+knowing which.
+
+**The newsletter CTA is last in the strip**, not first. It is a primary header
+action on desktop and was absent below `sm` entirely, so it needed a home — but
+putting a conversion button ahead of the navigation on the narrowest screens is
+the pattern the brand book rules out. It is reachable by scrolling the strip
+rather than being the first thing a reader meets.
+
+---
+
+## URL shape
+
+**`trailingSlash` stays off.** Decided 2026-09-06; closes backlog B0b.
+
+WordPress's `/%postname%/` serves `/mag/<slug>/` with a trailing slash, and the
+Next app serves the slash-free form and 308s the other. So the trailing slash
+changes at cutover for every indexed URL — which is the one thing this release
+was supposed to avoid, and it is why the question was opened.
+
+Setting `trailingSlash: true` would have matched WordPress exactly and cost no
+redirect. It was rejected anyway: **a 308 passes full link equity and costs no
+ranking**, so the price of the extra hop is one round trip, not position. The
+alternative price was a slash on every canonical, every sitemap entry, every
+internal link and inside `magUrl()` — a product-wide URL-shape change, taken on
+during the release where the least should change.
+
+One hop on a URL Google already has beats reshaping every URL the product will
+ever emit. Do not set `trailingSlash: true`.
+
+---
+
 ## Repository
 
 **Flat structure, not a monorepo.** One app; `apps/web/` would add a level for

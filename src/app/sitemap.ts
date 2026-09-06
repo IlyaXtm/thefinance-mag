@@ -41,6 +41,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
     },
     {
+      /*
+        `daily` and above /archive, because it genuinely is: the RSS automation
+        files roughly two translated items a day under «اخبار», so this page
+        turns over faster than anything else on the site. It was missing here
+        while being a real, indexable route — a new section Google would have
+        had to find by crawling alone.
+      */
+      url: magUrl('/news'),
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.6,
+    },
+    {
       url: magUrl('/authors'),
       lastModified: now,
       changeFrequency: 'monthly',

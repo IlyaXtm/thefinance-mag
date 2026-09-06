@@ -172,11 +172,14 @@ export function currentRedirects(): readonly LegacyRedirect[] {
 export function probeRedirectSource(): {
   reachable: boolean;
   count: number;
+  compiledCount: number;
   ageMs: number;
   missingKnown: string[];
+  missingCompiled: string[];
 } {
   const rules = currentRedirects();
   const present = new Set(rules.map((rule) => rule.from));
+  const compiled = new Set(LEGACY_REDIRECTS.map((rule) => rule.from));
 
   return {
     /* False until a fetch has ever succeeded in THIS process. */
@@ -209,5 +212,29 @@ export function probeRedirectSource(): {
       fields as one gate.
     */
     missingKnown: LEGACY_REDIRECTS.map((rule) => rule.from).filter((from) => !present.has(from)),
+
+    /* How many rules the compiled fallback holds, next to `count` so the two
+       can be compared at a glance rather than by opening the source. */
+    compiledCount: LEGACY_REDIRECTS.length,
+
+    /*
+      THE OTHER DIRECTION, AND THE ONE THAT ACTUALLY BITES AT CUTOVER.
+
+      `missingKnown` above asks "what has the CMS stopped returning?". This asks
+      the reverse: what is the CMS returning that the compiled fallback does NOT
+      have? That gap is invisible while the CMS is up — the live map is what
+      serves — and becomes the whole failure the moment it is not.
+
+      The fallback exists precisely for a CMS blip during cutover. A fallback
+      that is smaller than the live map does not fall back; it silently drops
+      the difference. When the live map held 19 rules and the compiled table
+      held 9, a blip at the wrong moment would have 404'd ten ranked URLs,
+      several of them historical Persian slugs, while `missingKnown` stayed
+      empty and reported everything fine.
+
+      Anything listed here is a live rule with no compiled floor under it. Fix
+      it by regenerating the table:  npm run redirects:sync
+    */
+    missingCompiled: rules.map((rule) => rule.from).filter((from) => !compiled.has(from)),
   };
 }

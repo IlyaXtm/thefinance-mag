@@ -44,6 +44,28 @@ export const HEADER_LINKS: NavLink[] = [
  * otherwise two or three clicks deep — and internal linking is the main lever
  * for topical authority on a site this small.
  */
+/**
+ * The header's category nav — the v4 design's five links.
+ *
+ * The design draws one flat category axis. This codebase keeps two taxonomies
+ * (`market` and `contentType`) because `decisions.md` chose "two axes, not
+ * six", so each label here resolves to whichever axis actually holds that
+ * content. No new taxonomy, no migration, no new URLs to redirect.
+ *
+ * ONE SUBSTITUTION, stated rather than fudged: the design's fifth link is
+ * «تحلیل تکنیکال», and there is no such term. Roughly 60% of the archive IS
+ * technical-analysis material, but it is filed as آموزش — so that is the label
+ * used, pointing where the content really is. Inventing a term to match a
+ * label would put a nav link in front of an archive nobody tagged.
+ */
+export const CATEGORY_NAV: NavLink[] = [
+  { label: 'طلا و ارز', href: '/market/gold-usd' },
+  { label: 'بورس ایران', href: '/market/tse' },
+  { label: 'کریپتو', href: '/market/crypto' },
+  { label: 'آموزش', href: '/archive?type=education' },
+  { label: 'اخبار', href: '/news' },
+];
+
 export const FOOTER_PRODUCT_LINKS: NavLink[] = [
   { label: 'اینچارت', href: 'https://inchart.thefinance.ir', external: true },
   { label: 'آکادمی', href: `${SITE_ORIGIN}/academy`, external: true },

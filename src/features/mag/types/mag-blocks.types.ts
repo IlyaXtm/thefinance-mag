@@ -47,8 +47,30 @@ export interface DisclaimerBlock {
   attributes: Record<string, never>;
 }
 
+/**
+ * IN-ARTICLE form. «این مطلب» — "this article" — and it is only correct where
+ * there is one.
+ */
 export const DISCLAIMER_TEXT =
   'این مطلب صرفاً جنبه آموزشی و اطلاع‌رسانی دارد و توصیه به خرید یا فروش نیست. ' +
+  'مسئولیت هر تصمیم سرمایه‌گذاری بر عهده خود شماست.';
+
+/**
+ * SITE-WIDE form, for the footer.
+ *
+ * The footer renders on every route — the 404, the search page, the author
+ * index — and was using the in-article text, so a page with no article told
+ * the reader that «این مطلب» is educational only. This is compliance copy
+ * under Iranian securities law, so the grammatical scope is not a nicety: a
+ * disclaimer that names a thing which is not on the page is a disclaimer that
+ * does not attach to anything.
+ *
+ * ONLY THE SCOPE CHANGES. The second sentence is byte-identical and the first
+ * swaps «این مطلب» for «محتوای مجله». Anything beyond that is a legal review,
+ * not a UI fix — flagged in the PR rather than done here.
+ */
+export const SITE_DISCLAIMER_TEXT =
+  'محتوای مجله فایننس صرفاً جنبه آموزشی و اطلاع‌رسانی دارد و توصیه به خرید یا فروش نیست. ' +
   'مسئولیت هر تصمیم سرمایه‌گذاری بر عهده خود شماست.';
 
 /**

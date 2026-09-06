@@ -24,6 +24,11 @@ const config: Config = {
         'text-muted': 'var(--text-muted)',
         accent: 'var(--accent)',
         'accent-contrast': 'var(--accent-contrast)',
+        'accent-soft': 'var(--accent-soft)',
+        /* Text over photography. Fixed across themes — see tokens.css. */
+        'on-media': 'var(--on-media)',
+        'on-media-secondary': 'var(--on-media-secondary)',
+        'on-media-muted': 'var(--on-media-muted)',
         'focus-ring': 'var(--focus-ring)',
         danger: 'var(--danger)',
         skeleton: 'var(--skeleton)',
@@ -51,7 +56,19 @@ const config: Config = {
         body: '18px',
       },
       maxWidth: {
-        // 700px measures 70–73 characters in Persian — mid-range of 65–75.
+        /*
+         * 700px measures 70–73 characters in IRANYekanX — mid-range of 65–75.
+         *
+         * Blog v4 briefly cut this to 570px, because it had switched the face
+         * to Vazirmatn, which is narrower: 700px measured 89 characters there,
+         * counted off the rendered text with Range geometry. That measurement
+         * was right and is not the reason this is back at 700 — the face is.
+         * IRANYekanX is the product-wide typeface and the switch was reverted,
+         * so the column that was calibrated for it comes back with it.
+         *
+         * The pair moves together. Never change one without re-measuring the
+         * other.
+         */
         prose: '700px',
       },
     },

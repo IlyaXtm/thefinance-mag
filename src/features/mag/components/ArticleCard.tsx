@@ -4,6 +4,8 @@ import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
 import { ContentTypeLabel } from './ContentTypeLabel';
 import { ArticleMeta } from './ArticleMeta';
+import { imageSrc } from '../lib/site';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * Grid article card.
@@ -46,7 +48,7 @@ export function ArticleCard({
         <div className="relative aspect-[16/9] w-full bg-surface">
           {featuredImage ? (
             <Image
-              src={featuredImage.url}
+              src={imageSrc(featuredImage.url)}
               alt={featuredImage.alt}
               fill
               sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
@@ -81,7 +83,7 @@ export function ArticleCard({
             row up and breaking row alignment.
           */}
           <h3 className="mt-2 min-h-[51px] text-[17px] font-semibold leading-[1.5] text-text-primary [display:-webkit-box] [overflow:hidden] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            {title}
+            {bidiTitle(title)}
           </h3>
 
           <div className="mt-auto pt-3">

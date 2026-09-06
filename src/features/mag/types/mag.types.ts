@@ -129,6 +129,18 @@ export interface ArticleSummary {
   modifiedAt: string | null;
   author: Author;
   /**
+   * The editor-written excerpt, or null.
+   *
+   * `excerpt(format: RAW)` returns ONLY the manual field — WordPress's
+   * auto-generated summary is what `RENDERED` would give, and that is the
+   * mid-sentence truncation `decisions.md` rejected as a dek source. So a
+   * non-empty value here is something a person actually wrote.
+   *
+   * Standard WPGraphQL, present on every schema, so unlike `outlineHeadings`
+   * it carries no plugin-version dependency.
+   */
+  excerpt: string | null;
+  /**
    * The article's own H2 headings, server-derived.
    * Feeds both the featured card's «در این مقاله» block and the article ToC —
    * one source, two consumers, so they can never disagree.

@@ -50,29 +50,27 @@ export interface LegacyRedirect {
 }
 
 export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
-  /* ---- Rank Math + _wp_old_slug, flattened to one hop ---- */
-  {
-    from: 'polymarket-predict-future-and-profit-from-it',
-    to: 'پلیمارکت-polymarket',
-    kind: 'permanent',
-  },
-  {
-    from: 'worlds-top-10-hedge-funds',
-    to: '10-هج-فاند-برتر-دنیا',
-    kind: 'permanent',
-    note: 'Two hops in WordPress: Rank Math → غولهای-والاستریت… → _wp_old_slug → here.',
-  },
-  { from: 'what-is-the-mfi-indicator', to: 'mfi-indicator', kind: 'permanent' },
-  {
-    from: 'complete-tutorial-on-the-williams-r-indicator',
-    to: 'آموزش-کامل-اندیکاتور-williams-r',
-    kind: 'permanent',
-  },
+  /* ---- Generated from the live CMS by scripts/sync-redirects.mjs.
+          Do not hand-edit: re-run `npm run redirects:sync` instead. ---- */
+  { from: '1160-2', to: 'فاندینگ-ریت-چیست؟', kind: 'permanent' },
+  { from: 'اندیکاتور-استوکاستیک-چیست؟-0-تا-100-معرفی-sto', to: '100-stochastic-indicator', kind: 'permanent' },
+  { from: '123-اندیکاتور-استوکاستیک', to: '100-stochastic-indicator', kind: 'permanent' },
+  { from: 'غولهای-والاستریت-نگاهی-عمیق-به-۱۰-ص', to: '10-هج-فاند-برتر-دنیا', kind: 'permanent' },
+  { from: 'what-is-bitcoi', to: 'what-is-bitcoin', kind: 'permanent' },
+  { from: 'fiat-currency-2', to: 'fiat-currency', kind: 'permanent' },
+  { from: 'usd-fed-cpi-risks-analysis-2', to: 'usd-fed-cpi-risks-analysis', kind: 'permanent' },
+  { from: 'راهنمای-جامع-شروع-فعالیت-در-فارکس-از-او', to: 'راهنمای-جامع-شروع-فعالیت-در-فارکس', kind: 'permanent' },
   { from: 'what-is-the-cci-indicator', to: 'اندیکاتور-cci-چیست؟', kind: 'permanent' },
-  { from: 'what-is-the-atr-indicator', to: 'اندیکاتور-atr-چیست؟', kind: 'permanent' },
+  { from: 'complete-tutorial-on-the-williams-r-indicator', to: 'آموزش-کامل-اندیکاتور-williams-r', kind: 'permanent' },
   { from: 'what-is-a-moving-average-indicator', to: 'moving-average-indicator', kind: 'permanent' },
+  { from: 'complete-guide-to-long-and-short-trades', to: 'آموزش-پوزیشن-لانگ-و-شورت-در-ارز-دیجیتال', kind: 'permanent' },
+  { from: 'polymarket-predict-future-and-profit-from-it', to: 'پلیمارکت-polymarket', kind: 'permanent' },
+  { from: 'what-is-a-bull-market', to: 'بازار-خرسی', kind: 'permanent' },
+  { from: 'worlds-top-10-hedge-funds', to: '10-هج-فاند-برتر-دنیا', kind: 'permanent' },
+  { from: 'what-is-the-mfi-indicator', to: 'mfi-indicator', kind: 'permanent' },
+  { from: 'what-is-the-atr-indicator', to: 'اندیکاتور-atr-چیست؟', kind: 'permanent' },
 
-  /* ---- Content gone ---- */
+  /* ---- Code-only. The CMS cannot supply these; see each note. ---- */
   {
     from: 'low-risk-investment-funds',
     to: '2-ways-to-choose-your-fixed-income-fund',

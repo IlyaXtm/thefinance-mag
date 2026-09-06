@@ -1,4 +1,5 @@
 import { hasPreviewSecret } from '@/features/mag/lib/preview-secret';
+import { magArchiveOverflowed } from '@/features/mag/api/v1/mag.service';
 import { probeRedirectSource } from '@/features/mag/lib/redirect-source';
 
 /**
@@ -21,6 +22,19 @@ export function GET() {
   return Response.json(
     {
       status: 'ok',
+      /*
+        Which build is actually running. Pages are generated at build time, so
+        a stale image serves stale content indefinitely and a restart does not
+        fix it — this is how you tell without guessing. Matches .next/BUILD_ID
+        on the machine that produced the image.
+      */
+      buildId: process.env.MAG_BUILD_ID ?? 'unknown',
+      /*
+        True when the archive has outgrown the single fetch the market pages
+        derive their list and counts from. At that point markets under-report
+        instead of erroring, so it has to be visible somewhere — this is where.
+      */
+      archiveOverflowed: magArchiveOverflowed(),
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*
@@ -33,6 +47,9 @@ export function GET() {
       redirectSource: {
         reachable: redirects.reachable,
         count: redirects.count,
+        /* The compiled fallback's size, beside the live count. If these differ
+           the fallback is not a fallback — see missingCompiled below. */
+        compiledCount: redirects.compiledCount,
         ageMs: redirects.ageMs,
         /*
           Compiled-in rules WordPress is not returning. Anything here is a
@@ -45,6 +62,13 @@ export function GET() {
           The cutover gate is `reachable === true && missingKnown.length === 0`.
         */
         missingKnown: redirects.missingKnown,
+        /*
+          Live rules with no compiled floor under them. Empty is required
+          before cutover for the same reason missingKnown is — but this is the
+          direction that fails during a CMS blip rather than after one, and it
+          was invisible until now.
+        */
+        missingCompiled: redirects.missingCompiled,
       },
       time: new Date().toISOString(),
     },

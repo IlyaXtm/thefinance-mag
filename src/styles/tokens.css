@@ -9,6 +9,21 @@
  * file is the only one that changes.
  *
  * Three themes. `v2-light` is the one that breaks: check contrast there first.
+ *
+ * BLOG v4. The v4 redesign is dark-only and its palette turned out to be v1
+ * navy exactly — `--bg`/`--card`/`--card-2`/`--accent`/`--accent-contrast` are
+ * byte-identical to what was already here. So v1 is the v4 theme, refined
+ * rather than replaced, and the other two keep working. Two changes were made
+ * to v1 to match the spec, both measured:
+ *
+ *   --text-secondary  #d4d4d4 → rgba(255,255,255,.70)   9.61 on surface
+ *   --text-muted      #a3a3a3 → rgba(255,255,255,.50)   5.34 on surface
+ *
+ * NOT adopted: the spec's `--rule-2` (rgba(255,255,255,.22)) for inputs and
+ * outline buttons. It measures 1.91 against the page and WCAG 2.2 SC 1.4.11
+ * wants 3.0 for a control whose border is its only boundary. `--rule-2` stays
+ * as a decorative strong hairline; anything interactive uses
+ * `--border-interactive` (3.95), which is why that token exists.
  */
 
 :root,
@@ -23,12 +38,21 @@
   --border-interactive: #63718a; /* 3.95 vs surface · 3.72 vs raised */
 
   --text-primary: #ffffff;
-  --text-secondary: #d4d4d4;
-  --text-muted: #a3a3a3;
+  --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 9.24 vs raised */
+  --text-muted: rgba(255, 255, 255, 0.5); /* 5.34 vs surface · 5.23 vs raised */
 
   --accent: #4d9afe;
   --accent-contrast: #041024; /* 6.67 on accent */
+  /* Category chip fill. Decorative only — the accent TEXT on top carries the
+     contrast (6.84), so this never has to clear a ratio on its own. */
+  --accent-soft: rgba(77, 154, 254, 0.14);
   --focus-ring: #4d9afe; /* 6.84 vs surface · 6.43 vs raised */
+  /* The newsletter surface — the one gradient in the system. A token per
+     theme rather than a literal, because the accent itself changes: v2-light
+     uses the darker #1a5fbf, and a 16% wash of the dark-theme blue over a
+     white card reads as a different brand. */
+  --accent-wash-from: rgba(77, 154, 254, 0.16);
+  --accent-wash-to: rgba(77, 154, 254, 0.02);
   --danger: #ff9e9e; /* 9.87 vs surface · 9.28 vs raised */
 
   --skeleton: rgba(255, 255, 255, 0.07);
@@ -54,7 +78,10 @@
 
   --accent: #4d9afe;
   --accent-contrast: #06121f; /* 6.61 on accent */
+  --accent-soft: rgba(77, 154, 254, 0.14);
   --focus-ring: #4d9afe; /* 6.95 vs surface · 6.29 vs raised */
+  --accent-wash-from: rgba(77, 154, 254, 0.16);
+  --accent-wash-to: rgba(77, 154, 254, 0.02);
   --danger: #fca5a5; /* 10.43 vs surface · 9.45 vs raised */
 
   --skeleton: rgba(255, 255, 255, 0.06);
@@ -76,6 +103,11 @@
 
   --accent: #1a5fbf;
   --accent-contrast: #ffffff; /* 6.12 on accent */
+  --accent-soft: rgba(26, 95, 191, 0.1);
+  /* Lighter than the dark themes on purpose: the same 16% over white is a
+     heavy blue panel, not a wash. */
+  --accent-wash-from: rgba(26, 95, 191, 0.09);
+  --accent-wash-to: rgba(26, 95, 191, 0.02);
 
   /*
    * NOT the dark-theme blue.
@@ -94,6 +126,68 @@
 
   --skeleton: #e4e8ef;
   --skeleton-strong: #d5dae4;
+}
+
+/*
+ * ── Over photography ────────────────────────────────────────────────────
+ *
+ * THESE DELIBERATELY DO NOT FLIP WITH THE THEME, and that is the whole point
+ * of putting them here rather than in each theme block.
+ *
+ * The lead card and the category cover set text directly on a featured image.
+ * What sits behind that text is a photograph, not a theme surface, so the
+ * readable choice is the same in every theme: a dark scrim and light text.
+ * Flipping them would mean a white scrim in the light theme, which washes an
+ * arbitrary photo out and still cannot guarantee contrast over its bright
+ * regions.
+ *
+ * This was a real defect, not a hypothetical. The scrim used to be a literal
+ * `rgba(4,12,31,.94)` while the text used `--text-primary`, so in v2-light the
+ * headline turned near-black on a dark navy scrim and vanished. Nothing
+ * errored; the lead story was simply unreadable.
+ *
+ * The scrim bottoms out at .94, which is where white clears 4.5:1 comfortably
+ * even over a fully white image — the worst case, since the image is arbitrary
+ * and uncontrolled.
+ */
+:root {
+  --scrim-from: rgba(4, 12, 31, 0.94);
+  --scrim-mid: rgba(4, 12, 31, 0.72);
+  --scrim-to: rgba(4, 12, 31, 0.1);
+
+  /* The category cover is shorter (210px), so its scrim is flatter and
+     stronger at the base — there is less height to fade across. */
+  --scrim-cover-from: rgba(7, 19, 49, 0.96);
+  --scrim-cover-to: rgba(7, 19, 49, 0.35);
+
+  --on-media: #ffffff;
+  --on-media-secondary: rgba(255, 255, 255, 0.78); /* 10.81 on .94 · 5.69 on .72 */
+  /*
+    .70, not the .62 the theme's own --text-muted uses.
+    Measured against the worst case — the scrim over a fully white image — .62
+    gives 7.26 at the .94 base but only 4.27 where the gradient has thinned to
+    .72, under the 4.5 floor. Today the meta row sits low enough to be in the
+    .94 region, so .62 passed by position rather than by design; a longer
+    headline pushing it up would have quietly broken it. .70 clears 4.5
+    anywhere in the scrimmed band (4.95 at .72, 8.44 at .94).
+  */
+  --on-media-muted: rgba(255, 255, 255, 0.7);
+}
+
+/*
+ * Mark the content layer that sits on a scrimmed image with `data-on-media`
+ * and the text tokens re-point themselves inside it.
+ *
+ * The alternative was a light/dark variant prop on every component that can
+ * appear over an image — Breadcrumbs, CategoryChip, the meta row — which is
+ * three places to forget one. Re-pointing the tokens means a component nested
+ * there is correct without knowing it is there, which is the property that
+ * actually prevents this defect coming back.
+ */
+[data-on-media] {
+  --text-primary: var(--on-media);
+  --text-secondary: var(--on-media-secondary);
+  --text-muted: var(--on-media-muted);
 }
 
 /*
@@ -168,6 +262,35 @@ cite {
 :focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+/*
+ * Theme toggle, both states rendered.
+ *
+ * The server always emits the dark default — the route is statically rendered
+ * and there is no cookie telling it otherwise — so the button cannot pick its
+ * icon in React without either a hydration mismatch or a visible flip on
+ * mount. Both icons ship and CSS shows the one matching the live theme, so the
+ * markup is identical on both sides and the right icon is in the first frame.
+ *
+ * `display: none` on the inactive half also takes its sr-only label out of the
+ * accessibility tree, which is what keeps the button's accessible name equal
+ * to the action it will actually perform.
+ */
+[data-theme-when] {
+  display: contents;
+}
+
+[data-theme-when='light'] {
+  display: none;
+}
+
+[data-theme='v2-light'] [data-theme-when='light'] {
+  display: contents;
+}
+
+[data-theme='v2-light'] [data-theme-when='dark'] {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

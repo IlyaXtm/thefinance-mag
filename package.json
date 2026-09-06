@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "redirects:sync": "node scripts/sync-redirects.mjs",
+    "check:invariants": "node scripts/check-invariants.mjs"
   },
   "dependencies": {
     "next": "15.5.23",

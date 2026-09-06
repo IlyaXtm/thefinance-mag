@@ -28,46 +28,14 @@ article lands would consolidate the URL we just published into a different one.
 
 ---
 
-## B0b — Decide the trailing-slash form before cutover
+## B0b — Trailing-slash form ✅ CLOSED 2026-09-06
 
-Found while building the redirect map, and it is the same shape of oversight as
-the one that missed the map itself: the permalink *structure* was checked, the
-actual *URLs* were not.
+**Decided: `trailingSlash` stays off.** A 308 passes full link equity and costs
+no ranking, so the extra hop on currently-ranking URLs is accepted rather than
+reshaping every canonical, sitemap entry and internal link product-wide.
 
-WordPress's `/%postname%/` serves `/mag/<slug>/` **with** a trailing slash. The
-Next app serves `/mag/<slug>` and 308s the slash form, and its canonicals and
-sitemap use the slash-free form. The trailing slash is part of the URL, so it
-changes at cutover — for **all 71 indexed URLs**, including the 23 whose slugs
-still exist and take no redirect at all today.
-
-The legacy map already targets the slash-free form directly, so those 48 are
-one hop either way. The question is the other 23, and the canonical form of
-every URL going forward.
-
-`decisions.md` says "Do not change URLs during the headless migration" and then
-"confirmed unnecessary anyway: the permalink structure is `/%postname%/`, so
-nothing changes." The trailing slash is the part that does change.
-
-Two options:
-
-- **`trailingSlash: true`** in `next.config.ts` — matches WordPress exactly, so
-  no indexed URL takes a redirect. Cost: every canonical, sitemap entry and
-  internal link gains a slash, and `magUrl()` has to build it.
-- **Accept one 308** on the slash form. Google follows it and updates, but it
-  is a redirect on every currently-ranking URL, added by us, during the one
-  release where we most want to change nothing.
-
-Not decided here because it changes URL shape product-wide.
-
-**First confirm the premise** — it is inferred from the permalink setting, not
-measured, because the build environment cannot reach the site:
-
-```bash
-curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku
-curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' https://thefinance.ir/mag/ichimoku/
-```
-
-If the slash-free form already 301s to the slash form, the premise holds.
+Reasoning in full: `docs/decisions.md` → URL shape. Do not reopen without new
+evidence that a 308 costs position.
 
 ---
 
@@ -176,8 +144,26 @@ whether they're a WordPress CPT inside Mag or a separate system.
 
 **Status:** deferred until the taxonomy fills
 
-Built and working, but not the default. 18 of 32 articles have no market, and
-`housing` has zero — a market bar would advertise empty buckets.
+Built and working, but not the default. The figure that decided this was **18
+of 32 articles with no market**, with `housing` at zero — a market bar would
+advertise empty buckets.
+
+⚠️ **That figure is stale and this item is therefore UNDECIDED, not deferred.**
+A content migration on 2026-09-06 took the archive to **53 published posts, 21
+of them new**. Nobody has counted how many of the 53 carry a market. If the
+ratio moved, the reason for deferring B4 has gone with it.
+
+Measure before deciding — one query, no build required:
+
+```bash
+curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:100){ nodes { slug markets { nodes { slug } } } } }"}' \
+  | python3 -c "import sys,json,collections
+n=json.load(sys.stdin)['data']['posts']['nodes']
+c=collections.Counter(m['slug'] for p in n for m in p['markets']['nodes'])
+print(f'{sum(1 for p in n if not p[\"markets\"][\"nodes\"])} of {len(n)} have no market')
+print(c.most_common())"
+```
 
 Content type is the visible filter axis for now. Markets appear as chips on
 cards and as archive pages, and only terms with `count > 0` are ever linked.
@@ -340,3 +326,188 @@ wpc option update comment_moderation 1
 
 Also confirm `comment_registration` stays `0` — the guest comment form depends
 on it.
+
+---
+
+## B12 — `source` on news rows is a content-model decision, not an `if`
+
+**Status:** decision needed before the news template can be judged complete
+
+`NewsRow` renders «منبع: …» only when `article.source` is present, and it never
+is. `source` and `sourceUrl` are listed in `CLAUDE.md` under fields
+deliberately excluded, so the condition is permanently false and every news row
+ships with less metadata than the v4 design specifies.
+
+The conditional itself is correct and should stay — the standing rule is not to
+build against a field that does not exist, and rendering a real one when it
+arrives is the honest half of that. What is not correct is leaving the question
+inside a component.
+
+**Why it probably should exist now.** The exclusion was decided when news was
+itself excluded. It isn't: an RSS automation publishes roughly two translated
+items a day, and a translated item genuinely has a source. Attribution is also
+the thing that separates a translated wire item from an original piece, which
+is a distinction an anti-hype publication has an interest in making visible.
+
+**What deciding it involves**, and why it is not a small change:
+
+- a field on `Post`, exposed through the mu-plugin the way `readingTime` and
+  `outlineHeadings` are, populated by the RSS importer rather than by hand
+- `sourceUrl` alongside it, and then the question of whether the source links
+  out — an outbound link per news row, on a publication whose own SEO is the
+  first priority, is a `rel` decision (`nofollow`? `ugc`? nothing?) rather than
+  a styling one
+- back-filling the existing news archive, or accepting that older rows have no
+  source and the row closes up for them
+
+Do not add the field without answering the link question. A source that is
+plain text is a smaller commitment than one that is a link, and the two are
+hard to swap once published.
+
+---
+
+## B13 — `author.role` renders nothing and has no source
+
+`AuthorBox` draws a role line under the author's name. `mapAuthor` returns
+`role: null` unconditionally, because WordPress exposes nothing for it and the
+content model does not list it. The mock used to fill it in, which is the only
+reason the line ever appeared.
+
+Two honest options, and a third that is not:
+
+1. Add an author-role field to the CMS (a user meta field, exposed through the
+   mu-plugin) and populate it for the six users.
+2. Delete the line from `AuthorBox` and the field from `Author`.
+3. ~~Leave it~~ — a component branch that can never render is dead code that
+   reads as a feature.
+
+Related, and deliberately kept: `avatar` is also always null, but that is a
+*decision* rather than a gap — Gravatar was dropped (a third-party request per
+author, a hash of their email sent abroad, unreliable from Iran) and the
+initial-based fallback is the intended design. `role` has no such decision
+behind it; it was simply never sourced.
+
+---
+
+## B14 — Cover art: the v4 grid needs artwork without the headline in it
+
+**Status:** count not yet measured — see below
+
+Blog v4 is image-led: a featured image on every card. The previous listing
+showed artwork exactly once, and the reason was concrete — the existing
+featured images have **the article's headline baked into the artwork**, so a
+card grid prints every title twice, once as text and once as pixels.
+
+Reversing that rule (recorded in `CLAUDE.md`) does not make the problem go
+away; it converts it from a design constraint into a content-production
+commitment. **The archive is 53 posts as of 2026-09-06, not the ~32 this item
+was scoped against** — the count below has to be re-taken at the new size, and
+the production commitment is correspondingly larger.
+
+**The number is not in this document because it could not be measured here.**
+It requires rendering `/mag` and `/mag/archive` against real data and counting
+how many featured images carry no headline. Run:
+
+```bash
+USE_MOCK=false npm start
+```
+
+then count on `/mag` and `/mag/archive`, and write the figure in here. Until
+then this item has a scope but not a size.
+
+**And the fixtures test the wrong state.** Of the 53 real articles, ZERO have
+no featured image — the null-image case the fixtures carefully cover does not
+occur in production. The state that does occur is untested: every real featured
+image has the headline baked into the artwork, so an image-led grid prints each
+title twice, once as art and once as text. That is precisely what the
+2026-08-20 one-image-index decision existed to prevent, and v4 reverses it
+against mock gradients that carry no text at all.
+
+The null-image fixture stays regardless — it costs nothing and the branch has
+to render — but it is not evidence about production.
+
+What *is* verified: the no-image card does not reflow the row. Measured on the
+archive row at 1440px, a null-image card is 984×208 with a 270×170 image box —
+identical to every image row beside it; at 390px, 350×412 with a 312×180 box,
+also identical.
+
+A review reported that the row "drops the image box entirely and the text spans
+full width". Geometrically that was not happening. Visually it was: the
+placeholder was `--surface-raised`, the same colour as the card it sits on, so
+the reserved 270px was invisible and the row read as though the text had
+spread. Reserved space nobody can see is not reserved as far as a reader is
+concerned. The placeholder is now `--surface-hover` with an inset hairline.
+
+---
+
+## B15 — Two live redirects point at destinations that 404
+
+**Status:** CMS-side content fix. Do **not** patch these in code — the live map
+is authoritative and a code patch would be overwritten on the next sync.
+
+Both are in the Rank Math table on the CMS and both are currently broken:
+
+1. **`what-is-a-moving-average-indicator`** → points at
+   `اندیکاتور-میانگین-متحرک-moving-average-چیست؟`, which does not exist.
+   Correct destination: **`moving-average-indicator`**
+
+2. **`introduction-to-persian-tradingview-inchart`** → points at
+   `/mag/mag/free-tradingview/`, with `/mag` doubled. WordPress happens to
+   clean the doubled prefix up today; **Next.js will not**, so this breaks at
+   cutover rather than now. Correct destination: **`/mag/free-tradingview/`**
+
+The second is the single biggest organic entry point to the magazine — 77
+clicks, roughly 43% of all `/mag` clicks. A 404 there at cutover is the worst
+single outcome available in this migration.
+
+After fixing both in Rank Math, re-run `npm run redirects:sync` so the compiled
+fallback picks up the corrected destinations.
+
+---
+
+## B16 — Total Blocking Time is at roughly 2× its guideline
+
+**Status:** accepted for now, with a named cause and a named next step.
+
+Measured on the standalone build at 390px under a 4× CPU throttle and
+1.6 Mbps/150 ms — a mid-range Android on 3G:
+
+| route | TBT |
+|---|---|
+| `/mag` | 384–442 ms |
+| `/mag/archive` | 411–441 ms |
+| `/mag/news` | ~350 ms |
+| article | ~456 ms |
+
+Against a 200 ms guideline. Every content route is over it.
+
+**Do not compare these against earlier numbers.** The same commit range
+measured 199–229 ms in an earlier session and 365–442 ms in this one, with
+byte-identical bundles — verified by re-measuring the pre-change commit, which
+came back at 365–420 ms. TBT here is a property of the machine at least as much
+as of the app, so it is only meaningful as a within-session comparison. The
+earlier engineering report called it "at its guideline"; on the numbers it was
+flagged over on four of six routes, and that description was too generous.
+
+**What is stable and is the actual driver:** 123–125 KB of first-load
+JavaScript on every route, 103 KB of it shared. TBT is main-thread time
+parsing, compiling and hydrating that.
+
+**What would move it, roughly in order of return:**
+
+1. The listing pages ship the full client runtime to render what is almost
+   entirely static markup. The interactive parts are the theme toggle, the
+   comment form and the search box — everything else could be a server
+   component with no client bundle at all. Audit which components carry
+   `'use client'` and why.
+2. The 94 KB IRANYekanX woff2 is not JS but is on the critical path and
+   competes for the same early network budget. A subset covering only the
+   Persian and Latin ranges actually used would cut it substantially, and the
+   face is fixed by CLAUDE.md so subsetting is the only lever.
+3. Confirm against a real device or a lab with a stable CPU baseline before
+   spending effort on either — the numbers above cannot support a
+   before/after claim on their own.
+
+TBT is a lab proxy for INP, which is the metric CLAUDE.md actually targets.
+Field INP is not being collected; that gap is the reason this cannot be closed
+by measurement here.
