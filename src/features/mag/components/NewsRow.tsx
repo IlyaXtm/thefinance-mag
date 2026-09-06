@@ -96,7 +96,25 @@ export function NewsDayGroup({
 }
 
 /**
- * Bucket articles by calendar day, newest first, preserving order within a day.
+ * Bucket articles by calendar day, newest day first, newest item first.
+ *
+ * IT NOW SORTS. It used to say "newest first, preserving order within a day"
+ * and do neither — it bucketed in arrival order and returned the buckets in
+ * insertion order, so the output was only ever as sorted as its input. On
+ * /mag/news that produced 10:40, 13:10, 07:35 under one heading: not
+ * ascending, not descending, just whatever order the query happened to return.
+ *
+ * Sorting HERE rather than relying on the caller is the point. A component
+ * whose correctness depends on an invariant it does not enforce is a component
+ * that breaks the day someone passes it a differently-ordered list, silently
+ * and in a way that looks like a data problem.
+ *
+ * The sort key is `publishedAt`, which is the same field the row renders as its
+ * clock. Sorting on one field and displaying another is how a list ends up
+ * looking unsorted while being perfectly sorted.
+ *
+ * The input is not mutated — `.sort()` is in-place, and a component reordering
+ * an array its caller still holds is a bug waiting for a second consumer.
  */
 export function groupByDay(articles: ArticleSummary[]): Array<{
   isoDate: string;
@@ -111,5 +129,12 @@ export function groupByDay(articles: ArticleSummary[]): Array<{
     else days.set(key, [article]);
   }
 
-  return [...days.entries()].map(([isoDate, items]) => ({ isoDate, articles: items }));
+  return [...days.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([isoDate, items]) => ({
+      isoDate,
+      articles: [...items].sort(
+        (a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt),
+      ),
+    }));
 }
