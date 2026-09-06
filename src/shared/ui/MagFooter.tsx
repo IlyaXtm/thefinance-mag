@@ -5,7 +5,7 @@ import {
   FOOTER_PRODUCT_LINKS,
   SOCIAL_LINKS,
 } from '@/features/mag/lib/nav';
-import { DISCLAIMER_TEXT } from '@/features/mag/types/mag-blocks.types';
+import { SITE_DISCLAIMER_TEXT } from '@/features/mag/types/mag-blocks.types';
 import { MAG_DESCRIPTION, MAG_NAME, ORGANIZATION, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
@@ -18,7 +18,8 @@ import type { Market } from '@/features/mag/types/mag.types';
  * and internal linking is the main lever for topical authority on a site this
  * small.
  *
- * THE DISCLAIMER IS NOT DECORATION. It is the same fixed string the article
+ * THE DISCLAIMER IS NOT DECORATION. It is the site-wide form of the string the
+ * article
  * body block uses, and it is not editor-editable: signal-selling is prohibited
  * under Iranian securities law, so this is legal protection rather than brand
  * voice. It appears here on every page and again on the post page.
@@ -93,7 +94,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
 
         <div className="mt-12 border-t border-border-subtle pt-8">
           <p className="max-w-[92ch] text-[13px] font-light leading-[1.85] text-text-muted">
-            {DISCLAIMER_TEXT}
+            {SITE_DISCLAIMER_TEXT}
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-text-muted">
