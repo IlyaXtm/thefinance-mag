@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { toMetadata } from '@/features/mag/lib/seo';
-import { MAG_NAME } from '@/features/mag/lib/site';
+import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import {
   ArticleGridEmpty,
@@ -51,6 +52,18 @@ export default async function NewsPage() {
 
   return (
     <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+      {/* «اخبار» is a top-level indexable section and had no breadcrumb of any
+          kind, structured or visible, while every other archive had both. Only
+          the markup is added here — the page's own header already names the
+          section, so a visible crumb above an <h1> saying the same word would
+          be noise. */}
+      <JsonLdScript
+        data={breadcrumbJsonLd([
+          { name: MAG_NAME, url: magUrl('/') },
+          { name: 'اخبار', url: magUrl('/news') },
+        ])}
+      />
+
       <div className="flex flex-col gap-6 border-b-2 border-border-strong pb-7 pt-6 md:flex-row md:items-end md:justify-between lg:pt-8">
         <div>
           <h1 className="text-[26px] font-bold tracking-[-0.3px] text-text-primary md:text-[32px]">

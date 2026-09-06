@@ -71,7 +71,24 @@ export function PostCard({ article }: { article: ArticleSummary }) {
  * Collapses to the vertical card layout below 640px rather than shrinking the
  * thumbnail to a stamp.
  */
-export function ArchiveCard({ article }: { article: ArticleSummary }) {
+export function ArchiveCard({
+  article,
+  /*
+    THE LCP ELEMENT ON AN ARCHIVE is the first card's image, which is what the
+    note on CategoryCover already says — the cover deliberately gives up
+    `priority` so this card can have it. It never did: ArchiveCard had no way
+    to be told, so every image in the list was lazy and LCP waited for a
+    lazy-loaded request to be discovered.
+
+    Measured on a 4x-throttled phone profile: 1.11s on /archive and 1.12s on a
+    market archive, against 0.58–0.63s on the pages that do mark their hero.
+    Both were inside the 2.5s target, so nothing looked wrong.
+  */
+  priority = false,
+}: {
+  article: ArticleSummary;
+  priority?: boolean;
+}) {
   const category = cardCategory(article);
   const dek = cardDek(article);
 
@@ -81,6 +98,7 @@ export function ArchiveCard({ article }: { article: ArticleSummary }) {
         <CardImage
           image={article.featuredImage}
           sizes="(max-width: 639px) 100vw, 270px"
+          priority={priority}
           rounded="rounded-lg"
           className="h-full"
         />

@@ -74,8 +74,8 @@ export async function MarketArchiveView({
           {articles.items.length > 0 ? (
             <>
               <div className="flex flex-col gap-6">
-                {articles.items.map((article) => (
-                  <ArchiveCard key={article.id} article={article} />
+                {articles.items.map((article, index) => (
+                  <ArchiveCard key={article.id} article={article} priority={index === 0} />
                 ))}
               </div>
               <Pagination

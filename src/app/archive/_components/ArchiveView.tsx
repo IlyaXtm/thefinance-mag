@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { isPageBeyondEnd } from '@/features/mag/lib/nav';
-import { MAG_NAME } from '@/features/mag/lib/site';
+import { breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import type { ContentType } from '@/features/mag/types/mag.types';
 import {
   ArchiveCard,
@@ -45,6 +46,13 @@ export async function ArchiveView({
 
   return (
     <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+      {/* The market, author and authors archives all emit this; the main
+          archive rendered the same breadcrumb visibly and emitted nothing,
+          which was an oversight rather than a decision. */}
+      <JsonLdScript
+        data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
+      />
+
       <div className="pt-6 lg:pt-8">
         <CategoryCover
           title="آرشیو"
@@ -66,8 +74,8 @@ export async function ArchiveView({
 
           {articles.items.length > 0 ? (
             <div className="flex flex-col gap-6">
-              {articles.items.map((article) => (
-                <ArchiveCard key={article.id} article={article} />
+              {articles.items.map((article, index) => (
+                <ArchiveCard key={article.id} article={article} priority={index === 0} />
               ))}
             </div>
           ) : (
