@@ -415,12 +415,28 @@ USE_MOCK=false npm start
 then count on `/mag` and `/mag/archive`, and write the figure in here. Until
 then this item has a scope but not a size.
 
-What *is* verified: `CardImage` renders a fixed-size placeholder panel when
-`featuredImage` is null, structurally identical in layout to the image branch
-(`h-full w-full` in both, with every call site fixing the box height), so a
-missing image cannot reflow the grid. A null-image fixture is now in the mock
-listing rather than only reachable by slug, so that path is exercised in
-development.
+**And the fixtures test the wrong state.** Of the 53 real articles, ZERO have
+no featured image — the null-image case the fixtures carefully cover does not
+occur in production. The state that does occur is untested: every real featured
+image has the headline baked into the artwork, so an image-led grid prints each
+title twice, once as art and once as text. That is precisely what the
+2026-08-20 one-image-index decision existed to prevent, and v4 reverses it
+against mock gradients that carry no text at all.
+
+The null-image fixture stays regardless — it costs nothing and the branch has
+to render — but it is not evidence about production.
+
+What *is* verified: the no-image card does not reflow the row. Measured on the
+archive row at 1440px, a null-image card is 984×208 with a 270×170 image box —
+identical to every image row beside it; at 390px, 350×412 with a 312×180 box,
+also identical.
+
+A review reported that the row "drops the image box entirely and the text spans
+full width". Geometrically that was not happening. Visually it was: the
+placeholder was `--surface-raised`, the same colour as the card it sits on, so
+the reserved 270px was invisible and the row read as though the text had
+spread. Reserved space nobody can see is not reserved as far as a reader is
+concerned. The placeholder is now `--surface-hover` with an inset hairline.
 
 ---
 

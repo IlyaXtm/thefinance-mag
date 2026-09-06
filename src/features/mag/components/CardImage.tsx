@@ -22,8 +22,23 @@ import type { MagImage } from '../types/mag.types';
  * without `/mag` 400s at the optimizer while the page still renders.
  *
  * The placeholder is not a broken-image box: an article genuinely without
- * artwork gets a flat `--surface-raised` panel, which reads as "no image"
- * rather than "failed to load".
+ * artwork gets a flat panel, which reads as "no image" rather than "failed to
+ * load".
+ *
+ * IT USED TO BE `--surface-raised` — THE SAME COLOUR AS THE CARD IT SITS ON.
+ * The box was still reserved and the grid still could not reflow, and a
+ * measurement said exactly that: a no-image archive row is 984×208 with a
+ * 270×170 image box, identical to every image row beside it. But nothing was
+ * visible in that 270px, so the row READ as though the image box had been
+ * dropped and the text had spread to full width — which is how it was reported
+ * in review, and the report was right about what a reader sees even though the
+ * layout was doing the right thing.
+ *
+ * A reserved space nobody can see is not reserved as far as the reader is
+ * concerned. `--surface-hover` is the next step up the same neutral ramp, so
+ * the slot reads as deliberately empty on either theme without introducing a
+ * colour, and the inset border gives it an edge on surfaces where the two
+ * steps are close.
  */
 export function CardImage({
   image,
@@ -43,7 +58,7 @@ export function CardImage({
     return (
       <span
         aria-hidden="true"
-        className={`block h-full w-full bg-surface-raised ${rounded} ${className}`}
+        className={`block h-full w-full bg-surface-hover shadow-[inset_0_0_0_1px_var(--border-subtle)] ${rounded} ${className}`}
       />
     );
   }
