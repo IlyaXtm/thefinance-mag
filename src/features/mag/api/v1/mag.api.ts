@@ -142,7 +142,16 @@ function mapImage(node: WpSummary['featuredImage']): MagImage | null {
   if (!image?.sourceUrl) return null;
 
   return {
-    url: image.sourceUrl,
+    /*
+      The CMS host, not the public one. The image optimizer fetches
+      server-side from inside the container; nginx on the frontend listens on
+      :80 only — TLS terminates at the CDN — so a fetch of
+      https://thefinance.ir/... leaves the box, hits the CDN and hairpins back,
+      which times out and every image 502s. wp.thefinance.ir is a different
+      host and resolves normally. Verified from inside the container: the CMS
+      URL returns 200, the public one does not.
+    */
+    url: image.sourceUrl.replace('https://thefinance.ir/mag/', 'https://wp.thefinance.ir/'),
     /* An empty alt is surfaced as-is rather than invented. Fabricated alt text
        is worse than none — it misdescribes the image to the people who rely
        on it. */
