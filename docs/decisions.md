@@ -139,6 +139,58 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
+## Brand assets
+
+**The logo is inline SVG with `currentColor` ink, not two theme files.**
+Decided 2026-09-07.
+
+The official pack ships a dark lockup and a light one that differ only in the
+ink — #FFFFFF against #0B1120. Picking between them would require the header to
+know the theme, and it cannot: the theme is applied pre-paint from localStorage,
+after the server has rendered. One asset that inherits the surrounding colour
+has no such problem.
+
+The three blues (#0163E1 · #10A5F5 · #00DBFF) stay literal and do NOT become
+tokens. They are the mark, the brand rules forbid recolouring it, and it must
+read identically on all three themes — the same reasoning that keeps
+`--scrim-*` and `--on-media` from flipping. A logo is artwork, not a themed
+surface, so this is not a hardcoded-colour violation.
+
+Inline rather than `<img>` for two reasons: «مجله» is a live `<text>` node and
+an externally-loaded SVG cannot reach the page's fonts, and the header logo
+stays markup on the LCP path rather than a request that can 400.
+
+**The typeface in the logo is IRANYekanX, overriding the asset's own README.**
+The pack specifies Vazirmatn Light and supplies a Google Fonts `<link>`. Both
+are refused: the typeface is fixed product-wide by CLAUDE.md — Blog v4 shipped
+Vazirmatn and it was reverted for exactly this reason — and no Google Fonts or
+foreign CDN may sit on the critical path of a site served from Iran behind
+ArvanCloud. `font-family: inherit`, weight 300, a real instance of the variable
+face. To match the drawing exactly, outline the word in IRANYekanX; never load
+a second face.
+
+---
+
+## Sticky sidebars
+
+**`position: sticky` goes on the grid item, never on a child of it.** Decided
+2026-09-07.
+
+A sticky element travels only within its containing block. Under
+`items-start`, a grid item is exactly as tall as its content — so a sticky
+panel nested inside one has zero travel and silently does nothing. A sticky
+GRID ITEM resolves against its grid area, which spans the row.
+
+The table of contents carried `sticky top-[76px]` for weeks and never moved,
+because it was the panel inside the item rather than the item. Nothing errors
+and the class reads correctly, so this is not visible in review — only in a
+measurement of `getBoundingClientRect().top` while scrolled.
+
+Both sidebars on the post page now use the same shape. Two sidebars in one grid
+with two positioning strategies is how the last one drifted.
+
+---
+
 ## Design system additions
 
 Three items surfaced during Mag that are **system-level**, not Mag-local. Left

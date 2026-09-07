@@ -63,7 +63,13 @@ export default async function SearchPage({
               type="search"
               defaultValue={query}
               placeholder="جستجو در مجله"
-              className="min-h-11 flex-1 rounded-full border border-border-interactive bg-transparent px-4 text-[15px] text-text-primary placeholder:text-text-muted"
+              /* `min-w-0` with `flex-1`, not `flex-1` alone. A flex item's
+                 default `min-width: auto` refuses to shrink below the input's
+                 intrinsic width, so at 320px the field held its ground and
+                 pushed the `shrink-0` submit button 14px off the edge. The
+                 header's search field and the 404's already pair the two; this
+                 one had drifted. */
+              className="min-h-11 w-full min-w-0 flex-1 rounded-full border border-border-interactive bg-transparent px-4 text-[15px] text-text-primary placeholder:text-text-muted"
             />
             <button
               type="submit"

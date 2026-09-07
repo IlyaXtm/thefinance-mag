@@ -1,15 +1,17 @@
 import Link from 'next/link';
 import { CATEGORY_NAV } from '@/features/mag/lib/nav';
-import { magPath, MAG_NAME, SITE_ORIGIN } from '@/features/mag/lib/site';
+import { magPath, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { NEWSLETTER_ENABLED } from '@/features/mag/lib/newsletter';
+import { MagLogo } from './MagLogo';
 import { ThemeToggle } from './ThemeToggle';
 
 /**
  * Magazine header — 80px, one flex row.
  *
- * Logo mark is a 9×24 accent bar, not an image: it is two DOM nodes instead of
- * a network request on the LCP path, and it cannot 400 the way a misconfigured
- * `next/image` src did on the first real deployment.
+ * Logo is the official lockup, INLINE SVG — still markup rather than a network
+ * request on the LCP path, so it keeps the property the 9×24 accent-bar
+ * placeholder was chosen for and cannot 400 the way a misconfigured
+ * `next/image` src did on the first real deployment. See MagLogo.
  *
  * The logo links to the MAIN SITE, which is the one thing this header must do.
  * A reader arrives from search, finishes an article, and needs a route back to
@@ -33,10 +35,14 @@ export function MagHeader() {
           href={SITE_ORIGIN}
           /* min-h-11: this is the route back to the main site, so it is a control
              and gets a 44px target rather than the 26px the text alone gives. */
-          className="flex min-h-11 shrink-0 items-center gap-2.5 text-text-primary"
+          className="flex min-h-11 shrink-0 items-center text-text-primary"
         >
-          <span aria-hidden="true" className="h-6 w-[9px] rounded-sm bg-accent" />
-          <span className="text-[17px] font-bold md:text-[18px]">{MAG_NAME}</span>
+          {/* The lockup carries its own accessible name, so no text node and
+              no `aria-label` on the link — either would double it. */}
+          {/* 28px at 390, 30px above. The brand rules put the floor for the
+              full lockup at 24px — below that the mark goes alone — so this
+              keeps headroom over it rather than sitting on it. */}
+          <MagLogo className="h-[28px] w-auto md:h-[30px]" />
         </a>
 
         {/* The five category links at lg and up. Below that they move to the

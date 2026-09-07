@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MagLogo } from './MagLogo';
 import {
   CATEGORY_NAV,
   FOOTER_MAG_LINKS,
@@ -6,7 +7,7 @@ import {
   SOCIAL_LINKS,
 } from '@/features/mag/lib/nav';
 import { SITE_DISCLAIMER_TEXT } from '@/features/mag/types/mag-blocks.types';
-import { MAG_DESCRIPTION, MAG_NAME, ORGANIZATION, SITE_ORIGIN } from '@/features/mag/lib/site';
+import { MAG_DESCRIPTION, ORGANIZATION, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { currentJalaliYear } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 
@@ -36,9 +37,8 @@ export function MagFooter({ markets }: { markets: Market[] }) {
       <div className="mx-auto max-w-[1440px] px-5 py-12 lg:px-10 lg:py-16">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span aria-hidden="true" className="h-6 w-[9px] rounded-sm bg-accent" />
-              <span className="text-[18px] font-bold text-text-primary">{MAG_NAME}</span>
+            <div className="flex items-center text-text-primary">
+              <MagLogo className="h-[32px] w-auto" />
             </div>
             <p className="mt-4 max-w-[46ch] text-[14px] font-light leading-[1.85] text-text-secondary">
               {MAG_DESCRIPTION}

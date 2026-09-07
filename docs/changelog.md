@@ -8,6 +8,173 @@ why it was made.
 
 ---
 
+## 2026-09-07 (later) — The ToC follows the reader, the newsletter stops lying, the official lockup lands
+
+### The sticky class had been there all along and had never done anything
+
+`ArticleAside`'s <nav> carried `sticky top-[76px]` from the day it was written.
+It did nothing. A sticky element can only travel inside its containing block,
+and its containing block was the grid item wrapping it — which under the grid's
+`items-start` is exactly as tall as the panel it holds. Zero travel.
+
+That is why the 20 August entry could record the height cap as protecting "the
+sticky behaviour it existed for" while the sticky behaviour was not happening.
+The cap shipped; the sticky did not; and the class reads correctly in the
+markup, so a review had nothing to catch.
+
+The right-hand rail worked by accident of structure: it IS the grid item, and a
+sticky grid item resolves against its grid AREA, which spans the row. So the
+fix was to do what that column already does rather than invent a second
+approach — `sticky` moved up one level onto the grid item. **One positioning
+strategy for both sidebars** is the part that stops this drifting again.
+
+`xl:` and not `lg:`, unlike the right rail: below 1280 that column is
+`lg:col-span-2`, a full-width strip holding the <details> disclosure, and
+pinning a collapsed accordion over the article would be worse than the bug.
+Measured at eleven widths — at ≥1280 both panels report `top=76` mid-scroll;
+below it the wrapper computes `position: static`. The height cap survives and is
+now load-bearing rather than defensive: the panel is 787px inside a 900px
+viewport, so the TOP edge is the one that sticks and the last of the 24 entries
+stays reachable.
+
+**The scroll-spy was wrong, and "should be unaffected" is why nobody looked.**
+The brief expected the observer to be unaffected by the sidebar's position and
+asked for a measurement anyway. The measurement found it broken — for an
+unrelated reason. It was `entries.filter(isIntersecting).sort(by top)[0]`: the
+topmost of the entries that CHANGED, not the heading the reader is under. With
+a ~220px detection band and headings ~600px apart, most positions have no
+heading in the band at all, so the highlight held whatever last crossed it. On
+the 41-minute article at 1440×900 it was five and six sections behind.
+
+Not caused by the sticky change — verified by overriding the wrapper back to
+`position: static` at 1440 with layout otherwise identical, which reproduced
+the same four wrong answers exactly. A first comparison against 1024 seemed to
+implicate it and was confounded by the column count; the runtime override is
+what isolates the variable. **The sticky fix is what makes it matter**: a stale
+highlight that was off-screen for most of the read is now pinned in front of
+the reader for forty minutes.
+
+The observer stays as the cheap trigger; its callback now asks the DOM which
+heading the reader is under. Re-picked on the rAF scroll frame too, so an
+anchor jump that carries the viewport past several headings between callbacks
+cannot leave it behind.
+
+**And the highlight is kept inside the scrolled list.** The panel is capped, so
+only ~16 of 24 entries are visible; without this the panel follows the reader
+while the reader's place in the panel does not — half a fix that looks whole.
+It scrolls the container's `scrollTop`, never `scrollIntoView`: the target sits
+in a nested scroller inside a sticky panel and `block: 'nearest'` still walks up
+and can move the window. Measured at zero page movement across seven positions.
+Vertical only, so the RTL `scrollLeft` warning does not apply — and it must
+never become horizontal arithmetic. Rect deltas rather than `offsetTop`, whose
+`offsetParent` here is the sticky grid item, not the list.
+
+**A fixture bug fixed in passing, and it was ours.** The 24-heading body was
+assigned as `STRESS[0].content`; the three hero fixtures added earlier the same
+day went to the front of that array and silently moved the long-read article to
+index 3, so it lost its content and its outline and rendered no contents panel
+at all. Nothing failed. Addressed by slug now.
+
+### The newsletter form was telling readers they had subscribed
+
+`handleSubmit` did not send anything anywhere. It waited 400ms and rendered
+«ثبت شد؛ ایمیل تأیید برایتان ارسال شد» — a confirmation that a confirmation
+email had been sent, when no request was made and no address was stored. Every
+reader who typed an address believed they had subscribed, and the line above the
+field promises «هفته‌ای یک ایمیل». It was live on production, on a publication
+whose position is «بدون سیگنال، بدون تبلیغ».
+
+Hidden, not softened. A "coming soon" notice keeps the field on screen and
+invites the same input, so the reader still types an address and still gets
+nothing. One flag — `NEWSLETTER_ENABLED` in `features/mag/lib/newsletter.ts` —
+takes out the card and both header CTAs together.
+
+**The blocker is two DNS records, not the frontend.** Without SPF and DMARC on
+`thefinance.ir` the confirmation email lands in spam and the double opt-in dies
+at its first step, so wiring the form to an endpoint would replace a fake
+success with a real silence. The backend is designed and costed in B6.
+
+**The flag cannot live in the component, and that is not a style preference.**
+It was there first and it did not work: `NewsletterCta.tsx` is `'use client'`,
+and a server component importing a value from a client module receives a client
+reference PROXY rather than the value. A proxy is an object, an object is
+truthy, so `NEWSLETTER_ENABLED && <a/>` in the server-rendered header evaluated
+to TRUE with the flag set to `false` — the card vanished while both CTAs kept
+rendering and pointing at an id that no longer existed. Nothing errored, the
+build was clean, and only `curl` on the served HTML showed it. **A flag read
+across the client boundary is not a flag.**
+
+**It was also causing a horizontal overflow nobody was measuring.** With the
+desktop CTA present the header row needs 1136px, so it pushed past the viewport
+from 1024 to 1135 — the band where the five-link nav has appeared but the row
+has not grown to hold it. 390 and 1440 both passed the whole time.
+`check-invariants.mjs` now sweeps 1024 as well: a breakpoint boundary is where
+layout breaks, and testing only the middle of each range is testing where it
+cannot.
+
+### The official lockup replaces the accent-bar placeholder
+
+The header and footer drew a 9×24 accent bar plus «مجله فایننس» as text. That
+was a placeholder chosen for a real property — two DOM nodes instead of a
+network request on the LCP path — and the replacement keeps it: the lockup is
+inline SVG, so it is still markup and still cannot 400 the way a misconfigured
+`next/image` src did on the first deployment.
+
+Inline is also the only option that works. «مجله» is a live `<text>` node in the
+asset; through `<img src>` or a CSS background an SVG cannot reach the page's
+fonts and cannot pull one in either, so the word would fall back to a system
+font while the rest of the lockup stayed outlined.
+
+**One asset, three themes.** The pack ships a dark file and a `-light` file
+differing only in the ink — #FFFFFF against #0B1120. Shipping both would mean
+the header choosing between them, which means the header knowing the theme,
+which the server cannot: the theme is applied pre-paint from localStorage. The
+ink is `currentColor` instead. The three blues stay literal — they are the mark,
+not a palette, the brand rules forbid recolouring it, and it must read
+identically on every theme. Same reasoning as the non-flipping `--scrim-*` and
+`--on-media` tokens, and the same reason it is not a hardcoded-colour violation:
+a logo is artwork, not a themed surface.
+
+**THE ASSET'S OWN FONT INSTRUCTION IS REFUSED.** Its README specifies Vazirmatn
+Light for «مجله» and offers a `fonts.googleapis.com` stylesheet to load it.
+Both are ruled out and neither is close: `CLAUDE.md` fixes the typeface as
+IRANYekanX product-wide — Blog v4 shipped Vazirmatn and it was reverted for
+exactly this reason, 2026-08-29 — and no Google Fonts or foreign CDN may sit on
+the critical path of a site served from Iran behind ArvanCloud. So
+`font-family: inherit`, and the word renders in IRANYekanX at weight 300, a real
+instance rather than a synthesised light because the face is loaded as a
+variable font spanning 100–1000. If it ever has to match the drawing exactly,
+outline «مجله» in IRANYekanX; do not load a second face. The note is written
+into `assets/brand/README.md` beside the instruction it overrides.
+
+Favicon and touch icon come from the same pack via Next's file convention
+(`src/app/icon.svg`, `apple-icon.png`). No `favicon.ico`: browsers request that
+at the SITE root, which under `basePath: '/mag'` belongs to the main site, so a
+`/mag/favicon.ico` would be a file nothing asks for. `public/logo.png` is
+untouched — it is the PUBLISHER mark in JSON-LD, «فایننس» rather than the
+magazine, and it is already the same official artwork.
+
+The C2PA metadata was stripped from every stored file: ~8KB of base64 per SVG,
+more than the artwork in most of them, and provenance for the generator rather
+than for the mark.
+
+### A responsive sweep, because it was asked for
+
+9 routes × 15 widths — every breakpoint boundary in the codebase and one either
+side: 320, 360, 390, 480, 639, 640, 767, 768, 1023, 1024, 1100, 1279, 1280,
+1440, 1920. Two real overflows found and fixed, both invisible at the two widths
+anyone measures:
+
+- **1024–1135**, every route: the header newsletter CTA, above.
+- **320px, `/search`**: the field is `flex-1` with no `min-w-0`, so its default
+  `min-width: auto` refused to shrink and pushed the `shrink-0` submit button
+  14px off the edge. The header's search field and the 404's already pair the
+  two classes; this one had drifted.
+
+Clean at every width afterwards.
+
+---
+
 ## 2026-09-07 — Category routes, the cutover's missing commit, and three live defects
 
 ### The image fix that lived only on the production server
