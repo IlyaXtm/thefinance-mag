@@ -205,9 +205,22 @@ migration during the monitoring window.
 
 ## B6 — Newsletter sending
 
-**Status:** partially deferred · **Blocked on:** SPF/DMARC records
+**Status:** blocked · **Blocked on:** SPF/DMARC records ·
+**The form is now hidden — 2026-09-07**
 
-The form exists. Storage, double opt-in, and sending do not.
+The form existed and was WORSE than not existing. Its submit handler sent
+nothing anywhere: it waited 400ms and showed «ثبت شد؛ ایمیل تأیید برایتان
+ارسال شد» — a confirmation that a confirmation email had been sent, when no
+request was made and no address was stored. That was live on production, on a
+publication whose position is «بدون سیگنال، بدون تبلیغ».
+
+It is now behind `NEWSLETTER_ENABLED` in `src/features/mag/lib/newsletter.ts`,
+which is `false`. The card and both header CTAs are unrendered — not replaced
+with a "coming soon" notice, which would keep the field on screen and invite
+the same input. The component and its styling are untouched; turning it back on
+is one line, and the file states the four preconditions.
+
+Storage, double opt-in, and sending still do not exist.
 
 **Blocked, not just deferred:** the last test showed `dkim=pass` but `spf=none`
 for `thefinance.ir`. Confirmation emails will land in spam until an SPF record
@@ -228,7 +241,14 @@ is published. DMARC is also absent.
 - Mailcow already handles multi-domain correctly (verified: DKIM signs with
   `d=thefinance.ir`); `mail.hmai.io` is just the MTA hostname.
 
-**Revisit when:** SPF and DMARC are published.
+**Revisit when:** SPF and DMARC are published. The frontend is then roughly
+three days: the `wp_tf_subscribers` table, the opt-in endpoint, the unsubscribe
+token, and a weekly digest on `wp_schedule_event` rather than an email per
+publish.
+
+**Do not flip the flag before the endpoint exists.** The `setTimeout` in
+`NewsletterCta.tsx` must be gone first, not after — a flag flipped over a fake
+submit handler restores exactly the defect it was added to remove.
 
 ---
 

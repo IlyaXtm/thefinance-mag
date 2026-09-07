@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { NEWSLETTER_ENABLED } from '../lib/newsletter';
 
 /**
- * Newsletter signup.
+ * Newsletter signup — CURRENTLY NOT RENDERED.
+ *
+ * The flag that switches it off, and the whole reason it is off, live in
+ * `../lib/newsletter`. Read that before changing anything here.
  *
  * EMAIL, not SMS. The content being sent is a weekly explanatory summary —
  * what happened in the markets and why — which fits an email and doesn't fit a
@@ -16,6 +20,7 @@ import { useState } from 'react';
  * category leads with exactly those, and the entire brand position is that we
  * don't. Changing this copy is a brand decision, not a wording tweak.
  */
+
 export function NewsletterCta() {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle');
@@ -43,6 +48,12 @@ export function NewsletterCta() {
     await new Promise((r) => setTimeout(r, 400));
     setState('done');
   }
+
+  /* Nothing rendered, so no field to type into and no gap where the card was
+     — the sidebars are flex columns and `gap` applies only between children
+     that exist. Every sidebar that held this still holds at least one other
+     card, so none of them collapses to empty. */
+  if (!NEWSLETTER_ENABLED) return null;
 
   return (
     <section

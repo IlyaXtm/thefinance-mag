@@ -178,15 +178,27 @@ for (const route of ROUTES) {
   await page.close();
 }
 
-/* 390px is the viewport CLAUDE.md's overflow rule is written against. */
-for (const route of ROUTES) {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.goto(BASE + route, { waitUntil: 'networkidle' });
-  const over = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  check(route, 'no horizontal overflow at 390px', !over, 'scrollWidth exceeds viewport');
-  await page.close();
+/*
+  390px is the viewport CLAUDE.md's overflow rule is written against.
+
+  1024 IS HERE BECAUSE 390 AND 1440 BOTH PASSED WHILE PRODUCTION OVERFLOWED.
+  It is the `lg` boundary: the five-link category nav appears at exactly 1024
+  while the header row has not yet grown to hold it and the newsletter button
+  beside it, so the row needed 1136px and pushed past the viewport from 1024 to
+  1135 — a 111px-wide band nobody was measuring, between the two widths
+  everybody measures. A breakpoint boundary is where layout breaks; testing
+  only the middle of each range is testing where it cannot.
+*/
+for (const width of [390, 1024]) {
+  for (const route of ROUTES) {
+    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    await page.goto(BASE + route, { waitUntil: 'networkidle' });
+    const over = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    check(route, `no horizontal overflow at ${width}px`, !over, 'scrollWidth exceeds viewport');
+    await page.close();
+  }
 }
 
 await browser.close();
@@ -201,4 +213,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`\n✓ all invariants hold across ${ROUTES.length} routes\n`);
+console.log(`\n✓ all invariants hold across ${ROUTES.length} routes (1440 · 1024 · 390)\n`);

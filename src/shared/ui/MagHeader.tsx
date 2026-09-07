@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CATEGORY_NAV } from '@/features/mag/lib/nav';
 import { magPath, MAG_NAME, SITE_ORIGIN } from '@/features/mag/lib/site';
+import { NEWSLETTER_ENABLED } from '@/features/mag/lib/newsletter';
 import { ThemeToggle } from './ThemeToggle';
 
 /**
@@ -102,12 +103,28 @@ export function MagHeader() {
             this is small enough to stay. */}
         <ThemeToggle />
 
-        <a
-          href="#newsletter"
-          className="hidden h-[42px] shrink-0 items-center rounded-full bg-accent px-5 text-[14px] font-medium text-accent-contrast transition-[filter] hover:brightness-110 motion-reduce:transition-none sm:inline-flex"
-        >
-          عضویت در خبرنامه
-        </a>
+        {/*
+          Gated on the same flag as the card it points at. `#newsletter` is the
+          id on that <section>, so with the section unrendered this button
+          would scroll to nothing — a primary header action that visibly does
+          nothing is worse than no button. See NewsletterCta.tsx for why the
+          form is off and what has to be true before this comes back.
+
+          An external `/mag#newsletter` — an old link, a previous send — still
+          degrades correctly on its own: an unknown fragment is a no-op and the
+          reader lands at the top of the page.
+
+          WHEN IT RETURNS IT CANNOT BE `sm:inline-flex` AGAIN. With this button
+          the header row needs 1136px and overflows from 1024 to 1135.
+        */}
+        {NEWSLETTER_ENABLED && (
+          <a
+            href="#newsletter"
+            className="hidden h-[42px] shrink-0 items-center rounded-full bg-accent px-5 text-[14px] font-medium text-accent-contrast transition-[filter] hover:brightness-110 motion-reduce:transition-none sm:inline-flex"
+          >
+            عضویت در خبرنامه
+          </a>
+        )}
       </div>
 
       {/*
@@ -155,17 +172,22 @@ export function MagHeader() {
                 </Link>
               </li>
             ))}
-            <li>
-              {/* The newsletter CTA is a primary header action on desktop and
-                  was absent below sm entirely. Last in the strip rather than
-                  in the top row, where the 390px header has no space left. */}
-              <a
-                href="#newsletter"
-                className="inline-flex h-11 items-center whitespace-nowrap rounded-full bg-accent px-4 text-[14px] font-medium text-accent-contrast sm:hidden"
-              >
-                عضویت در خبرنامه
-              </a>
-            </li>
+            {/* The <li> goes with the link, not just the link: an empty list
+                item still takes the row's `gap-1.5` and leaves a 6px hole at
+                the end of the strip. */}
+            {NEWSLETTER_ENABLED && (
+              <li>
+                {/* The newsletter CTA is a primary header action on desktop and
+                    was absent below sm entirely. Last in the strip rather than
+                    in the top row, where the 390px header has no space left. */}
+                <a
+                  href="#newsletter"
+                  className="inline-flex h-11 items-center whitespace-nowrap rounded-full bg-accent px-4 text-[14px] font-medium text-accent-contrast sm:hidden"
+                >
+                  عضویت در خبرنامه
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
