@@ -83,24 +83,89 @@ export function feedAlternate(): Record<string, Array<{ url: string; title: stri
 }
 
 /**
+ * The CMS host, as the image optimizer must address it.
+ *
+ * This is NOT `SITE_ORIGIN` and the difference is not cosmetic. `next/image`
+ * optimises server-side: the fetch is made by Node inside the container, not
+ * by the reader's browser. nginx on the frontend box listens on `:80` only —
+ * TLS terminates at the CDN — so a fetch of `https://thefinance.ir/...` from
+ * inside that container leaves the machine, reaches the CDN and hairpins back
+ * to the same box. It times out, and every image on the site 502s.
+ *
+ * `wp.thefinance.ir` is a different host and resolves normally, so media that
+ * the optimizer has to fetch is addressed there directly.
+ *
+ * Hardcoded rather than read from the environment on purpose: it has to agree
+ * exactly with the `remotePatterns` entry in next.config.ts, which cannot be
+ * environment-driven either, and `imageSrc` is called from components that may
+ * render on the client, where a non-`NEXT_PUBLIC_` variable is undefined and
+ * would produce a different src on each side of hydration.
+ */
+export const CMS_ORIGIN = 'https://wp.thefinance.ir';
+
+/** Everything from this segment on is identical on both hosts. */
+const UPLOADS_PATH = '/wp-content/uploads/';
+
+/**
+ * Address an uploads URL at the CMS host, for the optimizer only.
+ *
+ * WHY THE PATH IS REBUILT AND NOT JUST THE HOST SWAPPED. WordPress derives
+ * media URLs from `siteurl`, which is `https://thefinance.ir/mag`, so they
+ * come back as `https://thefinance.ir/mag/wp-content/uploads/...`. On the CMS
+ * host the uploads live at the ROOT - the `/mag` in `/mag/graphql` and
+ * `/mag/wp-admin` is nginx there stripping a prefix, not a subdirectory
+ * install. Measured on 2026-09-06:
+ *
+ *     https://wp.thefinance.ir/wp-content/uploads/X.jpg      200
+ *     https://wp.thefinance.ir/mag/wp-content/uploads/X.jpg  404
+ *
+ * A host-only swap would therefore turn every image into a 404 instead of a
+ * 502 - the same failure one hop upstream, which is the exact mistake the
+ * nginx media block made twice. So the URL is rebuilt from `/wp-content/...`.
+ *
+ * Anything that is not an uploads URL is returned untouched.
+ */
+export function toCmsMediaUrl(url: string): string {
+  const at = url.indexOf(UPLOADS_PATH);
+  if (at === -1) return url;
+  return `${CMS_ORIGIN}${url.slice(at)}`;
+}
+
+/**
  * Normalise an image src for `next/image`.
  *
  * THE TRAP, which has now cost two separate rounds: with `basePath` set, the
  * image optimizer resolves a root-relative `src` against the SERVER root, not
  * the app. `/mock/covers/x.jpg` therefore 400s with "The requested resource
- * isn't a valid image" while `/mag/mock/covers/x.jpg` returns 200 — and the
+ * isn't a valid image" while `/mag/mock/covers/x.jpg` returns 200 - and the
  * page still renders, just with every image missing.
  *
  * The first real deployment hit the remote-pattern half of this (the CMS
  * uploads path was allow-listed without `/mag`, so every optimised image
  * 400'd). This is the local half.
  *
- * Absolute URLs pass through untouched — WordPress already returns
- * `https://thefinance.ir/mag/wp-content/uploads/…`. Idempotent, so a src that
- * already carries the prefix is not given a second one.
+ * -- And why absolute URLs no longer pass through untouched ---------------
+ *
+ * They used to, because `mapImage` had already rewritten them to
+ * `https://thefinance.ir/mag/wp-content/uploads/...`. That is the right host
+ * for a reader and the wrong one for the optimizer - see `toCmsMediaUrl`. The
+ * rewrite happens HERE rather than in the mapper because the two consumers of
+ * `featuredImage.url` need different hosts and the mapper cannot know which is
+ * asking:
+ *
+ *   `next/image` src  -> optimizer fetch, server-side  -> CMS host
+ *   JSON-LD `image`   -> what Google is told about     -> public origin
+ *   `og:image`        -> what a social crawler fetches -> public origin
+ *
+ * Moving it into the mapper would put the de-indexed CMS host into structured
+ * data and Open Graph, which is what PR #2 introduced `toPublicUrl` to
+ * prevent. Leaving it out of both is what made every image 502 after cutover.
+ * `imageSrc` is the boundary where "this URL is about to be fetched by the
+ * optimizer" is actually known, so the split lives here and `MagImage.url`
+ * stays the public URL it has always been.
  */
 export function imageSrc(url: string): string {
-  if (!url.startsWith('/')) return url;
+  if (!url.startsWith('/')) return toCmsMediaUrl(url);
   if (url === MAG_PATH || url.startsWith(`${MAG_PATH}/`)) return url;
   return `${MAG_PATH}${url}`;
 }
