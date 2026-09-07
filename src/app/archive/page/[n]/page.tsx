@@ -4,7 +4,7 @@ import { getCategories } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import { ArchiveView } from '../../_components/ArchiveView';
 
 /**
@@ -35,7 +35,7 @@ export async function generateMetadata({
   return toMetadata({
     seo: null,
     path: `/archive/page/${page}`,
-    fallbackTitle: `آرشیو — صفحه ${toPersianDigits(page)}`,
+    fallbackTitle: `آرشیو — صفحه ${toPersianDigitsUngrouped(page)}`,
     fallbackDescription: `همه مطالب ${MAG_NAME}`,
   });
 }

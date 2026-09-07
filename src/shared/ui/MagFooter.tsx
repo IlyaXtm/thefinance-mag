@@ -7,7 +7,7 @@ import {
 } from '@/features/mag/lib/nav';
 import { SITE_DISCLAIMER_TEXT } from '@/features/mag/types/mag-blocks.types';
 import { MAG_DESCRIPTION, MAG_NAME, ORGANIZATION, SITE_ORIGIN } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { currentJalaliYear } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 
 /**
@@ -26,7 +26,10 @@ import type { Market } from '@/features/mag/types/mag.types';
  */
 export function MagFooter({ markets }: { markets: Market[] }) {
   const populated = markets.filter((market) => (market.count ?? 0) > 0);
-  const year = toPersianDigits(1405);
+  /* Was `toPersianDigits(1405)`, which rendered «۱٬۴۰۵» — a thousands
+     separator inside a year — and was a literal that would have gone stale in
+     Farvardin regardless. Both halves fixed at once; see lib/format.ts. */
+  const year = currentJalaliYear();
 
   return (
     <footer className="mt-auto border-t border-border-subtle bg-surface-raised">

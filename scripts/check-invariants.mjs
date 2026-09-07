@@ -135,6 +135,22 @@ for (const route of ROUTES) {
       skips,
       fontPreload: !!document.querySelector('link[rel="preload"][as="font"]'),
       overflow: document.documentElement.scrollWidth > window.innerWidth,
+      /*
+        A Jalali year rendered with a thousands separator: «۱٬۴۰۵».
+
+        The footer shipped this. `Intl.NumberFormat('fa-IR')` groups by default
+        and the Persian separator is U+066C, so `toPersianDigits(1405)` returned
+        one-thousand-four-hundred-and-five — which is what it says, and what the
+        reader saw. lib/format.ts now has an ungrouped path for identifiers.
+
+        THE PATTERN IS YEAR-SHAPED ON PURPOSE, ۱٬۳۰۰–۱٬۵۹۹, not "any grouped
+        number". Grouping is CORRECT for a quantity — «۱۲٬۰۰۰ نتیجه» is easier
+        to read than «۱۲۰۰۰ نتیجه» — so a blanket ban would be the same mistake
+        pointing the other way, and would start failing the day a count crosses
+        a thousand. Bounded to the range Jalali years occupy, this stays true
+        for as long as the calendar does.
+      */
+      groupedYear: (document.body.innerText.match(/۱٬[۳-۵][۰-۹][۰-۹]/g) ?? [])[0] ?? null,
     };
   });
 
@@ -150,12 +166,13 @@ for (const route of ROUTES) {
     check(route, 'font preloaded', d.fontPreload, 'no preload link'),
     check(route, 'no third-party requests', third.length === 0, third.join(', ')),
     check(route, 'no horizontal overflow', !d.overflow, 'scrollWidth exceeds viewport'),
+    check(route, 'no grouped Jalali year', !d.groupedYear, `found ${d.groupedYear}`),
   ].every(Boolean);
 
   rows.push(
     `${ok ? 'PASS' : 'FAIL'}  ${route.padEnd(28)} eager=${d.eager} lazy=${String(d.lazy).padStart(2)} ` +
       `h1=${d.h1} skips=${d.skips} sizes✓=${d.noSizes === 0} alt✓=${d.noAlt === 0} ` +
-      `font✓=${d.fontPreload} 3p=${third.length}`,
+      `font✓=${d.fontPreload} 3p=${third.length} year✓=${!d.groupedYear}`,
   );
 
   await page.close();

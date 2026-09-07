@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getCategory } from '@/features/mag/api/v1/mag.service';
 import { toMetadata } from '@/features/mag/lib/seo';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import { MAG_NAME } from '@/features/mag/lib/site';
 import { isExcludedCategory } from '@/features/mag/lib/taxonomy';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
@@ -57,7 +57,7 @@ export async function generateMetadata({
   return toMetadata({
     seo: null,
     path: `/category/${category.slug}/page/${page}`,
-    fallbackTitle: `${category.name} — صفحه ${toPersianDigits(page)}`,
+    fallbackTitle: `${category.name} — صفحه ${toPersianDigitsUngrouped(page)}`,
     fallbackDescription: `مطالب دسته‌ی ${category.name} در ${MAG_NAME}`,
     noindex: true,
   });

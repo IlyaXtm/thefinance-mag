@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { toPersianDigits } from '../lib/format';
+import { toPersianDigitsUngrouped } from '../lib/format';
 
 /**
  * Pagination.
@@ -189,7 +189,9 @@ export function Pagination({
                     : `${itemClass} border-border-interactive text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary`
                 }
               >
-                {toPersianDigits(page)}
+                {/* «صفحه ۱۰۰۰», never «صفحه ۱٬۰۰۰» — a page number names a
+                    page, it does not count them. */}
+                {toPersianDigitsUngrouped(page)}
               </Link>
             </li>
           ),

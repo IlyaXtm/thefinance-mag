@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
-import { formatJalali, formatReadingTime, toDateTimeAttr, toPersianDigits } from '../lib/format';
+import {
+  formatJalali,
+  formatReadingTime,
+  toDateTimeAttr,
+  toPersianDigitsUngrouped,
+} from '../lib/format';
 import { bidiTitle } from '../lib/bidi-title';
 
 /**
@@ -41,7 +46,8 @@ export function ArticleRow({
             aria-hidden="true"
             className="mt-1 w-6 shrink-0 text-[13px] tabular-nums text-text-muted"
           >
-            {toPersianDigits(index)}
+            {/* A position in a list, not a count of anything — ungrouped. */}
+            {toPersianDigitsUngrouped(index)}
           </span>
         )}
 

@@ -24,7 +24,14 @@
 const TEHRAN = 'Asia/Tehran';
 const FA_PERSIAN = 'fa-IR-u-ca-persian';
 
-/** «۲۷ مرداد ۱۴۰۵» */
+/**
+ * «۲۷ مرداد ۱۴۰۵»
+ *
+ * The year here is safe: `DateTimeFormat` does not group a year field, so the
+ * ۱٬۴۰۵ defect never applied to a rendered date. Verified on the built page,
+ * not assumed — both this and `formatJalaliShort` were checked before the
+ * footer's literal was changed.
+ */
 const longDate = new Intl.DateTimeFormat(FA_PERSIAN, {
   year: 'numeric',
   month: 'long',
@@ -39,8 +46,48 @@ const shortDate = new Intl.DateTimeFormat(FA_PERSIAN, {
   timeZone: TEHRAN,
 });
 
-/** Persian digits for standalone numbers. */
-const number = new Intl.NumberFormat('fa-IR');
+/**
+ * TWO NUMBER FORMATTERS, AND THE DIFFERENCE IS NOT COSMETIC.
+ *
+ * ── The bug this exists to stop ─────────────────────────────────────────
+ *
+ * The footer rendered the year as «۱٬۴۰۵». `Intl.NumberFormat('fa-IR')` groups
+ * thousands by default and the Persian group separator is U+066C, so 1405 came
+ * back as one-thousand-four-hundred-and-five — which is what the reader saw,
+ * because that is what it says. A year is not a quantity. Neither is a page
+ * number, a post ID, a phone number or a postcode: grouping them is the same
+ * mistake as writing the year 2,026.
+ *
+ * ── Why the fix is two functions and not one ────────────────────────────
+ *
+ * `useGrouping: false` everywhere would be the other half of the same bug.
+ * «۱۲۰۰۰ نتیجه» is genuinely harder to read than «۱۲٬۰۰۰ نتیجه», and search
+ * totals, article counts and reading times are quantities where the separator
+ * is doing real work. There is no format that is right for both, so the call
+ * site has to say which it means — and the name is what makes it say so.
+ *
+ * The grouped one keeps the old name because the great majority of call sites
+ * are counts and were already correct. The ungrouped one is spelled out rather
+ * than abbreviated so that `toPersianDigits(year)` looks wrong on sight.
+ */
+const groupedNumber = new Intl.NumberFormat('fa-IR');
+const plainNumber = new Intl.NumberFormat('fa-IR', { useGrouping: false });
+
+/**
+ * The current Jalali year, as digits — «۱۴۰۵».
+ *
+ * Read from the clock rather than typed as a literal. `toPersianDigits(1405)`
+ * was hardcoded in the footer, which meant it was going to be silently wrong
+ * from 1 Farvardin ۱۴۰۶ onwards, and nothing would have failed.
+ *
+ * Uses the date formatter, not the number formatter: `DateTimeFormat` never
+ * groups a year, so this cannot reintroduce the separator even if someone
+ * changes the helper below.
+ */
+const yearOnly = new Intl.DateTimeFormat(FA_PERSIAN, {
+  year: 'numeric',
+  timeZone: TEHRAN,
+});
 
 export function formatJalali(iso: string): string {
   return longDate.format(new Date(iso));
@@ -50,9 +97,29 @@ export function formatJalaliShort(iso: string): string {
   return shortDate.format(new Date(iso));
 }
 
-/** Persian digits. Use for counts, reading time, pagination. */
+/**
+ * Persian digits for a QUANTITY, with thousands grouping.
+ *
+ * Counts, totals, reading time, percentages. Anything you could sensibly put
+ * «تعداد» in front of.
+ */
 export function toPersianDigits(value: number): string {
-  return number.format(value);
+  return groupedNumber.format(value);
+}
+
+/**
+ * Persian digits for an IDENTIFIER, with no thousands grouping.
+ *
+ * Years, page numbers, post IDs, phone numbers, postcodes — numbers that name
+ * something rather than count it. See the note above the formatters.
+ */
+export function toPersianDigitsUngrouped(value: number): string {
+  return plainNumber.format(value);
+}
+
+/** The current Jalali year in Tehran, as Persian digits. */
+export function currentJalaliYear(): string {
+  return yearOnly.format(new Date());
 }
 
 /** «۷ دقیقه» */
