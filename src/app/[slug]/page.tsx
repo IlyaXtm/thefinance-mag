@@ -277,9 +277,24 @@ export default async function ArticlePage({
             />
           </div>
 
-          <div className="ms-auto">
-            <ShareRow slug={article.slug} title={article.title} />
-          </div>
+          {/*
+            THE SHARE ROW USED TO SIT HERE, `ms-auto` at the end of the byline.
+
+            It is now below the article body, and the reason is order of
+            operations rather than tidiness: nobody shares an article they have
+            not read. Putting the control at the top asks for the decision
+            before the reader has anything to decide with, and it spends the
+            most valuable strip on the page — directly beneath a 44px h1, at the
+            reading edge — on three buttons instead of on who wrote this and
+            when. Below the body is both the conventional place and the point at
+            which the question is real.
+
+            It also removes a competition the header could not win: three
+            bordered 44px circles next to the byline read as loud as the title
+            they sit under. The brief's third option was to keep it here but
+            make it quieter; moving it makes it quieter AND puts it where it is
+            useful, so that is the one taken.
+          */}
         </div>
       </div>
 
@@ -323,6 +338,7 @@ export default async function ArticlePage({
           <ArticleBody html={article.content} />
 
           <div className="mt-10 flex flex-col gap-8">
+            <ShareRow slug={article.slug} title={article.title} />
             <AuthorBox author={article.author} />
             <CommentList thread={comments} />
             <CommentForm articleId={article.id} />
