@@ -353,7 +353,31 @@ export default async function ArticlePage({
         So: one column below lg, article + right rail at lg, all three at xl.
       */}
       <div className="mt-9 grid items-start gap-8 lg:mt-11 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[260px_1fr_300px]">
-        <div className="lg:order-2 lg:col-span-2 xl:order-1 xl:col-span-1">
+        {/*
+          `sticky` GOES ON THE GRID ITEM, not on the panel inside it — the same
+          shape the right-hand rail below uses, deliberately, because two
+          sidebars in one grid with two positioning strategies is how this
+          drifts apart again.
+
+          THIS IS WHY THE ToC DID NOT STICK. `ArticleAside`'s <nav> already
+          carried `sticky top-[76px]` and had since it was written. It did
+          nothing, because a sticky element can only travel inside its
+          containing block, and its containing block was this wrapper — which
+          under the grid's `items-start` is exactly as tall as the panel it
+          holds. Zero travel. Nothing errors, nothing warns, and the class is
+          right there in the markup, which is why it survived a review.
+
+          The right-hand rail escaped it by accident of structure: it IS the
+          grid item, and a sticky grid item resolves against its grid AREA,
+          which spans the full row height — the length of the article. Moving
+          `sticky` up one level here gives the ToC the same travel.
+
+          `xl:` and not `lg:`, unlike the right rail. Below 1280 this column is
+          `lg:col-span-2` — a full-width strip above the article holding the
+          <details> disclosure, not a rail — and a sticky strip there would
+          pin a collapsed accordion over the text. See ArticleAside.
+        */}
+        <div className="lg:order-2 lg:col-span-2 xl:order-1 xl:col-span-1 xl:sticky xl:top-[76px]">
           <ArticleAside headings={article.outline} />
         </div>
 
