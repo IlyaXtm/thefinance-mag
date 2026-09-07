@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -11,6 +12,7 @@ import { bidiTitle } from '@/features/mag/lib/bidi-title';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { authorInitial, cardCategory } from '@/features/mag/lib/card';
 import { toPersianDigits } from '@/features/mag/lib/format';
+import { heroAspectRatios } from '@/features/mag/lib/hero-ratio';
 import Link from 'next/link';
 import { PreviewBanner } from './_components/PreviewBanner';
 import {
@@ -206,6 +208,9 @@ export default async function ArticlePage({
   ]);
 
   const category = cardCategory(article);
+  const heroRatios = article.featuredImage
+    ? heroAspectRatios(article.featuredImage)
+    : null;
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },
@@ -299,9 +304,27 @@ export default async function ArticlePage({
       </div>
 
       {/* Featured image — the ONE priority image on this page. */}
-      {article.featuredImage && (
+      {article.featuredImage && heroRatios && (
         <figure className="mt-7">
-          <div className="h-[220px] md:h-[420px]">
+          {/*
+            The box takes the IMAGE's shape, not a shape of its own.
+
+            `h-[220px] md:h-[420px]` full-bleed is a 3.24 ratio at 1440, and
+            nothing in the archive is that shape — see lib/hero-ratio.ts for the
+            measured spread and the clamp. The ratio is inline rather than a
+            Tailwind class because it is per-image data, and inline is also what
+            makes it CLS-safe: it is in the markup before the image loads, so
+            the height is final from first paint.
+          */}
+          <div
+            className="aspect-[var(--hero-ratio-sm)] md:aspect-[var(--hero-ratio-md)]"
+            style={
+              {
+                '--hero-ratio-sm': heroRatios.mobile,
+                '--hero-ratio-md': heroRatios.desktop,
+              } as CSSProperties
+            }
+          >
             <CardImage
               image={article.featuredImage}
               sizes="(max-width: 1023px) 100vw, 1360px"

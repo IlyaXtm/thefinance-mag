@@ -184,6 +184,24 @@ function img(seed: string, alt: string): ArticleSummary['featuredImage'] {
   return { url: `/mock/covers/${seed}.jpg`, alt, width: 1200, height: 675 };
 }
 
+/**
+ * A featured image at a stated size, for the hero-ratio stress fixtures.
+ *
+ * The ordinary covers are all 1200×675, which is the one shape the archive
+ * does NOT have — so the fixed hero looked fine against the mock while
+ * cropping 41% off every real image. These three carry the dimensions actually
+ * measured on the live corpus, and the files themselves are drawn with an
+ * inset frame and corner marks so a crop is visible rather than inferred.
+ */
+function sizedImg(
+  seed: string,
+  alt: string,
+  width: number,
+  height: number,
+): ArticleSummary['featuredImage'] {
+  return { url: `/mock/covers/${seed}.jpg`, alt, width, height };
+}
+
 const SUMMARIES: ArticleSummary[] = [
   {
     /*
@@ -552,6 +570,66 @@ function stressSeo(slug: string, title: string): MagSeo {
 }
 
 const STRESS: Article[] = [
+  /* ── The three hero shapes, from the live corpus ─────────────────────── */
+  {
+    /* The widest: 2.50. Three published images are under 800px wide and this
+       is their shape. The old fixed hero cropped 23% off it AND upscaled a
+       680px file across 1360px of frame. */
+    id: 'h1',
+    slug: 'stress-hero-wide',
+    title: 'تصویر پهن (۶۸۰×۲۷۲) — بررسی نسبت ابعاد قاب',
+    featuredImage: sizedImg('stress-wide', 'قاب آزمایشی با نسبت ۲٫۵', 680, 272),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 4,
+    publishedAt: '2026-08-01T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p>',
+    seo: stressSeo('stress-hero-wide', 'تصویر پهن (۶۸۰×۲۷۲)'),
+  },
+  {
+    /* The tallest AND under 800px wide: 1.50. The clamp floor bites here and
+       nowhere else — 21% cropped instead of the old 54%. */
+    id: 'h2',
+    slug: 'stress-hero-small',
+    title: 'تصویر کوچک (۶۴۰×۴۲۷) — بررسی کف نسبت ابعاد',
+    featuredImage: sizedImg('stress-small', 'قاب آزمایشی با نسبت ۱٫۵', 640, 427),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 4,
+    publishedAt: '2026-08-02T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p>',
+    seo: stressSeo('stress-hero-small', 'تصویر کوچک (۶۴۰×۴۲۷)'),
+  },
+  {
+    /* 1200×630 with the headline baked into the artwork, as much of the
+       archive is. This is the case where a crop is not merely ugly: the old
+       box cut the lower third, which is where the baked text sits. */
+    id: 'h3',
+    slug: 'stress-hero-baked',
+    title: 'تیتر روی تصویر (۱۲۰۰×۶۳۰) — بررسی برش متن',
+    featuredImage: sizedImg('stress-baked', 'قاب آزمایشی با تیتر روی تصویر', 1200, 630),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 4,
+    publishedAt: '2026-08-03T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p>',
+    seo: stressSeo('stress-hero-baked', 'تیتر روی تصویر (۱۲۰۰×۶۳۰)'),
+  },
   {
     /* The longest article in the archive is a 41-minute read. 24 headings is
        what makes the table of contents scroll rather than run off-screen. */
