@@ -235,6 +235,43 @@ during the release where the least should change.
 One hop on a URL Google already has beats reshaping every URL the product will
 ever emit. Do not set `trailingSlash: true`.
 
+**A taxonomy filter that should be indexed gets a path, not a query string.**
+Decided 2026-09-07; closes backlog B0c.
+
+Reading `searchParams` opts a Next route out of prerendering entirely. So
+`/mag/archive?type=education` is dynamic on every request and can never become a
+static page — which put «آموزش», 41 of 53 articles, behind the one URL shape the
+build cannot prerender. `/mag/category/<slug>` is the same list at a path, and a
+path segment is part of the resource's identity, so it is static ISR.
+
+The rule generalises: **a filter that is a view over a resource may stay in the
+query string; a filter that names a body of content must be a path.** The page
+number moved out of `?page=` for the same reason, one release earlier.
+
+`?type=` still answers and 308s to the path route. It is a compatibility
+surface, not an address.
+
+**Categories are read from the CMS; the nav is not.** Every category the
+taxonomy holds gets a route, prerendered and sitemap-listed, with no deploy —
+`generateStaticParams` reads the live list. `CATEGORY_NAV` stays five
+hand-picked links. A route is not a nav slot: rendering the CMS's list in the
+header would put «مقالات» — 39 posts, a catch-all tag nobody chose as a section
+— at the top of every page for being large, and would hand an editorial decision
+about the top of every page to whoever adds a term.
+
+**A taxonomy archive under 8 articles is not indexed.** Below the floor it stays
+out of the sitemap AND carries `noindex, follow` — both, because a URL kept out
+of the sitemap is still reachable from the links on every page, so a
+sitemap-only exclusion is decorative. The page still renders and is still
+linked; only the indexing claim is withdrawn, and it returns on its own when the
+archive grows.
+
+The floor applies to markets too, and today it de-indexes all six, including the
+three in the header nav. That is the intended behaviour, not an oversight: a
+market archive holding two articles IS thin. The cause is that 39 of 53 articles
+carry no market — a tagging backlog (B17), not something the floor should be
+bent to hide.
+
 ---
 
 ## Repository

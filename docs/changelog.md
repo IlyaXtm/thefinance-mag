@@ -8,6 +8,279 @@ why it was made.
 
 ---
 
+## 2026-09-07 — Category routes, the cutover's missing commit, and three live defects
+
+### The image fix that lived only on the production server
+
+Every image on the live site 502s, and the reason is that `next/image` optimises
+**server-side**: the fetch is made by Node inside the container. nginx on the
+frontend listens on `:80` only — TLS terminates at the CDN — so a fetch of
+`https://thefinance.ir/...` from inside that container leaves the machine, hits
+the CDN and hairpins back to the same box, which times out.
+`wp.thefinance.ir` is a different host and resolves normally.
+
+That was patched directly on the server during the cutover and **the patch is
+not in git**. `origin/claude-main` still carries the pre-cutover mapper, so the
+next rebuild from git — which is explicitly what the deploy is supposed to be —
+would have reintroduced the outage the server was patched to stop. This is the
+same pattern as the redirects mu-plugin: a fix that exists only on a machine.
+
+**The version now in git is not the same fix, deliberately.** The server's version
+rewrites in `mapImage`, which sends the de-indexed CMS host into JSON-LD
+`image.url` and `og:image` — the two consumers that read `MagImage.url`
+verbatim — and that is exactly what PR #2 added `toPublicUrl` to prevent. Both
+justifications are valid and they apply to different consumers:
+
+| consumer | fetched by | needs |
+|---|---|---|
+| `next/image` src | the optimizer, server-side, inside the container | CMS host |
+| JSON-LD `image` | nothing; it is a claim to Google | public origin |
+| `og:image` | a social crawler, from outside | public origin |
+
+So the split lives in `imageSrc`, the one boundary where "this URL is about to
+be fetched by the optimizer" is actually known, and `MagImage.url` stays the
+public URL it has always been.
+
+**The path changes too, not only the host**, and this is the trap the nginx
+media block fell into twice. WordPress derives media URLs from `siteurl`
+(`https://thefinance.ir/mag`), but on the CMS host uploads sit at the root:
+
+```
+https://wp.thefinance.ir/wp-content/uploads/X.jpg      200
+https://wp.thefinance.ir/mag/wp-content/uploads/X.jpg  404
+```
+
+A host-only swap turns a 502 into a 404 — the same failure one hop upstream.
+
+**`remotePatterns` was not already correct.** Its `wp.thefinance.ir` entry
+carried `/mag/wp-content/uploads/**`, allow-listing the one shape the CMS
+answers 404 to. That mismatch fails silently: the optimizer returns 400 and the
+page renders with every image missing, which is how the first deployment
+shipped. Fixed, with a note in `next.config.ts` saying it and `CMS_ORIGIN` are
+one decision written in two files.
+
+### `/mag/category/<slug>` — built, not redirected
+
+`/mag/archive?type=education` **cannot be indexed by this build**, and that is
+structural rather than a tuning problem: awaiting `searchParams` opts a Next
+route out of prerendering entirely, so a filtered archive is dynamic on every
+request and never becomes a static page Google can be handed. «آموزش» is 41 of
+53 articles — the largest single body of topical authority the magazine has —
+and it was sitting behind the one URL shape the build cannot prerender. A path
+segment is part of the resource's identity, so `/category/education` is static
+ISR. Same reasoning that moved pagination out of `?page=`.
+
+`generateStaticParams` reads the **live taxonomy**, so a term the editors add
+gets a working, prerendered, sitemap-listed archive on the next revalidation
+with no deploy. `dynamicParams = false`, so a slug with nothing behind it 404s
+rather than rendering on demand. «دسته‌بندی نشده» is excluded by slug until the
+CMS-side delete lands.
+
+**The nav did not follow, and that is the point.** `CATEGORY_NAV` stays five
+hand-picked links; only «آموزش» was repointed to the path route. Rendering the
+CMS's category list in the header would put «مقالات» — 39 posts, a catch-all tag
+nobody chose as a section — at the top of every page for being large, and would
+hand an editorial decision about the top of every page to whoever adds a term.
+A route is not a nav slot.
+
+**The archive layout was reused, not re-templated.** `/archive` and
+`/market/<slug>` had grown two copies of the same shell — same grid, same sticky
+offset, same sidebar, same breadcrumb JSON-LD — differing only in masthead text,
+which filter row appears and where pagination points. A third copy would have
+made the layout a convention rather than a thing, and the next spacing fix would
+have landed in two files out of three. Extracted to `ArchiveShell`; the three
+routes now differ in data and in nothing else. The filter row stays a **slot**
+rather than a `taxonomy: 'market' | 'type'` prop, because a prop like that would
+quietly re-merge the two axes `decisions.md` chose to keep separate.
+
+### The sitemap floor, and the market archives it de-indexes
+
+Eight articles, in `src/features/mag/lib/taxonomy.ts`. Below it an archive stays
+out of the sitemap **and** carries `noindex` — both, because keeping a URL out
+of the sitemap does not stop Google finding it through the links on every page,
+so a sitemap-only exclusion is decorative. The routes still render and are still
+linked; only the indexing claim is withdrawn, and `follow` stays on.
+
+Live that admits education 41, articles 39, news 10 and excludes analysis 2 and
+inchart 2. Paginated pages are always `noindex, follow` regardless of size: a
+slice has no subject of its own, its contents move as articles publish, and it
+competes with page one for the same query.
+
+The same floor replaced `count === 0` on the market archives, **and there it
+de-indexes all six** — crypto 5, forex 3, global 3, tse 2, gold-usd 1, housing 0
+— including the three the header links to. That is uncomfortable and it is the
+honest answer: a market archive holding two articles IS thin, and indexing it
+does not make it less so. 39 of 53 articles carry no market at all. **This is a
+content-workflow problem, not an architecture one**, recorded as B17 rather than
+designed around; every archive crosses the floor on its own the moment its
+market reaches eight, with no deploy and nothing to remember.
+
+B4 is closed on the same measurement. Its own trigger was "any single market
+reaches roughly 8–12 articles"; the largest is 5, and the untagged share went
+*up* from 56% to 74% across the migration.
+
+`?type=` keeps working and 308s to the path route, page number carried across.
+Checked against the live taxonomy rather than `CONTENT_TYPES`, because the two
+sets differ in both directions: «مقالات» is a category with no content type, and
+«گزارش» is a content type with no category — redirecting `?type=report` on the
+strength of it being a known type would have sent readers to a 404.
+
+### «۱٬۴۰۵» — a thousands separator inside a year
+
+The footer rendered the copyright year with a Persian group separator (U+066C),
+because `Intl.NumberFormat('fa-IR')` groups by default and `toPersianDigits`
+was the only digit helper. A year is not a quantity. Neither is a page number,
+a post ID or a phone number.
+
+**Fixed at the call sites, not globally.** `useGrouping: false` everywhere would
+be the same mistake pointing the other way — «۱۲۰۰۰ نتیجه» is genuinely harder
+to read than «۱۲٬۰۰۰ نتیجه». No single format is right for both, so the call
+site has to say which it means, and the name is what makes it say so:
+`toPersianDigits` keeps grouping for quantities, `toPersianDigitsUngrouped` is
+spelled out so `toPersianDigits(year)` looks wrong on sight.
+
+Audited: ungrouped now for the footer year, pagination page numbers, the
+«صفحه ۲» in five paginated route titles and its hidden heading, and the position
+number on `ArticleRow`. Still grouped, correctly: search total, news total,
+author article count, market counts, comment thread total, reading time,
+reading-progress percentage.
+
+**Jalali years in dates and day headings were never affected**, which is worth
+recording because they were the first suspects. `Intl.DateTimeFormat` does not
+group a year field. Measured on the rendered page, not reasoned about: across
+seven routes the only four-digit runs anywhere are ۱۴۰۳ and ۱۴۰۵, both
+ungrouped. `check-invariants.mjs` now asserts it permanently, with a
+year-shaped pattern (۱٬۳۰۰–۱٬۵۹۹) rather than "any grouped number" so it cannot
+start failing the day a real count crosses a thousand — falsified before
+shipping against «۱٬۴۰۵», «۱۴۰۵» and «۱۲٬۰۰۰».
+
+The footer's `1405` was also a literal that would have gone silently wrong on
+1 Farvardin ۱۴۰۶. It now reads the clock through the date formatter.
+
+### The article header: what was reported and what was there
+
+**The centred `h1` is not in this codebase.** Measured on the built page at
+1440px: `text-align` computes to `start`, and the h1's box is flush with the
+container's inline-start edge, sharing it exactly with the byline row.
+`text-center` appears nowhere in `src/` on any file, and `git log -S` finds no
+commit that ever added it to the article template. The live container predates
+this branch — `/mag/health` reports `buildId: "unknown"` — so the centring is
+almost certainly there and not here, and it goes away with the next deploy.
+
+**The handoff's centring is deliberately not honoured**, whatever the live build
+is doing. RTL body copy establishes a reading edge, and a centred heading
+abandons the edge every line beneath it returns to. That is the decision; this
+paragraph is the record of it.
+
+**One real misalignment was found and is NOT fixed**, because it is the drawn
+design rather than a defect: at ≥1280 the h1's reading edge is 1400 and the
+body's is 1092 — a 308px gap, with the 260px contents rail between them. The
+title block is capped at 820px because that is the design's measure for a 44px
+h1. Narrowing it to the body column would align the two edges and contradict the
+drawing, so it is flagged here rather than decided unilaterally.
+
+**The share row moved below the body.** Order of operations, not tidiness:
+nobody shares an article they have not read. At the top it asked for the
+decision before the reader had anything to decide with, and it spent the most
+valuable strip on the page — directly under a 44px h1, at the reading edge — on
+three buttons rather than on who wrote this and when. The brief's third option
+was to keep it in the header but quieter; moving it does both.
+
+«@» is gone. It is not an email icon anywhere — it is the separator in an
+address — and it was guarding the one button that opens the reader's mail
+client. «TG» and «WA» were Latin abbreviations on a Persian page. All three are
+inline SVG marks now, inline because no third-party request is allowed here.
+
+**The accessible names were already correct**, contrary to the report: every
+anchor carried an `aria-label` and the glyph was `aria-hidden`, so a screen
+reader read «هم‌رسانی در تلگرام» and never «TG». Only the wording changed, to
+the «اشتراک‌گذاری …» form. RTL order was verified by geometry rather than by
+reading the array — Telegram x=968, WhatsApp x=918, email x=868 at 1440px, right
+to left from the reading edge — and it falls out of array order in an RTL flex
+row, so there is no `flex-row-reverse` to drift out of sync.
+
+### The hero was drawn at a shape nothing in the archive has
+
+`h-[220px] md:h-[420px]` full-bleed is 1360×420 at 1440 — a ratio of 3.24 — with
+`object-cover` inside it. The archive's featured images cluster at 1.90
+(1200×630, the standard OG size and the great majority), 1.50 (1200×800) and
+2.50 (680×272, the three images under 800px wide). So the box cut a band out of
+the middle of every one:
+
+| source | was, 1440 / 390 | now |
+|---|---|---|
+| 680×272 (2.50) | 23% / 36% | 0% / 0% |
+| 640×427 (1.50) | 54% / 6% | 21% / 0% |
+| 1200×630 (1.90) | 41% / 16% | 0% / 0% |
+| 1200×675 (1.78) | 45% / 11% | 6% / 0% |
+
+A fixed taller box was rejected: at 1.9 it would still crop 21% off a 1.5 image
+and would crop the **sides** off the 2.5 panoramas, which are chart images whose
+edges carry the axis labels. `object-fit: contain` was rejected too — the frame
+keeps its own shape and bars everything inside it, and a bar-padded hero reads
+as a broken upload in a design that is deliberately image-led.
+
+The variable height carries no CLS risk because of where the number comes from:
+`mediaDetails` is fetched server-side and the ratio is in the markup, so the box
+has its final height before a single image byte arrives. Measured with a
+layout-shift observer installed before navigation: **CLS 0.0000** on four
+articles at both widths.
+
+Two clamps, not one: [1.9, 2.8] desktop, [1.5, 2.8] mobile. The floor is a
+desktop cost control — full-bleed at 1360px an unclamped 1.5 image stands 907px
+tall and puts those pixels on the LCP path — and at 350px that reasoning does
+not apply. Applying the desktop floor on mobile anyway was the one regression in
+the first measured pass (6% → 21%, because the old 350×220 box happened to sit
+near 1.5 by accident), so mobile keeps its own.
+
+**And the mock was hiding all of this.** Every mock cover is 1200×675 — the one
+shape the archive does not have — so the fixed hero looked correct against the
+fixtures while cropping 41% off every real image. Three fixtures were added at
+the measured dimensions, drawn with an inset frame and corner marks so a crop is
+visible in a screenshot rather than inferred from a number.
+
+### Smaller things, and one that is only a note
+
+**News day-group ordering** is correct: days descending, items descending within
+a day. Verified on the rendered `/mag/news` — ۲۸ → ۲۷ → ۲۶ مرداد, with each
+group's timestamps in order. Verified against the mock's six items, not the
+live ten; see the blocked list below.
+
+**No `wp-json` route was added to Next**, and none exists. Confirmed by search.
+
+**Nineteen articles carry hand-written canonicals that duplicate what the SEO
+layer already builds.** They are redundant rather than wrong — `toMetadata`
+rebuilds every canonical from `SITE_ORIGIN` and the slug and never passes a
+Rank Math URL through, so a hand-written one cannot reach the page even if it
+points somewhere else. Two of them carried a trailing `%20`, already fixed
+CMS-side. Clearing the remaining nineteen is a CMS pass with no frontend
+component and no urgency; it is recorded here so the next person to see them
+knows they are inert rather than load-bearing.
+
+### What could not be done, and exactly why
+
+**This environment cannot reach the CMS.** `curl` to `https://wp.thefinance.ir/mag/graphql`
+and to `https://thefinance.ir/mag/` both return `000` in ~0.25s — a connection
+refused by the agent proxy's allow-list, not a timeout, so retrying does not
+help. The handoff states the CMS is reachable ("dozens of queries ran against it
+during the cutover"); that is true of the machine the cutover ran on and not of
+this session.
+
+Blocked on it, with the commands in B14 and B4 of `backlog.md`:
+
+- the cover-art count (how many of the 53 featured images have the headline
+  baked in) — B14, still unsized
+- the five category status codes against production
+- the sitemap's contents against production
+- the featured-image aspect-ratio measurement against production — the hero
+  clamp is built to the ratios the handoff reported, and should be re-checked
+  against the query in B14 once someone can run it
+- news day-group ordering against the real ten items
+
+Everything else in both briefs was done and measured against the built app.
+
+---
+
 ## 2026-09-06 — Ten items from reading the rendered pages
 
 A review of the 60-image export, not of the code. Three of its findings

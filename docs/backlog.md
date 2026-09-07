@@ -39,11 +39,26 @@ evidence that a 308 costs position.
 
 ---
 
-## B0c — Check whether `/mag/category/*` needs redirecting
+## B0c — Check whether `/mag/category/*` needs redirecting ✅ CLOSED 2026-09-07
 
-The Search Console export shows five such URLs with impressions and zero
-clicks. Probably not worth redirecting, but it should be a decision rather than
-an omission. `scripts/verify-redirects.sh` prints their current status.
+**Answered by building the routes instead.** The Search Console export showed
+five `/mag/category/*` URLs with impressions and zero clicks, and the open
+question was whether to redirect them somewhere. As of today `/mag/category/<slug>`
+is a real route generated from the live taxonomy, so those five URLs resolve to
+the archives they always named. Nothing to redirect.
+
+Two of the five are below the sitemap floor and carry `noindex` — `analysis`
+and `inchart`, at two articles each — so they answer 200 for a reader arriving
+from an old link while asking not to be ranked. That is the correct outcome for
+a URL with impressions and no clicks.
+
+Confirm after the next deploy:
+
+```bash
+for s in education articles news analysis inchart; do
+  printf '%-10s %s\n' "$s" "$(curl -s -o /dev/null -w '%{http_code}' https://thefinance.ir/mag/category/$s)"
+done
+```
 
 ---
 
@@ -140,36 +155,32 @@ whether they're a WordPress CPT inside Mag or a separate system.
 
 ---
 
-## B4 — Market filter bar as the primary axis
+## B4 — Market filter bar as the primary axis ✅ CLOSED 2026-09-07
 
-**Status:** deferred until the taxonomy fills
+**Status:** closed — measured at the new archive size, and the answer did not
+change.
 
-Built and working, but not the default. The figure that decided this was **18
-of 32 articles with no market**, with `housing` at zero — a market bar would
-advertise empty buckets.
+The figure that originally decided this was 18 of 32 articles with no market.
+The 2026-09-06 migration took the archive to 53 posts and made that figure
+stale, which reopened the item. It has now been counted:
 
-⚠️ **That figure is stale and this item is therefore UNDECIDED, not deferred.**
-A content migration on 2026-09-06 took the archive to **53 published posts, 21
-of them new**. Nobody has counted how many of the 53 carry a market. If the
-ratio moved, the reason for deferring B4 has gone with it.
+| market | articles |
+|---|---|
+| crypto | 5 |
+| forex | 3 |
+| global | 3 |
+| tse | 2 |
+| gold-usd | 1 |
+| housing | 0 |
+| **no market at all** | **39 of 53** |
 
-Measure before deciding — one query, no build required:
+The ratio got *worse*, not better: 56% untagged before, 74% now. The trigger
+this item set for itself — any single market reaching roughly 8–12 articles —
+is not close to being met by the largest of them.
 
-```bash
-curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
-  -d '{"query":"{ posts(first:100){ nodes { slug markets { nodes { slug } } } } }"}' \
-  | python3 -c "import sys,json,collections
-n=json.load(sys.stdin)['data']['posts']['nodes']
-c=collections.Counter(m['slug'] for p in n for m in p['markets']['nodes'])
-print(f'{sum(1 for p in n if not p[\"markets\"][\"nodes\"])} of {len(n)} have no market')
-print(c.most_common())"
-```
-
-Content type is the visible filter axis for now. Markets appear as chips on
-cards and as archive pages, and only terms with `count > 0` are ever linked.
-
-**Revisit when:** any single market reaches roughly 8–12 articles — enough to
-fill a topic hub. That's the trigger, not a date.
+So content type stays the visible filter axis. Markets remain chips on cards
+and archive pages, and only terms with `count > 0` are ever linked. Reopen this
+only if the tagging in B17 actually happens; nothing else changes the answer.
 
 ---
 
@@ -404,16 +415,44 @@ commitment. **The archive is 53 posts as of 2026-09-06, not the ~32 this item
 was scoped against** — the count below has to be re-taken at the new size, and
 the production commitment is correspondingly larger.
 
-**The number is not in this document because it could not be measured here.**
-It requires rendering `/mag` and `/mag/archive` against real data and counting
-how many featured images carry no headline. Run:
+**The number is STILL not in this document, and the reason is now specific.**
+It was asked for again on 2026-09-07 and it could not be taken: this build
+environment cannot reach the CMS. `curl` to `wp.thefinance.ir` and to
+`thefinance.ir` both return `000` in ~0.25s — a connection refused by the agent
+proxy's allow-list, not a timeout, so it is not a matter of retrying. Every
+attempt at this figure has failed for the same reason, and it will keep failing
+until the count is taken somewhere with network access to the CMS.
+
+Two ways to take it. The cheap one is a count of headline-bearing artwork by
+eye, which is what the question actually is — no query can tell you whether a
+JPEG has text rendered into it:
 
 ```bash
-USE_MOCK=false npm start
+USE_MOCK=false npm start   # then count on /mag and /mag/archive
 ```
 
-then count on `/mag` and `/mag/archive`, and write the figure in here. Until
-then this item has a scope but not a size.
+The mechanical half — sizes and shapes, which bound how bad a crop can be — is
+one query and is worth pasting into the same session:
+
+```bash
+curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:100){ nodes { slug featuredImage { node { sourceUrl mediaDetails { width height } } } } } }"}' \
+  | python3 -c "import sys,json,collections
+n=json.load(sys.stdin)['data']['posts']['nodes']
+miss=[p['slug'] for p in n if not p.get('featuredImage')]
+d=[(p['slug'],p['featuredImage']['node']['mediaDetails']) for p in n if p.get('featuredImage')]
+print(f'{len(n)} posts, {len(miss)} with no featured image')
+print('under 800px wide:', [s for s,m in d if (m['width'] or 0) < 800])
+c=collections.Counter(round((m['width'] or 1)/(m['height'] or 1),2) for _,m in d)
+print('aspect ratios:', c.most_common())"
+```
+
+The reported shape of the answer, from the handoff: all 53 have a featured
+image, three are under 800px wide, and the ratios split across 1.90, 1.50 and
+2.50. Those three ratios are now what the article hero is drawn at — see
+`src/features/mag/lib/hero-ratio.ts` — so the crop half of this item is closed
+even though the headline-count half is not. Until the count exists this item
+has a scope but not a size.
 
 **And the fixtures test the wrong state.** Of the 53 real articles, ZERO have
 no featured image — the null-image case the fixtures carefully cover does not
@@ -511,3 +550,37 @@ parsing, compiling and hydrating that.
 TBT is a lab proxy for INP, which is the metric CLAUDE.md actually targets.
 Field INP is not being collected; that gap is the reason this cannot be closed
 by measurement here.
+
+---
+
+## B17 — 39 of 53 articles carry no market, and every market archive is thin
+
+**Status:** open. **This is a content-workflow problem, not an architecture
+one**, and it is recorded here rather than designed around.
+
+The counts are in B4 above. Their consequence in the code is that the sitemap
+floor (8 articles, `src/features/mag/lib/taxonomy.ts`) excludes **every market
+archive**, including the three the header nav links to — طلا و ارز, بورس ایران
+and کریپتو. Those pages render, are linked, and are crawlable; they simply stop
+asking to be indexed.
+
+That is uncomfortable and it is correct. A market archive holding two articles
+IS thin, and indexing it does not make it less so. Lowering the floor to admit
+them would put five near-empty pages in front of Google to avoid admitting that
+five archives are near-empty.
+
+**What would fix it is tagging, not code.** Every archive crosses the floor on
+its own the moment its market reaches eight articles — no deploy, no change to
+the floor, nothing to remember. The work is:
+
+1. Decide which of the 39 untagged articles belong to a market. A large share
+   are general technical-analysis education that genuinely belongs to none;
+   forcing those into a market to fill a bucket would be worse than the gap.
+2. Tag them in the CMS.
+3. Re-run the B4 query. Anything at 8+ reappears in the sitemap on the next
+   revalidation.
+
+**What NOT to do:** add a market to an article to make a number go up, invent
+a market term to catch the leftovers, or lower the floor. The first two damage
+the taxonomy the two-axis decision exists to keep small; the third publishes
+thin pages on purpose.
