@@ -14,6 +14,7 @@ import {
   type ArticleListParams,
   type ArticleSummary,
   type Author,
+  type Category,
   type Market,
   type MarketSlug,
   type Paginated,
@@ -733,10 +734,12 @@ export async function getAllSummaries(): Promise<ArticleSummary[]> {
 export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
-  const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
+  const { page = 1, perPage = 9, market, category, contentType, authorSlug, excludeSlug } =
+    params;
 
   const filtered = ALL_SUMMARIES.filter((a) => {
     if (market && a.market?.slug !== market) return false;
+    if (category && !inMockCategory(a, category)) return false;
     if (contentType && a.contentType.slug !== contentType) return false;
     if (authorSlug && a.author.slug !== authorSlug) return false;
     if (excludeSlug && a.slug === excludeSlug) return false;
@@ -802,6 +805,58 @@ export async function getPreviewArticle(id: string, _secret: string): Promise<Ar
     ...base,
     title: `[پیش‌نمایش] ${base.title}`,
   });
+}
+
+/**
+ * Categories, mocked with the shape the CMS returns.
+ *
+ * The fixtures carry one resolved `contentType` per article and no raw category
+ * list — that is what `mapSummary` produces from the real API too, because the
+ * frontend models one type per article. So the mock categories are derived from
+ * the types present, plus «مقالات».
+ *
+ * «مقالات» IS INCLUDED DELIBERATELY, and it is the whole reason this mock is
+ * not just CONTENT_TYPES. Live it is the second-largest category (39 of 53) and
+ * it is not a content type at all — it has been used as a general tag, so most
+ * educational pieces are filed under both. A mock that returned only the four
+ * type slugs would let a category route ship untested against exactly the term
+ * most likely to break it: a category with no `ContentType` behind it.
+ */
+function inMockCategory(article: ArticleSummary, slug: string): boolean {
+  /* The catch-all tag, mirroring how «مقالات» is used: everything but news. */
+  if (slug === 'articles') return article.contentType.slug !== 'news';
+  return article.contentType.slug === slug;
+}
+
+const MOCK_CATEGORY_NAMES: Record<string, string> = {
+  news: 'اخبار',
+  analysis: 'تحلیل',
+  report: 'گزارش',
+  education: 'آموزش',
+  articles: 'مقالات',
+};
+
+export async function getCategories(): Promise<Category[]> {
+  const slugs = [...Object.keys(MOCK_CATEGORY_NAMES)];
+
+  return simulate(
+    slugs
+      .map((slug) => ({
+        slug,
+        name: MOCK_CATEGORY_NAMES[slug],
+        description: null,
+        count: ALL_SUMMARIES.filter((a) => inMockCategory(a, slug)).length,
+      }))
+      /* Empty terms never reach the frontend from the real API either. */
+      .filter((c) => c.count > 0)
+      .sort((a, b) => b.count - a.count),
+  );
+}
+
+export async function getCategory(slug: string): Promise<Category> {
+  const category = (await getCategories()).find((c) => c.slug === slug);
+  if (!category) throw new MagNotFoundError(slug);
+  return category;
 }
 
 export async function getMarkets(): Promise<Market[]> {

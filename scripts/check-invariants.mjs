@@ -41,6 +41,7 @@ const ROUTES = [
   '/mag/news',
   '/mag/fundamental-analysis',
   '/mag/market/crypto',
+  '/mag/category/education',
 ];
 
 /* News rows carry 78px thumbnails that are below the fold on every viewport

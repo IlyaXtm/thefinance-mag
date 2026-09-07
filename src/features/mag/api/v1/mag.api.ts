@@ -16,6 +16,7 @@ import {
   type ArticleListParams,
   type ArticleSummary,
   type Author,
+  type Category,
   type MagImage,
   type Market,
   type MarketSlug,
@@ -26,6 +27,7 @@ import {
 } from '../../types/mag.types';
 import type { MagSeo } from '../../types/mag-seo.types';
 import { resolveContentType } from '../../lib/content-types';
+import { isExcludedCategory } from '../../lib/taxonomy';
 import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
 import { SITE_ORIGIN } from '../../lib/site';
 
@@ -367,10 +369,12 @@ export async function getArticles(
     source. Filtering it here filtered a single unfiltered page and produced a
     list that disagreed with its own count.
   */
-  const { page = 1, perPage = 9, contentType, authorSlug, excludeSlug } = params;
+  const { page = 1, perPage = 9, category, contentType, authorSlug, excludeSlug } = params;
 
   const filters = {
-    category: contentType ?? null,
+    /* Both map to `categoryName`; `category` is the unnarrowed form the
+       /category/<slug> route uses. See ArticleListParams. */
+    category: category ?? contentType ?? null,
     author: authorSlug ?? null,
     search: null,
   };
@@ -618,6 +622,63 @@ export async function getPreviewArticle(id: string, secret: string): Promise<Art
     secondaryMarkets: markets.slice(1),
     seo: mapSeo(data.magPreview.seo),
   };
+}
+
+/**
+ * The category taxonomy, live.
+ *
+ * SOURCED FROM THE CMS RATHER THAN A CONSTANT, unlike CONTENT_TYPES. That is
+ * the difference the routes are built on: `/mag/category/<slug>` must exist for
+ * a category the editors add tomorrow without a deploy, and `generateStaticParams`
+ * reads this. Content types are four values the frontend defines and resolves
+ * per article, so they stay in code.
+ *
+ * `count` IS `node.count` here, where the market archives deliberately derive
+ * theirs from the posts instead. The reason the markets do that does not apply:
+ * there the count disagreed with a list the same page rendered, because market
+ * filtering happened in JS over one unfiltered page. A category archive queries
+ * `categoryName` server-side, so its list and its count are already the same
+ * question asked of the same index. Deriving these would mean partitioning the
+ * archive by a field `mapSummary` throws away — it resolves ONE content type
+ * per post and drops the rest — so it would under-count every overlapping term.
+ *
+ * `hideEmpty` is not passed. It is a real WPGraphQL argument, but an unknown
+ * field fails the whole query rather than being ignored, and this session
+ * cannot reach GraphiQL to confirm the spelling on this schema version. Empty
+ * terms are filtered here instead, which costs nothing at this size.
+ */
+export async function getCategories(): Promise<Category[]> {
+  const data = await gql<{
+    categories: {
+      nodes: Array<{ slug: string; name: string; description: string | null; count: number | null }>;
+    };
+  }>(
+    `query Categories {
+      categories(first: 100) { nodes { slug name description count } }
+    }`,
+    {},
+    3600,
+  );
+
+  return data.categories.nodes
+    .filter((node) => !isExcludedCategory(node.slug) && (node.count ?? 0) > 0)
+    .map((node) => ({
+      slug: node.slug,
+      name: node.name,
+      /* WordPress stores an empty description as '', not null. Normalised so
+         the archive header's `description ?? fallback` actually fires. */
+      description: node.description?.trim() ? node.description.trim() : null,
+      count: node.count ?? 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export async function getCategory(slug: string): Promise<Category> {
+  const category = (await getCategories()).find(
+    (c) => c.slug === slug || decodeURIComponent(c.slug) === decodeURIComponent(slug),
+  );
+  if (!category) throw new MagNotFoundError(slug);
+  return category;
 }
 
 export async function getMarkets(): Promise<Market[]> {

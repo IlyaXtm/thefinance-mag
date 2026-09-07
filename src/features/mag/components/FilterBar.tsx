@@ -96,18 +96,42 @@ function Bar({
 export function ContentTypeFilterBar({
   contentTypes,
   activeSlug = null,
+  routedSlugs = [],
 }: {
   contentTypes: ContentType[];
   activeSlug?: string | null;
+  /**
+   * Slugs that have a real `/category/<slug>` route — i.e. the categories the
+   * CMS actually holds. Everything else keeps `?type=`.
+   */
+  routedSlugs?: string[];
 }) {
-  /* Query-string filtering on the archive, not separate routes. One canonical
-     archive URL with a filter parameter beats four thin near-duplicate pages. */
+  /*
+    THIS ROW USED TO BE ALL QUERY STRINGS, and the note said one canonical
+    archive URL with a filter parameter beat four thin near-duplicate pages.
+    That reasoning was about duplication and it was right about duplication. It
+    was wrong about indexing, and the second problem is the bigger one:
+    `/archive?type=education` CANNOT be indexed by this build at all. Reading
+    `searchParams` opts a route out of prerendering, so the filtered archive is
+    a dynamic page Google is asked to crawl on demand — 41 articles' worth of
+    topical authority sitting behind a URL shape that never becomes static.
+
+    So a filter that has a category behind it now links to the path route, and
+    the near-duplicate worry is handled where it belongs: the thin ones are
+    `noindex` and out of the sitemap (see lib/taxonomy.ts), rather than the
+    substantial ones being unindexable.
+
+    «گزارش» has no category in the taxonomy yet, so its chip keeps `?type=` and
+    keeps working. This is why the set is passed in rather than assumed.
+  */
+  const routed = new Set(routedSlugs);
+
   const items: FilterItem[] = [
     { slug: 'all', name: 'همه', href: '/archive' },
     ...contentTypes.map((c) => ({
       slug: c.slug,
       name: c.name,
-      href: `/archive?type=${c.slug}`,
+      href: routed.has(c.slug) ? `/category/${c.slug}` : `/archive?type=${c.slug}`,
     })),
   ];
 

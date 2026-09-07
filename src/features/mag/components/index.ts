@@ -1,6 +1,7 @@
 export { ArticleAside } from './ArticleAside';
 export { ShareRow } from './ShareRow';
 export { CategoryCover } from './CategoryCover';
+export { ArchiveShell } from './ArchiveShell';
 export { CardImage } from './CardImage';
 export { CardByline, CardDate } from './CardMeta';
 export { CategoryChip } from './CategoryChip';

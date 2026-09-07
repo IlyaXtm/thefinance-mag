@@ -59,6 +59,7 @@ export function toMetadata({
   publishedAt,
   modifiedAt,
   authorName,
+  noindex = false,
 }: {
   seo: MagSeo | null;
   /** Path within /mag, e.g. `/notcoin-explore`. */
@@ -78,6 +79,20 @@ export function toMetadata({
   publishedAt?: string;
   modifiedAt?: string | null;
   authorName?: string;
+  /**
+   * Withdraw the indexing claim for a page that renders fine but is too thin
+   * to be worth a search result — a taxonomy archive below the floor in
+   * lib/taxonomy.ts.
+   *
+   * `follow` stays ON. The page is not a mistake and its links are how a
+   * crawler reaches articles that may sit two clicks deep otherwise; only the
+   * "put this in the index" claim is withdrawn.
+   *
+   * The canonical stays self-referencing, which is correct rather than
+   * contradictory: it says "if you do index something here, index this URL",
+   * and the two directives answer different questions.
+   */
+  noindex?: boolean;
 }): Metadata {
   const canonical = magUrl(path);
   const title = seo?.title ?? fallbackTitle;
@@ -88,7 +103,11 @@ export function toMetadata({
     title,
     description,
     alternates: { canonical, types: feedAlternate() },
-    robots: seo ? parseRobots(seo.robots) : undefined,
+    robots: noindex
+      ? { index: false, follow: true, googleBot: { index: false, follow: true } }
+      : seo
+        ? parseRobots(seo.robots)
+        : undefined,
     openGraph: {
       type: publishedAt ? 'article' : 'website',
       title: seo?.openGraph?.title ?? ogTitle ?? title,

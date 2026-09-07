@@ -52,6 +52,15 @@ export const HEADER_LINKS: NavLink[] = [
  * six", so each label here resolves to whichever axis actually holds that
  * content. No new taxonomy, no migration, no new URLs to redirect.
  *
+ * THE LIST IS HAND-PICKED AND STAYS THAT WAY. `/mag/category/<slug>` is now
+ * generated from the live taxonomy, so every category the CMS holds has a
+ * route — but a route is not a nav slot. Rendering the CMS's category list
+ * here would put «مقالات» (39 posts, a catch-all tag nobody chose as a
+ * section) in the header for being large, and would let an editorial decision
+ * about the top of every page be made by whoever adds a term. Five links,
+ * chosen; new categories are reachable, indexed where they earn it, and not
+ * automatically promoted.
+ *
  * ONE SUBSTITUTION, stated rather than fudged: the design's fifth link is
  * «تحلیل تکنیکال», and there is no such term. Roughly 60% of the archive IS
  * technical-analysis material, but it is filed as آموزش — so that is the label
@@ -62,7 +71,10 @@ export const CATEGORY_NAV: NavLink[] = [
   { label: 'طلا و ارز', href: '/market/gold-usd' },
   { label: 'بورس ایران', href: '/market/tse' },
   { label: 'کریپتو', href: '/market/crypto' },
-  { label: 'آموزش', href: '/archive?type=education' },
+  /* The path route, not `?type=education`. The query-string shape cannot be
+     prerendered or indexed — see src/app/category/[slug]/page.tsx — and this
+     is the nav slot pointing at the largest category on the site (41 of 53). */
+  { label: 'آموزش', href: '/category/education' },
   { label: 'اخبار', href: '/news' },
 ];
 
