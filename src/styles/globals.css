@@ -412,3 +412,33 @@
     direction: ltr;
   }
 }
+
+/*
+ * The one animation in the system: the InChart card's fade.
+ *
+ * A keyframe rather than a `transition`, because the card MOUNTS when it
+ * appears — a transition needs a rendered from-state to move away from, and
+ * there isn't one. `forwards` holds the end state so it cannot flash back.
+ *
+ * Opacity only. No translate, no scale, no slide: the constraint on that card
+ * is that it reads as a panel appearing, not as something arriving. And
+ * `prefers-reduced-motion` removes it entirely — the card is simply there,
+ * which is the correct reduced-motion answer for a reveal rather than a
+ * slower version of the same movement.
+ */
+@keyframes tf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='tf-fade-in'],
+  .\[animation\:tf-fade-in_200ms_ease-out_forwards\] {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

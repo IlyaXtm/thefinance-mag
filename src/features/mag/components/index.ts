@@ -27,6 +27,7 @@ export { ContentTypeFilterBar, MarketFilterBar } from './FilterBar';
 export { ContentTypeLabel } from './ContentTypeLabel';
 export { MarketChip } from './MarketChip';
 export { NewsletterCta } from './NewsletterCta';
+export { InchartCta } from './InchartCta';
 export { PageHeader } from './PageHeader';
 export { Section, SectionInner } from './Section';
 export { TableOfContents, tocId } from './TableOfContents';
