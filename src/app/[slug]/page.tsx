@@ -196,14 +196,46 @@ export default async function ArticlePage({
     supplementary, the article is the point. It degrades to an empty thread,
     which the list already handles by rendering nothing.
   */
-  const [related, onward, comments] = await Promise.all([
+  const [related, onward, latest, comments] = await Promise.all([
     getArticles({
       page: 1,
       perPage: 3,
       contentType: article.contentType.slug,
       excludeSlug: article.slug,
     }),
-    getArticles({ page: 1, perPage: 4, excludeSlug: article.slug }),
+    /*
+      «ادامه‌ی مسیر» — SAME CONTENT TYPE, not the latest four.
+
+      The review asked what drives this panel: «بر چه اساسی کار می‌کند، یا فقط
+      تیتره؟». The answer was "just the heading": it was
+      `getArticles({ perPage: 4 })` with no filter at all, so a panel promising
+      to continue the reader's path showed whatever had been published most
+      recently — a news item under an education article, and no way for a
+      reader to tell that was all it meant.
+
+      Now it is the same content type, newest first, which is achievable at
+      this size: 41 articles under آموزش and 39 under مقالات. Market-based
+      relatedness is NOT an option and is not being pretended into one — 39 of
+      53 articles carry no market at all. That is backlog B17, a tagging
+      problem, and building a feature on a field three quarters of the archive
+      does not have would produce an empty panel most of the time.
+
+      SEVEN, not four, because three of them are about to be spent. «مطالب
+      مرتبط» lower down already queries the same content type, and without a
+      wider fetch the two panels would show the same three articles a screen
+      apart — the exact duplication the injected table of contents was just
+      removed for. The overlap is filtered below.
+    */
+    getArticles({
+      page: 1,
+      perPage: 7,
+      contentType: article.contentType.slug,
+      excludeSlug: article.slug,
+    }),
+    /* The fallback, fetched alongside rather than after: a second round trip
+       on every ISR regeneration to cover a case that fires on two of 53
+       articles is not worth the latency, and this query is already cached. */
+    getArticles({ page: 1, perPage: 5, excludeSlug: article.slug }),
     getComments(article.slug).catch(() => ({ items: [], total: 0 })),
   ]);
 
@@ -211,6 +243,28 @@ export default async function ArticlePage({
   const heroRatios = article.featuredImage
     ? heroAspectRatios(article.featuredImage)
     : null;
+
+  /*
+    THE PANEL IS NAMED AFTER WHAT IT SHOWS, and the name is computed because
+    the content can fall back.
+
+    «مطالب مرتبط» renders three articles of this content type further down, so
+    they are removed here — two panels on one screen showing the same three
+    titles is a duplicate, not a recommendation.
+
+    When enough of the type survives that filter, the panel is «بیشتر در آموزش»
+    and it is exactly that. When the type is too small for both panels —
+    «تحلیل» has two articles in the whole archive — there is nothing left, and
+    the honest answer is to fall back to recency AND SAY SO in the heading
+    rather than keep a name the content no longer earns. A panel called
+    «ادامه‌ی مسیر» over unrelated articles is a promise the content does not
+    keep, which is what the review was pointing at.
+  */
+  const relatedSlugs = new Set(related.items.map((a) => a.slug));
+  const onwardInType = onward.items.filter((a) => !relatedSlugs.has(a.slug)).slice(0, 4);
+  const onwardItems = onwardInType.length > 0 ? onwardInType : latest.items.slice(0, 4);
+  const onwardTitle =
+    onwardInType.length > 0 ? `بیشتر در ${article.contentType.name}` : 'تازه‌ترین مطالب';
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },
@@ -425,8 +479,8 @@ export default async function ArticlePage({
 
         <aside className="flex flex-col gap-6 lg:sticky lg:order-4 lg:top-[76px] xl:order-3">
           <LinkListCard
-            title="ادامه‌ی مسیر"
-            items={onward.items.slice(0, 4).map((a) => ({
+            title={onwardTitle}
+            items={onwardItems.map((a) => ({
               slug: a.slug,
               title: a.title,
               meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
