@@ -1,4 +1,4 @@
-import { ORGANIZATION, SITE_ORIGIN } from './site';
+import { ORGANIZATION, SITE_ORIGIN, SOCIAL_CHANNELS } from './site';
 
 /**
  * Navigation targets.
@@ -91,9 +91,21 @@ export const FOOTER_MAG_LINKS: NavLink[] = [
   { label: 'جستجو', href: '/search' },
 ];
 
-export const SOCIAL_LINKS: NavLink[] = ORGANIZATION.sameAs.map((href) => ({
-  label: 'اینستاگرام',
-  href,
+/**
+ * Social channels, labelled per platform.
+ *
+ * It used to map `ORGANIZATION.sameAs` and label EVERY entry «اینستاگرام»,
+ * which was correct only because there was exactly one. Adding a second would
+ * have produced two chips both saying Instagram — and because the label is the
+ * link's accessible name, a screen reader would have announced two identical
+ * destinations.
+ *
+ * Channels with no confirmed URL are filtered out here rather than omitted
+ * from the list, so the ones still being chased stay visible in the source.
+ */
+export const SOCIAL_LINKS: NavLink[] = SOCIAL_CHANNELS.filter((c) => c.url).map((c) => ({
+  label: c.label,
+  href: c.url,
   external: true,
 }));
 

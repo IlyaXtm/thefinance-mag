@@ -7,7 +7,11 @@ import {
   SOCIAL_LINKS,
 } from '@/features/mag/lib/nav';
 import { SITE_DISCLAIMER_TEXT } from '@/features/mag/types/mag-blocks.types';
-import { MAG_DESCRIPTION, ORGANIZATION, SITE_ORIGIN } from '@/features/mag/lib/site';
+import {
+  ORGANIZATION,
+  ORGANIZATION_DESCRIPTION,
+  SITE_ORIGIN,
+} from '@/features/mag/lib/site';
 import { currentJalaliYear } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 
@@ -40,8 +44,22 @@ export function MagFooter({ markets }: { markets: Market[] }) {
             <div className="flex items-center text-text-primary">
               <MagLogo className="h-[32px] w-auto" />
             </div>
-            <p className="mt-4 max-w-[46ch] text-[14px] font-light leading-[1.85] text-text-secondary">
-              {MAG_DESCRIPTION}
+            {/*
+              WHAT فایننس IS, replacing the magazine's one-line tagline rather
+              than sitting above it — two descriptions stacked in a footer
+              column is the wall of text the review warned about.
+
+              13px and `text-muted`, a step down from the 14px `text-secondary`
+              the tagline used. It is five times longer, so at the old size it
+              would have out-weighed the three link columns beside it and made
+              the brand column the loudest thing in the footer. Smaller and
+              quieter, it reads as the boilerplate it is.
+
+              46ch → 52ch: at 46 characters this sets seven lines on desktop
+              and towers over the columns; 52 brings it to five.
+            */}
+            <p className="mt-4 max-w-[52ch] text-[13px] font-light leading-[1.9] text-text-muted">
+              {ORGANIZATION_DESCRIPTION}
             </p>
 
             {SOCIAL_LINKS.length > 0 && (
@@ -83,7 +101,23 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               </FooterLink>
             ))}
             <FooterLink href="/news">اخبار</FooterLink>
-            <FooterLink href="/feed">خوراک RSS</FooterLink>
+            {/*
+              «خبرخوان (RSS)», not «خوراک RSS». «خوراک» is the correct Persian
+              term and is what publishing uses; the review did not recognise it,
+              and a finance reader is not a publishing reader. «خبرخوان» is the
+              word people actually use, with the Latin acronym in brackets for
+              anyone scanning for it.
+
+              The bracketed Latin run is isolated for the same reason article
+              titles are — a bare `(RSS)` inside a Persian link reorders around
+              its own brackets when the line wraps. See lib/bidi-title.tsx.
+            */}
+            <FooterLink href="/feed">
+              خبرخوان{' '}
+              <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>
+                (RSS)
+              </span>
+            </FooterLink>
           </FooterColumn>
 
           <FooterColumn title="فایننس">
