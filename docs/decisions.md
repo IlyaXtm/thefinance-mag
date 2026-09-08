@@ -139,6 +139,57 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
+## Content model
+
+**CMS-injected navigation chrome is stripped at the mapping layer.** Decided
+2026-09-08.
+
+`easy-table-of-contents` hooks `the_content`, WPGraphQL runs `the_content`
+filters, and the plugin's list therefore arrives inside the article body. A
+headless frontend owns its own layout: a plugin that decides where navigation
+goes is data the mapper drops, the same way it drops `text-align: justify`.
+
+The general rule: **the body is content, not chrome.** Anything a CMS plugin
+injects around the content — contents lists, share bars, related-post blocks,
+author boxes — is stripped on the way in and rendered by the frontend or not at
+all. Two systems both deciding where a table of contents goes is how an article
+gets two of them.
+
+Deactivating the plugin is cleaner and remains the recommended follow-up. It was
+not done because it would break any article using `[ez-toc]` explicitly and
+that could not be audited. **When it is done, the strip stays** — as a guard,
+not as the fix.
+
+**The table of contents is H2 only.** Both `extractHeadings()` and the
+mu-plugin's `outlineHeadings` collect h2 and nothing else. A three-level list on
+a 41-minute read is a wall, and the panel is already height-capped with internal
+scrolling because 24 entries fill it. A nested ToC is a design change with a
+scroll and a density problem attached, not a regex edit.
+
+---
+
+## Pagination
+
+**A page number belongs in the path; `?page=N` is a compatibility surface.**
+Decided 2026-09-08; extends the URL-shape rule below.
+
+`?page=N` used to return 200 with the content of page one, because Next ignores
+a parameter no route reads — an unbounded set of distinct URLs serving identical
+content, which is worse than a 404 because Google indexes it. It now 301s to the
+path route, in middleware, so the rule lives in one place rather than in four
+route files.
+
+`/search` is the exception and must stay one: it paginates by query string on
+purpose, because a search URL is already query-shaped and noindex either way.
+
+**Middleware does not fetch data to decide a redirect.** A page number past the
+last one redirects and then 404s at the destination. Knowing the last page at
+the network boundary would mean querying the CMS on every request, which is
+exactly what that layer must not do — its worst failure has to stay "a wrong
+destination".
+
+---
+
 ## Brand assets
 
 **The logo is inline SVG with `currentColor` ink, not two theme files.**

@@ -604,3 +604,72 @@ the floor, nothing to remember. The work is:
 a market term to catch the leftovers, or lower the floor. The first two damage
 the taxonomy the two-axis decision exists to keep small; the third publishes
 thin pages on purpose.
+
+---
+
+## B18 — Deactivate `easy-table-of-contents` on the CMS
+
+**Status:** open. Blocked on a shortcode audit that needs CMS access.
+
+The plugin injects a table of contents into every article body, which rendered
+as a second ToC a few hundred pixels below the sidebar one. It is now stripped
+at the mapping layer (`stripInjectedToc`), so the reader-facing defect is fixed
+— but the CMS is still generating markup the frontend throws away on every
+request, and the strip is a regex-adjacent scanner written against plugin markup
+nobody here could verify.
+
+**Before deactivating, audit for the shortcode.** Auto-insert and `[ez-toc]`
+produce identical output, so the strip removes both; deactivating would remove
+an inline list an author placed on purpose:
+
+```bash
+# any post whose content places the shortcode explicitly
+wp post list --post_type=post --format=ids \
+  | xargs -n1 wp post get --field=content \
+  | grep -c 'ez-toc'
+```
+
+If the count is zero, deactivate. **Keep the strip afterwards regardless** — it
+costs nothing and it is the guard that stops the next plugin doing the same
+thing.
+
+An author who genuinely wants an inline contents list should get a Gutenberg
+block (B7), not this plugin: a block is placed deliberately, renders through the
+frontend's own components, and cannot appear on articles nobody asked it to.
+
+**Watch `/mag/health` → `injectedTocSurvivors`.** Non-empty means the plugin's
+markup has moved and the strip is a no-op; the slugs name which articles to
+open. `npm run check:toc` covers the shapes we know of.
+
+---
+
+## B19 — The other social channels, and the hero-image feedback
+
+Two items from the 2026-09-08 SEO review that need somebody outside this
+environment.
+
+**Social URLs.** The review asked for the other channels; Telegram and LinkedIn
+were named but no addresses were supplied. They sit in `SOCIAL_CHANNELS`
+(`lib/site.ts`) with empty URLs and render nothing. Paste the real address in
+and they appear in the footer and in the JSON-LD `sameAs` at once.
+
+Do NOT guess a handle. `sameAs` asserts to Google that this organisation IS the
+account at that address — a wrong one either makes a dead entity claim or
+attaches somebody else's profile to this publisher, and both are worse than the
+channel being absent.
+
+**«عکس‌های شاخص را خراب کرده».** Feedback on the per-image hero aspect ratio
+(`9b86b3f`). "Broke" could mean cropped, stretched, too tall or too small, and
+each has a different fix, so nothing was changed. The trade-off they are
+probably reacting to:
+
+| source ratio | old fixed band | now |
+|---|---|---|
+| 680×272 (2.50) | 23% cropped | 0% — a 544px strip |
+| 1200×630 (1.90) | 41% cropped | 0% — 714px tall |
+| 1200×800 (1.50) | 54% cropped | 21% |
+
+A wide image is now a thin band; a tall one pushes the article down. The old
+band cropped everything equally instead, which is why it was replaced. Ask which
+they saw before changing it — and take the measurement in B14 at the same time,
+since it is the same query and the same session.
