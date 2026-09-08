@@ -575,6 +575,37 @@ function stressSeo(slug: string, title: string): MagSeo {
 }
 
 const STRESS: Article[] = [
+  {
+    /*
+      THE HEADLINE THE SEO REVIEW MARKED UP, VERBATIM.
+
+      Live it broke after «خرید،» and stranded «انتقال و نگهداری BTC» on a line
+      of its own. Persian headlines built with «؛» and «،» read as clauses, and
+      a break inside the second clause reads as a mistake rather than as a line
+      ending.
+
+      It is a fixture because the mock had no title with this shape — every
+      existing one either fits on a line or breaks somewhere harmless — so
+      `text-wrap: balance` could have been added, shipped and measured against
+      titles that never exhibited the defect. Same failure as the hero: the
+      fixtures agreed with the code instead of testing it.
+    */
+    id: 'w1',
+    slug: 'stress-headline-clause-break',
+    title: 'خرید بیت کوین در ایران؛ آموزش کامل خرید، انتقال و نگهداری BTC',
+    featuredImage: img('notcoin', 'نمودار قیمت بیت کوین'),
+    market: MARKETS.crypto,
+    contentType: TYPES.education,
+    readingTime: 9,
+    publishedAt: '2026-08-05T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p><h2>کیف پول</h2><p>متن نمونه.</p>',
+    seo: stressSeo('stress-headline-clause-break', 'خرید بیت کوین در ایران'),
+  },
   /* ── The three hero shapes, from the live corpus ─────────────────────── */
   {
     /* The widest: 2.50. Three published images are under 800px wide and this

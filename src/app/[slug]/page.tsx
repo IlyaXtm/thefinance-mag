@@ -237,7 +237,38 @@ export default async function ArticlePage({
       <div className="mt-5 max-w-[820px]">
         <CategoryChip name={category.name} href={category.href} />
 
-        <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:pretty] md:text-[44px]">
+        {/*
+          `text-wrap: balance`, not `pretty`.
+
+          The live h1 «خرید بیت کوین در ایران؛ آموزش کامل خرید، انتقال و
+          نگهداری BTC» broke after «خرید،», stranding «انتقال و نگهداری BTC» on
+          a line of its own. Persian headlines built with «؛» and «،» read as
+          clauses, and a break inside the second one reads as a mistake rather
+          than as a line ending.
+
+          `pretty` only protects the LAST line — it prevents an orphan word and
+          says nothing about where the earlier breaks land, which is exactly
+          where this headline goes wrong. `balance` evens every line in the
+          block. Measured at 1440 on that headline, with the longhand toggled:
+
+            off  778px «…ایران؛ آموزش کامل خرید،» / 396px «انتقال و نگهداری BTC»
+            on   569px «…ایران؛ آموزش»            / 605px «کامل خرید، انتقال و نگهداری BTC»
+
+          and at 390 the three lines become one clause each. Browsers cap
+          balancing at a handful of lines, which is the shape of an h1, and it
+          degrades to normal wrapping where unsupported.
+
+          IT DOES NOT FIGHT `bidiTitle`, verified at 390px on «تحلیل فاندامنتال
+          (Fundamental Analysis) چیست؟» — the title that exposed the mirrored
+          bracket. The pair still resolves inside its isolate. Balancing DOES
+          change where that title breaks: unbalanced it kept «(Fundamental
+          Analysis)» whole and left «چیست؟» alone on a 104px line; balanced it
+          splits the parenthesised run across lines and removes the orphan.
+          That split is safe only because of the isolate — without
+          `bidi-title.tsx` this change would reintroduce the mirrored bracket,
+          so the two are a pair and neither should be removed alone.
+        */}
+        <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:balance] md:text-[44px]">
           {bidiTitle(article.title)}
         </h1>
 
