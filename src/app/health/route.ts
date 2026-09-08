@@ -1,5 +1,8 @@
 import { hasPreviewSecret } from '@/features/mag/lib/preview-secret';
-import { magArchiveOverflowed } from '@/features/mag/api/v1/mag.service';
+import {
+  magArchiveOverflowed,
+  magInjectedTocSurvivors,
+} from '@/features/mag/api/v1/mag.service';
 import { probeRedirectSource } from '@/features/mag/lib/redirect-source';
 
 /**
@@ -35,6 +38,17 @@ export function GET() {
         instead of erroring, so it has to be visible somewhere — this is where.
       */
       archiveOverflowed: magArchiveOverflowed(),
+      /*
+        Articles whose body still contained a CMS-injected table of contents
+        after `stripInjectedToc` ran. Should always be empty.
+
+        It is here because the strip is written against plugin markup this
+        build environment could not verify against the live CMS, and a regex
+        that stops matching does not fail — it silently ships the duplicate ToC
+        it was added to remove. Non-empty means the plugin's markup moved;
+        the slugs name which articles to open.
+      */
+      injectedTocSurvivors: magInjectedTocSurvivors(),
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*
