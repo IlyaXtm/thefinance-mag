@@ -1,4 +1,4 @@
-# TheFinance Mag — `claude` branch
+# TheFinance Mag — `claude-main` branch
 
 Headless rebuild of `thefinance.ir/mag`: WordPress + WPGraphQL as the content
 layer, Next.js App Router as the public frontend.

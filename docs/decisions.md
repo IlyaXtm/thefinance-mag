@@ -139,6 +139,58 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
+## Brand assets
+
+**The logo is inline SVG with `currentColor` ink, not two theme files.**
+Decided 2026-09-07.
+
+The official pack ships a dark lockup and a light one that differ only in the
+ink — #FFFFFF against #0B1120. Picking between them would require the header to
+know the theme, and it cannot: the theme is applied pre-paint from localStorage,
+after the server has rendered. One asset that inherits the surrounding colour
+has no such problem.
+
+The three blues (#0163E1 · #10A5F5 · #00DBFF) stay literal and do NOT become
+tokens. They are the mark, the brand rules forbid recolouring it, and it must
+read identically on all three themes — the same reasoning that keeps
+`--scrim-*` and `--on-media` from flipping. A logo is artwork, not a themed
+surface, so this is not a hardcoded-colour violation.
+
+Inline rather than `<img>` for two reasons: «مجله» is a live `<text>` node and
+an externally-loaded SVG cannot reach the page's fonts, and the header logo
+stays markup on the LCP path rather than a request that can 400.
+
+**The typeface in the logo is IRANYekanX, overriding the asset's own README.**
+The pack specifies Vazirmatn Light and supplies a Google Fonts `<link>`. Both
+are refused: the typeface is fixed product-wide by CLAUDE.md — Blog v4 shipped
+Vazirmatn and it was reverted for exactly this reason — and no Google Fonts or
+foreign CDN may sit on the critical path of a site served from Iran behind
+ArvanCloud. `font-family: inherit`, weight 300, a real instance of the variable
+face. To match the drawing exactly, outline the word in IRANYekanX; never load
+a second face.
+
+---
+
+## Sticky sidebars
+
+**`position: sticky` goes on the grid item, never on a child of it.** Decided
+2026-09-07.
+
+A sticky element travels only within its containing block. Under
+`items-start`, a grid item is exactly as tall as its content — so a sticky
+panel nested inside one has zero travel and silently does nothing. A sticky
+GRID ITEM resolves against its grid area, which spans the row.
+
+The table of contents carried `sticky top-[76px]` for weeks and never moved,
+because it was the panel inside the item rather than the item. Nothing errors
+and the class reads correctly, so this is not visible in review — only in a
+measurement of `getBoundingClientRect().top` while scrolled.
+
+Both sidebars on the post page now use the same shape. Two sidebars in one grid
+with two positioning strategies is how the last one drifted.
+
+---
+
 ## Design system additions
 
 Three items surfaced during Mag that are **system-level**, not Mag-local. Left
@@ -180,6 +232,97 @@ unchanged path with a fallback to the WordPress disk so migration is a
 background copy with no cutover moment. Not now: R1 changes one variable, and
 offload plugins rewrite attachment URLs in the database — precisely what's
 being protected.
+
+---
+
+## Mobile navigation
+
+**A scrollable category strip, not a drawer.** Decided 2026-09-06.
+
+Below `lg` the header carried the logo, a search icon and the theme toggle and
+nothing else. Every section was reachable only from the footer — roughly
+4,000px of scroll down the home page.
+
+The standing note against a hamburger said: *"with two links, a drawer costs a
+tap, a JS bundle, a focus trap and a motion-preference case, all to hide two
+words."* That was right for two links. There are five, and the argument does
+not carry at five.
+
+But the note is also the reason the answer is a strip rather than a drawer:
+**every cost it lists is a cost of hiding things.** The tap, the JavaScript,
+the focus trap, the `prefers-reduced-motion` case — all of them exist because a
+drawer conceals. A horizontally scrollable row pays none of them, because it
+conceals nothing. It is markup and one CSS property, and the links are visible
+rather than behind an affordance.
+
+Native `overflow-x` handles RTL direction on its own; no `scrollLeft`
+arithmetic, whose sign differs across browsers. The edge fade is `mask-image`
+rather than a coloured gradient, so it works over any theme's surface without
+knowing which.
+
+**The newsletter CTA is last in the strip**, not first. It is a primary header
+action on desktop and was absent below `sm` entirely, so it needed a home — but
+putting a conversion button ahead of the navigation on the narrowest screens is
+the pattern the brand book rules out. It is reachable by scrolling the strip
+rather than being the first thing a reader meets.
+
+---
+
+## URL shape
+
+**`trailingSlash` stays off.** Decided 2026-09-06; closes backlog B0b.
+
+WordPress's `/%postname%/` serves `/mag/<slug>/` with a trailing slash, and the
+Next app serves the slash-free form and 308s the other. So the trailing slash
+changes at cutover for every indexed URL — which is the one thing this release
+was supposed to avoid, and it is why the question was opened.
+
+Setting `trailingSlash: true` would have matched WordPress exactly and cost no
+redirect. It was rejected anyway: **a 308 passes full link equity and costs no
+ranking**, so the price of the extra hop is one round trip, not position. The
+alternative price was a slash on every canonical, every sitemap entry, every
+internal link and inside `magUrl()` — a product-wide URL-shape change, taken on
+during the release where the least should change.
+
+One hop on a URL Google already has beats reshaping every URL the product will
+ever emit. Do not set `trailingSlash: true`.
+
+**A taxonomy filter that should be indexed gets a path, not a query string.**
+Decided 2026-09-07; closes backlog B0c.
+
+Reading `searchParams` opts a Next route out of prerendering entirely. So
+`/mag/archive?type=education` is dynamic on every request and can never become a
+static page — which put «آموزش», 41 of 53 articles, behind the one URL shape the
+build cannot prerender. `/mag/category/<slug>` is the same list at a path, and a
+path segment is part of the resource's identity, so it is static ISR.
+
+The rule generalises: **a filter that is a view over a resource may stay in the
+query string; a filter that names a body of content must be a path.** The page
+number moved out of `?page=` for the same reason, one release earlier.
+
+`?type=` still answers and 308s to the path route. It is a compatibility
+surface, not an address.
+
+**Categories are read from the CMS; the nav is not.** Every category the
+taxonomy holds gets a route, prerendered and sitemap-listed, with no deploy —
+`generateStaticParams` reads the live list. `CATEGORY_NAV` stays five
+hand-picked links. A route is not a nav slot: rendering the CMS's list in the
+header would put «مقالات» — 39 posts, a catch-all tag nobody chose as a section
+— at the top of every page for being large, and would hand an editorial decision
+about the top of every page to whoever adds a term.
+
+**A taxonomy archive under 8 articles is not indexed.** Below the floor it stays
+out of the sitemap AND carries `noindex, follow` — both, because a URL kept out
+of the sitemap is still reachable from the links on every page, so a
+sitemap-only exclusion is decorative. The page still renders and is still
+linked; only the indexing claim is withdrawn, and it returns on its own when the
+archive grows.
+
+The floor applies to markets too, and today it de-indexes all six, including the
+three in the header nav. That is the intended behaviour, not an oversight: a
+market archive holding two articles IS thin. The cause is that 39 of 53 articles
+carry no market — a tagging backlog (B17), not something the floor should be
+bent to hide.
 
 ---
 

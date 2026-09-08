@@ -6,7 +6,7 @@ import type { MarketSlug } from '@/features/mag/types/mag.types';
 import { MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import { MarketArchiveView } from '../../_components/MarketArchiveView';
 
 /**
@@ -51,7 +51,7 @@ export async function generateMetadata({
   return toMetadata({
     seo: null,
     path: `/market/${market.slug}/page/${page}`,
-    fallbackTitle: `${market.name} — صفحه ${toPersianDigits(page)}`,
+    fallbackTitle: `${market.name} — صفحه ${toPersianDigitsUngrouped(page)}`,
     fallbackDescription: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
   });
 }

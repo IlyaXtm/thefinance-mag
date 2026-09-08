@@ -1,6 +1,12 @@
 import type { MetadataRoute } from 'next';
-import { getArticles, getAuthors, getMarkets } from '@/features/mag/api/v1/mag.service';
+import {
+  getArticles,
+  getAuthors,
+  getCategories,
+  getMarkets,
+} from '@/features/mag/api/v1/mag.service';
 import { magUrl } from '@/features/mag/lib/site';
+import { isThinArchive } from '@/features/mag/lib/taxonomy';
 
 /**
  * Sitemap for /mag.
@@ -14,14 +20,18 @@ import { magUrl } from '@/features/mag/lib/site';
  * URL by construction.
  *
  * Search is excluded: those pages are noindex.
+ *
+ * So are taxonomy archives below the floor in lib/taxonomy.ts — see the note
+ * further down.
  */
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, markets, authors] = await Promise.all([
+  const [articles, markets, categories, authors] = await Promise.all([
     getArticles({ page: 1, perPage: 500 }),
     getMarkets(),
+    getCategories(),
     getAuthors(),
   ]);
 
@@ -39,6 +49,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.5,
+    },
+    {
+      /*
+        `daily` and above /archive, because it genuinely is: the RSS automation
+        files roughly two translated items a day under «اخبار», so this page
+        turns over faster than anything else on the site. It was missing here
+        while being a real, indexable route — a new section Google would have
+        had to find by crawling alone.
+      */
+      url: magUrl('/news'),
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.6,
     },
     {
       url: magUrl('/authors'),
@@ -59,13 +82,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
+  /*
+    TAXONOMY ARCHIVES ARE FILTERED BY A FLOOR, NOT BY "HAS ANY ARTICLES".
+
+    The old test was `count === 0`, which kept an archive of two out of the
+    sitemap only if it held zero. Submitting a two-article archive is not
+    neutral: it spends crawl budget on a page that will not rank and it dilutes
+    the signal of the archives that will. The floor lives in lib/taxonomy.ts
+    together with the `noindex` the same pages carry, because a URL kept out of
+    the sitemap is still reachable from the links on every page — the two
+    directives have to move as one or the exclusion is decorative.
+
+    Today this admits education (41), articles (39) and news (10), and excludes
+    analysis (2) and inchart (2).
+
+    IT ALSO EXCLUDES EVERY MARKET ARCHIVE — crypto 5, forex 3, global 3, tse 2,
+    gold-usd 1, housing 0 — including the three the header nav links to. That
+    is not a bug in the floor and it is not a reason to lower it. 39 of 53
+    articles carry no market at all, so those archives ARE thin, and indexing
+    them would not make them less so. The fix is tagging, which is a content
+    workflow, not a template: backlog B17.
+  */
   for (const market of markets) {
-    /* A market with no articles would be an empty page in the sitemap —
-       submitting it wastes crawl budget and looks like thin content. */
-    if ((market.count ?? 0) === 0) continue;
+    if (isThinArchive(market.count)) continue;
 
     entries.push({
       url: magUrl(`/market/${market.slug}`),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    });
+  }
+
+  for (const category of categories) {
+    if (isThinArchive(category.count)) continue;
+
+    entries.push({
+      url: magUrl(`/category/${category.slug}`),
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.6,

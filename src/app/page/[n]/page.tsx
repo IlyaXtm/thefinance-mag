@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getArticles } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { feedAlternate, magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import {
   ArticleGrid,
   ContentTypeFilterBar,
@@ -33,7 +33,7 @@ export async function generateMetadata({
   const page = Number(n);
 
   return {
-    title: `${MAG_NAME} — صفحه ${toPersianDigits(page)}`,
+    title: `${MAG_NAME} — صفحه ${toPersianDigitsUngrouped(page)}`,
     alternates: { canonical: magUrl(`/page/${page}`), types: feedAlternate() },
   };
 }
@@ -65,7 +65,7 @@ export default async function PaginatedListingPage({
       </SectionInner>
 
       <Section>
-        <h2 className="sr-only">صفحه {toPersianDigits(page)}</h2>
+        <h2 className="sr-only">صفحه {toPersianDigitsUngrouped(page)}</h2>
         <ArticleGrid articles={articles.items} />
         <Pagination page={articles.page} totalPages={articles.totalPages} hrefFor={pagePathHref('/')} />
       </Section>

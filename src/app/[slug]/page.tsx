@@ -1,5 +1,5 @@
+import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getArticle, getArticles, getPreviewArticle } from '@/features/mag/api/v1/mag.service';
@@ -8,21 +8,27 @@ import { getComments } from '@/features/mag/api/v1/mag.comments.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
+import { bidiTitle } from '@/features/mag/lib/bidi-title';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
+import { authorInitial, cardCategory } from '@/features/mag/lib/card';
+import { toPersianDigits } from '@/features/mag/lib/format';
+import { heroAspectRatios } from '@/features/mag/lib/hero-ratio';
+import Link from 'next/link';
 import { PreviewBanner } from './_components/PreviewBanner';
 import {
+  ArticleAside,
   ArticleBody,
-  ArticleGrid,
   ArticleMeta,
   AuthorBox,
   Breadcrumbs,
+  CardImage,
+  CategoryChip,
   CommentForm,
   CommentList,
-  ContentTypeLabel,
+  LinkListCard,
   NewsletterCta,
-  MarketChip,
-  Section,
-  TableOfContents,
+  PostCard,
+  ShareRow,
 } from '@/features/mag/components';
 
 /**
@@ -183,38 +189,39 @@ export default async function ArticlePage({
   if (!article) notFound();
 
   /*
-    Related articles and comments in parallel — neither depends on the other,
-    and sequential awaits would add a round trip on every ISR regeneration.
+    Related, onward reading and comments in parallel — none depends on another,
+    and sequential awaits would add round trips on every ISR regeneration.
 
     A comment fetch failure must not take the article down: comments are
-    supplementary, the article is the point. So it degrades to an empty thread,
+    supplementary, the article is the point. It degrades to an empty thread,
     which the list already handles by rendering nothing.
   */
-  const [related, comments] = await Promise.all([
+  const [related, onward, comments] = await Promise.all([
     getArticles({
       page: 1,
       perPage: 3,
       contentType: article.contentType.slug,
       excludeSlug: article.slug,
     }),
+    getArticles({ page: 1, perPage: 4, excludeSlug: article.slug }),
     getComments(article.slug).catch(() => ({ items: [], total: 0 })),
   ]);
 
+  const category = cardCategory(article);
+  const heroRatios = article.featuredImage
+    ? heroAspectRatios(article.featuredImage)
+    : null;
+
   const crumbs = [
     { name: MAG_NAME, href: '/' },
-    ...(article.market ? [{ name: article.market.name, href: `/market/${article.market.slug}` }] : []),
+    { name: category.name, href: category.href },
     { name: article.title, href: `/${article.slug}` },
   ];
 
   return (
-    <main>
+    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
       {isPreview && <PreviewBanner />}
 
-      {/*
-        Structured data. Article, not NewsArticle — most of this archive is
-        evergreen education, and NewsArticle would signal a freshness the
-        content doesn't claim.
-      */}
       <JsonLdScript
         data={[
           articleJsonLd(article),
@@ -222,22 +229,51 @@ export default async function ArticlePage({
         ]}
       />
 
-      <Section width="article" className="!pb-0">
-        <div className="max-w-prose">
-          <Breadcrumbs items={crumbs} />
+      <div className="pt-6 lg:pt-8">
+        <Breadcrumbs items={crumbs} />
+      </div>
 
-          <div className="mt-5 flex items-center gap-2">
-            {article.market && <MarketChip market={article.market} />}
-            {article.market && <span className="text-text-muted" aria-hidden="true">·</span>}
-            <ContentTypeLabel contentType={article.contentType} />
-          </div>
+      {/* Title block, capped at 820 — the design's measure for a 44px h1. */}
+      <div className="mt-5 max-w-[820px]">
+        <CategoryChip name={category.name} href={category.href} />
 
-          {/* The page's only h1. No clamp — the full title always shows. */}
-          <h1 className="mt-3 text-[26px] font-bold leading-[1.5] text-text-primary md:text-[38px]">
-            {article.title}
-          </h1>
+        <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:pretty] md:text-[44px]">
+          {bidiTitle(article.title)}
+        </h1>
 
-          <div className="mt-4">
+        {/*
+          NO LEAD PARAGRAPH, and the omission is deliberate.
+
+          The design draws a 20px standfirst here. There is no `dek` field to
+          fill it — `decisions.md` dropped the idea because the live site's
+          excerpts are auto-truncated mid-sentence, which is the evidence that
+          this team does not write summaries. On a CARD the fallback is the
+          article's own H2 headings, which works: the card has nothing else.
+
+          Here it does not. The table of contents sits a few hundred pixels
+          below and lists those same headings, so a derived lead would print
+          the article's outline twice on one screen — and the body's first
+          paragraph, which follows immediately, is already the standfirst in
+          practice.
+
+          When a real dek field exists, it goes here.
+        */}
+
+        <div className="mt-6 flex flex-wrap items-center gap-4 border-b border-border-subtle pb-6">
+          <span
+            aria-hidden="true"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[16px] text-text-secondary"
+          >
+            {authorInitial(article.author.name)}
+          </span>
+
+          <div className="flex min-w-0 flex-col gap-1">
+            <Link
+              href={`/author/${article.author.slug}`}
+              className="text-[15px] font-medium text-text-primary transition-colors hover:text-accent"
+            >
+              {article.author.name}
+            </Link>
             <ArticleMeta
               readingTime={article.readingTime}
               publishedAt={article.publishedAt}
@@ -247,60 +283,146 @@ export default async function ArticlePage({
           </div>
 
           {/*
-            Hero is the LCP element: priority, fixed 3:2 box, no text overlay.
-            Mag thumbnails frequently have the title baked into the image, so an
-            overlay would collide with it.
+            THE SHARE ROW USED TO SIT HERE, `ms-auto` at the end of the byline.
+
+            It is now below the article body, and the reason is order of
+            operations rather than tidiness: nobody shares an article they have
+            not read. Putting the control at the top asks for the decision
+            before the reader has anything to decide with, and it spends the
+            most valuable strip on the page — directly beneath a 44px h1, at the
+            reading edge — on three buttons instead of on who wrote this and
+            when. Below the body is both the conventional place and the point at
+            which the question is real.
+
+            It also removes a competition the header could not win: three
+            bordered 44px circles next to the byline read as loud as the title
+            they sit under. The brief's third option was to keep it here but
+            make it quieter; moving it makes it quieter AND puts it where it is
+            useful, so that is the one taken.
           */}
-          {article.featuredImage && (
-            <div className="relative mt-6 aspect-[3/2] w-full overflow-hidden rounded-card bg-surface-raised">
-              <Image
-                src={article.featuredImage.url}
-                alt={article.featuredImage.alt}
-                fill
-                sizes="(max-width: 1023px) 100vw, 700px"
-                className="object-cover"
-                priority
-              />
-            </div>
-          )}
         </div>
-      </Section>
+      </div>
 
-      <Section width="article" className="!pt-10">
-        <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-          {/* min-w-0 lets the column shrink below its content width, which is
-              what stops a long unbroken string from blowing out the layout. */}
-          <div className="min-w-0 flex-1">
-            <div className="mb-8 lg:hidden">
-              <TableOfContents headings={article.outline} />
-            </div>
+      {/* Featured image — the ONE priority image on this page. */}
+      {article.featuredImage && heroRatios && (
+        <figure className="mt-7">
+          {/*
+            The box takes the IMAGE's shape, not a shape of its own.
 
-            <ArticleBody html={article.content} />
-
-            <div className="mt-12 max-w-prose space-y-8">
-              <AuthorBox author={article.author} />
-
-              <NewsletterCta />
-
-              {/* Renders nothing when there are no approved comments. */}
-              <CommentList thread={comments} />
-
-              <CommentForm articleId={article.id} />
-            </div>
+            `h-[220px] md:h-[420px]` full-bleed is a 3.24 ratio at 1440, and
+            nothing in the archive is that shape — see lib/hero-ratio.ts for the
+            measured spread and the clamp. The ratio is inline rather than a
+            Tailwind class because it is per-image data, and inline is also what
+            makes it CLS-safe: it is in the markup before the image loads, so
+            the height is final from first paint.
+          */}
+          <div
+            className="aspect-[var(--hero-ratio-sm)] md:aspect-[var(--hero-ratio-md)]"
+            style={
+              {
+                '--hero-ratio-sm': heroRatios.mobile,
+                '--hero-ratio-md': heroRatios.desktop,
+              } as CSSProperties
+            }
+          >
+            <CardImage
+              image={article.featuredImage}
+              sizes="(max-width: 1023px) 100vw, 1360px"
+              priority
+              rounded="rounded-card"
+            />
           </div>
+          {article.featuredImage.alt && (
+            <figcaption className="mt-2.5 text-[12.5px] leading-[1.7] text-text-muted">
+              {article.featuredImage.alt}
+            </figcaption>
+          )}
+        </figure>
+      )}
 
-          {/* Inline-end column — the LEFT side in RTL. */}
-          <aside className="hidden w-[260px] shrink-0 lg:block">
-            <TableOfContents headings={article.outline} />
-          </aside>
+      {/*
+        THREE COLUMNS ONLY AT xl (1280+).
+
+        The obvious `lg:grid-cols-[260px_1fr_300px]` is wrong and measurably
+        so: at exactly 1024 it leaves the article column 299px wide — about 30
+        Persian characters a line, less than half the 70–73 the type scale is
+        built for. The design's responsive note says the post page drops to two
+        columns between 1024 and 1279, with the contents collapsing into a
+        `<details>` above the article, and this is why.
+
+        So: one column below lg, article + right rail at lg, all three at xl.
+      */}
+      <div className="mt-9 grid items-start gap-8 lg:mt-11 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[260px_1fr_300px]">
+        {/*
+          `sticky` GOES ON THE GRID ITEM, not on the panel inside it — the same
+          shape the right-hand rail below uses, deliberately, because two
+          sidebars in one grid with two positioning strategies is how this
+          drifts apart again.
+
+          THIS IS WHY THE ToC DID NOT STICK. `ArticleAside`'s <nav> already
+          carried `sticky top-[76px]` and had since it was written. It did
+          nothing, because a sticky element can only travel inside its
+          containing block, and its containing block was this wrapper — which
+          under the grid's `items-start` is exactly as tall as the panel it
+          holds. Zero travel. Nothing errors, nothing warns, and the class is
+          right there in the markup, which is why it survived a review.
+
+          The right-hand rail escaped it by accident of structure: it IS the
+          grid item, and a sticky grid item resolves against its grid AREA,
+          which spans the full row height — the length of the article. Moving
+          `sticky` up one level here gives the ToC the same travel.
+
+          `xl:` and not `lg:`, unlike the right rail. Below 1280 this column is
+          `lg:col-span-2` — a full-width strip above the article holding the
+          <details> disclosure, not a rail — and a sticky strip there would
+          pin a collapsed accordion over the text. See ArticleAside.
+        */}
+        <div className="lg:order-2 lg:col-span-2 xl:order-1 xl:col-span-1 xl:sticky xl:top-[76px]">
+          <ArticleAside headings={article.outline} />
         </div>
-      </Section>
+
+        <div className="min-w-0 lg:order-3 xl:order-2">
+          <ArticleBody html={article.content} />
+
+          <div className="mt-10 flex flex-col gap-8">
+            <ShareRow slug={article.slug} title={article.title} />
+            <AuthorBox author={article.author} />
+            <CommentList thread={comments} />
+            <CommentForm articleId={article.id} />
+          </div>
+        </div>
+
+        <aside className="flex flex-col gap-6 lg:sticky lg:order-4 lg:top-[76px] xl:order-3">
+          <LinkListCard
+            title="ادامه‌ی مسیر"
+            items={onward.items.slice(0, 4).map((a) => ({
+              slug: a.slug,
+              title: a.title,
+              meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
+            }))}
+          />
+          <NewsletterCta />
+        </aside>
+      </div>
 
       {related.items.length >= 3 && (
-        <Section width="article" className="!pt-0">
-          <h2 className="mb-6 text-[22px] font-bold text-text-primary">مطالب مرتبط</h2>
-          <ArticleGrid articles={related.items} />
-        </Section>
+        <section aria-labelledby="related-heading" className="mt-16">
+          <div className="mb-6 flex items-center gap-4">
+            <h2
+              id="related-heading"
+              className="text-[22px] font-bold tracking-[-0.2px] text-text-primary md:text-[24px]"
+            >
+              مطالب مرتبط
+            </h2>
+            <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.items.map((item) => (
+              <PostCard key={item.id} article={item} />
+            ))}
+          </div>
+        </section>
       )}
     </main>
   );

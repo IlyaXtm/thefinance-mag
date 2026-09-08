@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { permanentRedirect } from 'next/navigation';
+import { getCategories } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
@@ -32,17 +34,22 @@ export const metadata: Metadata = toMetadata({
 /**
  * Page ONE of the archive.
  *
- * `type` is read from the query string and `page` is not — the page number now
+ * `type` is read from the query string and `page` is not — the page number
  * lives in the path, at `/archive/page/<n>`.
  *
- * NOTE: this route is still dynamic, and `type` is why. Awaiting `searchParams`
+ * THIS ROUTE IS STILL DYNAMIC AND `type` IS STILL WHY. Awaiting `searchParams`
  * at all opts a route out of prerendering, so `/archive` cannot be static while
- * it also serves `/archive?type=education` — one route cannot be both. Moving
- * the page number out was still worth doing on its own: it is what makes the
- * market and author archives static, and it stops `/archive/page/2` from being
- * a second dynamic shape. Making `/archive` itself static needs the type filter
- * to leave the query string too, which is a product decision, not a technical
- * one.
+ * it also answers `/archive?type=education`. What changed is what it answers
+ * WITH: a `?type=` that has a real category behind it is now a permanent
+ * redirect to `/category/<slug>`, which is static and indexable. The dynamic
+ * shape survives as a compatibility surface for old links, not as the address
+ * of any content.
+ *
+ * `/archive` itself — no query string — is unaffected and still renders here.
+ * It cannot be prerendered while this function reads `searchParams` at all;
+ * making it static would mean moving the redirect into middleware, which
+ * cannot ask the CMS which categories exist and would therefore have to
+ * hardcode the list this whole feature exists to stop hardcoding.
  */
 export default async function ArchivePage({
   searchParams,
@@ -50,6 +57,23 @@ export default async function ArchivePage({
   searchParams: Promise<{ type?: string }>;
 }) {
   const { type } = await searchParams;
+
+  if (type) {
+    /*
+      301/308 to the path route when the category is real.
+
+      Checked against the live taxonomy rather than against CONTENT_TYPES,
+      because the two are not the same set and the difference is load-bearing
+      in both directions: «مقالات» is a category with no content type, and
+      «گزارش» is a content type with no category. Redirecting `?type=report`
+      on the strength of it being a known type would send readers to a 404.
+    */
+    const categories = await getCategories();
+    if (categories.some((category) => category.slug === type)) {
+      permanentRedirect(`/category/${type}`);
+    }
+  }
+
   const contentType = CONTENT_TYPES.find((t) => t.slug === type);
 
   return <ArchiveView contentType={contentType} page={1} />;

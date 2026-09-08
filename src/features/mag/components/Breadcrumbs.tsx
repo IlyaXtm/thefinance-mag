@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { bidiTitle } from '../lib/bidi-title';
 
 export type Crumb = { name: string; href: string };
 
@@ -28,11 +29,11 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
             <li key={item.href} className="flex items-center gap-1.5">
               {isLast ? (
                 <span aria-current="page" className="line-clamp-1 text-text-secondary">
-                  {item.name}
+                  {bidiTitle(item.name)}
                 </span>
               ) : (
                 <Link href={item.href} className="transition-colors hover:text-text-primary">
-                  {item.name}
+                  {bidiTitle(item.name)}
                 </Link>
               )}
 

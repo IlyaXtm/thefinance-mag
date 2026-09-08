@@ -1,35 +1,28 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
-import type { ContentTypeSlug } from '@/features/mag/types/mag.types';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { toMetadata } from '@/features/mag/lib/seo';
-import { magPath, MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
+import { MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
+import type { ContentTypeSlug } from '@/features/mag/types/mag.types';
 import {
-  ArticleRow,
-  FeaturedArticle,
+  CategoryListCard,
+  HeroFeature,
+  HeroSideCard,
   NewsletterCta,
-  SectionHeading,
-  Section,
-  TopicList,
+  PostCard,
 } from '@/features/mag/components';
 
 /**
- * thefinance.ir/mag — the index.
+ * thefinance.ir/mag — the home page.
  *
- * A SERVER COMPONENT reading the service directly rather than through an SWR
- * hook. SWR renders an empty shell and fills it client-side, which is exactly
- * what a crawler sees: nothing. SEO is this product's first priority, so
- * indexable content is server-rendered.
- *
- * THE SHAPE OF THIS PAGE IS DICTATED BY THE ARCHIVE, NOT BY A TEMPLATE.
- *
- * 32 published articles. 18 carry no market. Housing has zero. No reports
- * exist. The original design — a 1+3 lead block, a six-way market filter, a
- * nine-card grid and a reports band — consumed twelve articles immediately,
- * showed several of them twice, and advertised three empty buckets.
- *
- * So: one image, everything else text, and every section drawn from a
- * non-overlapping pool.
+ * v4: image-led. The previous listing showed artwork exactly once because
+ * every featured image had the headline baked into it, so a card grid printed
+ * each title twice. The v4 design reverses that decision deliberately and this
+ * page follows it — which makes the artwork a real dependency: a card with a
+ * missing or wrong-aspect image now reads as broken rather than as restraint.
+ * `CardImage` fixes the box so the grid cannot reflow, and every image needs a
+ * real Persian alt.
  */
 
 export const revalidate = 300;
@@ -44,158 +37,96 @@ export const metadata: Metadata = toMetadata({
 /**
  * The lead slot never carries news.
  *
- * An RSS automation files roughly two «اخبار» items a day. Leading with the
- * newest article therefore meant the hero was almost always a three-minute
- * translated headline, and a publication whose identity is analysis and
- * education would never show either in the largest editorial statement on its
- * front page. Because the automation runs daily, that degrades on its own
- * rather than correcting.
- *
- * Accepted cost: with infrequent human publishing the lead can go stale for
- * weeks. A good article from last week beats an automated headline from this
- * morning.
+ * An RSS automation files roughly two «اخبار» a day, so leading with the
+ * newest article meant the hero was almost always a three-minute translated
+ * headline — a publication whose identity is analysis and education would
+ * never show either in the largest editorial statement on its front page.
  */
 const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['analysis', 'education', 'report'];
 
-/**
- * How far back to look for a lead.
- *
- * The window has to outrun the automation. At roughly two news items a day, 20
- * covers about ten days of uninterrupted publishing before a genuine article
- * could fall out of range — and the same request supplies the latest list, so
- * widening it costs no extra round trip. The API has no "not this type"
- * filter, and inventing one against a field WordPress doesn't expose would be
- * worse than filtering a window we already fetched.
- */
+/** Wide enough to outrun the automation — about ten days of it. */
 const LEAD_WINDOW = 20;
 
 export default async function MagIndexPage() {
-  const [pool, education, markets] = await Promise.all([
+  const [pool, markets] = await Promise.all([
     getArticles({ page: 1, perPage: LEAD_WINDOW }),
-    getArticles({ page: 1, perPage: 6, contentType: 'education' }),
     getMarkets(),
   ]);
 
   const featured = pool.items.find((a) => LEAD_TYPES.includes(a.contentType.slug));
+  const rest = pool.items.filter((a) => a.slug !== featured?.slug);
 
-  /*
-    The latest list keeps news — it is only barred from the hero — and drops
-    whatever the hero took so nothing appears twice on one screen.
-
-    If the window holds nothing but news there is no hero at all, and the page
-    opens on the latest list. That is the honest degradation: falling back to a
-    news item would defeat the rule this exists to enforce.
-  */
-  const latestItems = pool.items.filter((a) => a.slug !== featured?.slug);
-  const rest = latestItems.slice(0, 6);
-
-  /*
-    De-duplication.
-
-    Anything shown in the hero or the latest list is excluded from the
-    educational section. Without this the same article appears twice on one
-    screen, which is what makes a small archive look both sparse AND
-    repetitive — the single most avoidable error at this size.
-  */
-  const shown = new Set([featured?.slug, ...rest.map((a) => a.slug)].filter(Boolean));
-  const learning = education.items.filter((a) => !shown.has(a.slug)).slice(0, 5);
+  /* Two beside the hero, six in the grid below, nothing repeated. */
+  const heroSide = rest.slice(0, 2);
+  const grid = rest.slice(2, 8);
 
   return (
-    <main>
-      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 7))]} />
+    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 8))]} />
 
-      {/*
-        Masthead. Deliberately quiet: no hero image, no gradient, no
-        decorative rule. The lead article is the page's focal point, and a
-        second competing one would flatten it.
-      */}
-      <Section className="!pb-0">
-        <div className="flex flex-col gap-3 border-b border-border-strong pb-8 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-[30px] font-bold leading-[1.4] text-text-primary md:text-[38px]">
-              {MAG_NAME}
-            </h1>
-            <p className="mt-2 text-text-secondary">{MAG_DESCRIPTION}</p>
-          </div>
+      <h1 className="sr-only">{MAG_NAME}</h1>
 
-          {/* Native form action — basePath is NOT applied automatically, so it
-              goes through magPath. Without it the search box posts to
-              thefinance.ir/search and leaves the magazine. */}
-          <form action={magPath('/search')} method="get" className="shrink-0">
-            <label htmlFor="mag-search" className="sr-only">
-              جستجو در مجله
-            </label>
-            <input
-              id="mag-search"
-              name="q"
-              type="search"
-              placeholder="جستجو در مجله"
-              className="min-h-11 w-full rounded-full border border-border-interactive bg-transparent px-4 text-[14px] text-text-primary placeholder:text-text-muted md:w-56"
-            />
-          </form>
-        </div>
-      </Section>
-
+      {/* Hero: 1.55fr | 1fr, stacking below lg. */}
       {featured && (
-        <Section className="!pb-0 !pt-10">
-          <FeaturedArticle article={featured} />
-        </Section>
-      )}
+        <section aria-labelledby="lead-heading" className="mt-6 lg:mt-8">
+          <h2 id="lead-heading" className="sr-only">
+            مطلب اصلی
+          </h2>
 
-      {/*
-        Two columns on desktop: the reading list carries the weight, topics sit
-        alongside as a quiet index. On mobile they stack, latest first —
-        somebody on a phone came to read, not to browse taxonomy.
-      */}
-      <Section className="!pt-16">
-        <div className="grid gap-12 lg:grid-cols-[1.6fr_1fr] lg:gap-16">
-          <div className="flex flex-col gap-12">
-            <section>
-              <SectionHeading title="تازه‌ترین‌ها" href="/archive" linkLabel="آرشیو" />
-              <div>
-                {rest.map((article) => (
-                  <ArticleRow key={article.id} article={article} />
+          <div className="grid gap-6 lg:grid-cols-[1.55fr_1fr]">
+            <HeroFeature article={featured} />
+
+            {heroSide.length > 0 && (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
+                {heroSide.map((article) => (
+                  <HeroSideCard key={article.id} article={article} />
                 ))}
               </div>
-            </section>
-
-            {learning.length > 0 && (
-              <section>
-                {/*
-                  Not numbered.
-
-                  A numbered path implies a teaching order this data doesn't
-                  carry yet — WordPress sorts by publication date, which has no
-                  relationship to what a beginner should read first. Numbering
-                  it anyway would be decoration pretending to be structure.
-
-                  When the `series_order` field lands (backlog B2), pass `index`
-                  to ArticleRow and this becomes the real learning path.
-                */}
-                <SectionHeading
-                  title="آموزش"
-                  href="/archive?type=education"
-                  linkLabel="همه آموزش‌ها"
-                />
-                <div>
-                  {learning.map((article) => (
-                    <ArticleRow key={article.id} article={article} />
-                  ))}
-                </div>
-              </section>
             )}
           </div>
+        </section>
+      )}
 
-          <aside className="flex flex-col gap-12">
-            <section>
-              <SectionHeading title="موضوع‌ها" />
-              <TopicList markets={markets} />
-            </section>
+      {/* Body: 1fr | 320px, 56px gap. */}
+      <div className="mt-14 grid items-start gap-10 lg:mt-16 lg:grid-cols-[1fr_320px] lg:gap-14">
+        <section aria-labelledby="latest-heading">
+          <div className="mb-6 flex items-center gap-4">
+            <h2
+              id="latest-heading"
+              className="text-[22px] font-bold tracking-[-0.2px] text-text-primary md:text-[24px]"
+            >
+              تازه‌ترین مطالب
+            </h2>
+            <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
+            <Link
+              href="/archive"
+              className="inline-flex min-h-11 shrink-0 items-center text-[14px] text-accent transition-colors hover:text-text-primary"
+            >
+              همه‌ی مطالب ←
+            </Link>
+          </div>
 
-            <NewsletterCta />
-          </aside>
-        </div>
-      </Section>
+          <div className="grid gap-6 sm:grid-cols-2 lg:gap-7">
+            {grid.map((article) => (
+              <PostCard key={article.id} article={article} />
+            ))}
+          </div>
+
+          <div className="mt-9 flex justify-center">
+            <Link
+              href="/archive"
+              className="inline-flex h-[46px] items-center rounded-full border border-border-interactive px-6 text-[15px] text-text-primary transition-colors hover:border-accent hover:bg-accent-soft"
+            >
+              مطالب بیشتر
+            </Link>
+          </div>
+        </section>
+
+        <aside className="flex flex-col gap-6 lg:sticky lg:top-[76px]">
+          <CategoryListCard markets={markets} />
+          <NewsletterCta />
+        </aside>
+      </div>
     </main>
   );
 }

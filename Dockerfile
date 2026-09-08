@@ -41,7 +41,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG SITE_ORIGIN=https://thefinance.ir
 ARG WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql
 ARG USE_MOCK=false
-ENV SITE_ORIGIN=$SITE_ORIGIN \
+# The image has no .git, so the build id has to be passed in. Without it the
+# app reports "unknown" and /mag/health cannot tell you which commit is running
+# — which is exactly how a three-week-stale container went unnoticed.
+#   docker build --build-arg BUILD_ID=$(git rev-parse --short HEAD) ...
+ARG BUILD_ID=unknown
+ENV BUILD_ID=$BUILD_ID \
+    SITE_ORIGIN=$SITE_ORIGIN \
     WP_GRAPHQL_ENDPOINT=$WP_GRAPHQL_ENDPOINT \
     USE_MOCK=$USE_MOCK
 

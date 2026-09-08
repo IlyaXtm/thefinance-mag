@@ -4,6 +4,7 @@ import { getMarket } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError, MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import type { MarketSlug } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
+import { isThinArchive } from '@/features/mag/lib/taxonomy';
 import { MAG_NAME } from '@/features/mag/lib/site';
 import { MarketArchiveView } from './_components/MarketArchiveView';
 
@@ -60,6 +61,17 @@ export async function generateMetadata({
     fallbackTitle: market.name,
     fallbackDescription: market.description ?? `مطالب ${market.name} در ${MAG_NAME}`,
     ogTitle: `${market.name} | ${MAG_NAME}`,
+    /*
+      The same floor the category archives use, and today it catches ALL SIX
+      markets — the largest holds five articles. That is the honest reading of
+      these pages: 39 of 53 articles carry no market, so a market archive is a
+      thin page, and the three the header links to are thin too.
+
+      The route, the links and the crawl path are untouched; only the request
+      to index is withdrawn, and it comes back on its own the moment tagging
+      pushes a market past the floor. See lib/taxonomy.ts and backlog B17.
+    */
+    noindex: isThinArchive(market.count),
   });
 }
 

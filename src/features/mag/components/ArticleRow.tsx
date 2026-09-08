@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
-import { formatJalali, formatReadingTime, toDateTimeAttr, toPersianDigits } from '../lib/format';
+import {
+  formatJalali,
+  formatReadingTime,
+  toDateTimeAttr,
+  toPersianDigitsUngrouped,
+} from '../lib/format';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * A text-only article row.
@@ -40,13 +46,14 @@ export function ArticleRow({
             aria-hidden="true"
             className="mt-1 w-6 shrink-0 text-[13px] tabular-nums text-text-muted"
           >
-            {toPersianDigits(index)}
+            {/* A position in a list, not a count of anything — ungrouped. */}
+            {toPersianDigitsUngrouped(index)}
           </span>
         )}
 
         <div className="min-w-0 flex-1">
           <h3 className="text-[17px] font-semibold leading-[1.6] text-text-primary transition-colors group-hover:text-accent md:text-[19px]">
-            {title}
+            {bidiTitle(title)}
           </h3>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-text-muted">

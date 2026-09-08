@@ -4,7 +4,7 @@ import { getAuthor } from '@/features/mag/api/v1/mag.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import { AuthorArchiveView } from '../../_components/AuthorArchiveView';
 
 /**
@@ -44,7 +44,7 @@ export async function generateMetadata({
   return toMetadata({
     seo: null,
     path: `/author/${author.slug}/page/${page}`,
-    fallbackTitle: `${author.name} — صفحه ${toPersianDigits(page)}`,
+    fallbackTitle: `${author.name} — صفحه ${toPersianDigitsUngrouped(page)}`,
     fallbackDescription: author.bio ?? `مطالب ${author.name} در ${MAG_NAME}`,
   });
 }

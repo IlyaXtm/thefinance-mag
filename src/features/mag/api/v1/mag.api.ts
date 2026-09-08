@@ -16,6 +16,7 @@ import {
   type ArticleListParams,
   type ArticleSummary,
   type Author,
+  type Category,
   type MagImage,
   type Market,
   type MarketSlug,
@@ -26,6 +27,7 @@ import {
 } from '../../types/mag.types';
 import type { MagSeo } from '../../types/mag-seo.types';
 import { resolveContentType } from '../../lib/content-types';
+import { isExcludedCategory } from '../../lib/taxonomy';
 import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
 import { SITE_ORIGIN } from '../../lib/site';
 
@@ -73,6 +75,25 @@ async function gql<T>(
 
 /* ------------------------------------------------------------------ */
 
+/*
+  DEPLOY ORDER IS NOT OPTIONAL: the mu-plugin ships BEFORE this does.
+
+  `outlineHeadings` is registered by `wordpress/mu-plugins/thefinance-mag.php`.
+  GraphQL rejects an unknown field outright rather than returning null for it,
+  so against a CMS without that plugin version every query built from these
+  fields comes back as:
+
+      Cannot query field "outlineHeadings" on type "Post".
+
+  `gql()` turns that into a MagFetchError, which means the listing, the archive
+  and search all fail — not degrade. Verified against a stub that returns
+  exactly that error: /mag/search answered 500, and /mag/archive only answered
+  200 because ISR was still holding a page from before the field existed, which
+  is the worst kind of pass.
+
+  Adding a field to a listing query is therefore a two-step deploy: WordPress
+  first, frontend second.
+*/
 const SUMMARY_FIELDS = `
   databaseId
   slug
@@ -80,6 +101,11 @@ const SUMMARY_FIELDS = `
   date
   readingTime
   modifiedAtIso
+  # RAW, not RENDERED: only the hand-written field, never WordPress's
+  # auto-truncated summary. Standard WPGraphQL — no plugin dependency, so
+  # this line is safe to deploy ahead of the mu-plugin.
+  excerpt(format: RAW)
+  outlineHeadings
   categories { nodes { slug name } }
   markets { nodes { slug name } }
   author { node { name slug description } }
@@ -92,7 +118,6 @@ const SEO_FIELDS = `
     description
     canonicalUrl
     robots
-    breadcrumbs { text url isHidden }
     openGraph { title description url type locale image { url } twitterMeta { card } }
   }
 `;
@@ -109,6 +134,8 @@ interface WpSummary {
   date: string;
   readingTime: number | null;
   modifiedAtIso: string | null;
+  excerpt: string | null;
+  outlineHeadings: string[] | null;
   categories: { nodes: WpTerm[] } | null;
   markets: { nodes: WpTerm[] } | null;
   author: { node: { name: string; slug: string; description: string | null } | null } | null;
@@ -142,16 +169,18 @@ function mapImage(node: WpSummary['featuredImage']): MagImage | null {
   if (!image?.sourceUrl) return null;
 
   return {
-    /*
-      The CMS host, not the public one. The image optimizer fetches
-      server-side from inside the container; nginx on the frontend listens on
-      :80 only — TLS terminates at the CDN — so a fetch of
-      https://thefinance.ir/... leaves the box, hits the CDN and hairpins back,
-      which times out and every image 502s. wp.thefinance.ir is a different
-      host and resolves normally. Verified from inside the container: the CMS
-      URL returns 200, the public one does not.
-    */
-    url: image.sourceUrl.replace('https://thefinance.ir/mag/', 'https://wp.thefinance.ir/'),
+    /* THE PUBLIC URL, always. The CMS returns wp.thefinance.ir for media on
+       some code paths, and a de-indexed host must not reach JSON-LD or
+       og:image — the two consumers that read this field as-is.
+
+       It is NOT the URL `next/image` fetches. That one is built by `imageSrc`
+       at the point of use, because the optimizer runs server-side inside the
+       container and cannot reach thefinance.ir from there. Splitting it here
+       instead would fix the images by breaking structured data; see the note
+       on `toCmsMediaUrl`.
+
+       The `??` is only for the type — `sourceUrl` is proven non-null above. */
+    url: toPublicUrl(image.sourceUrl) ?? image.sourceUrl,
     /* An empty alt is surfaced as-is rather than invented. Fabricated alt text
        is worse than none — it misdescribes the image to the people who rely
        on it. */
@@ -216,8 +245,22 @@ function mapSummary(node: WpSummary): ArticleSummary {
     publishedAt: node.date,
     modifiedAt: node.modifiedAtIso,
     author: mapAuthor(node.author),
-    /* Only the full article parses its body for headings. */
-    outline: [],
+    /*
+      Server-derived, by `tf_mag_outline_headings()` in the mu-plugin.
+
+      It cannot be derived here: the listing query deliberately does not fetch
+      `content` — nine full article bodies on the page that carries LCP and
+      ISR — and this used to be a hardcoded `[]`, which meant `cardDek()`
+      returned null for every card in production while the mock filled the
+      field in and hid it. The article and preview paths override this with
+      `extractHeadings(content)`, which they can afford because they already
+      have the body.
+    */
+    outline: node.outlineHeadings ?? [],
+
+    /* Trimmed to null: WordPress returns '' for an unset excerpt, and an empty
+       string would read as "present" at every call site. */
+    excerpt: node.excerpt?.trim() || null,
   };
 }
 
@@ -227,7 +270,6 @@ function mapSeo(raw: unknown): MagSeo {
     description?: string | null;
     canonicalUrl?: string | null;
     robots?: string[] | null;
-    breadcrumbs?: Array<{ text?: string | null; url?: string | null; isHidden?: boolean | null }> | null;
     openGraph?: {
       title?: string | null;
       description?: string | null;
@@ -244,19 +286,7 @@ function mapSeo(raw: unknown): MagSeo {
     description: seo.description ?? null,
     canonicalUrl: toPublicUrl(seo.canonicalUrl ?? null),
     robots: seo.robots ?? [],
-    /*
-      Rank Math's breadcrumbs are mapped but the UI builds its own trail from
-      the article's market and title. Keeping both in sync matters: structured
-      breadcrumbs that disagree with the visible ones is a mismatch Google
-      flags, so whichever the page renders must be the one it marks up.
-    */
-    breadcrumbs: (seo.breadcrumbs ?? [])
-      .filter((crumb) => !crumb.isHidden)
-      .map((crumb) => ({
-        text: crumb.text ?? '',
-        url: toPublicUrl(crumb.url ?? null) ?? '',
-        isHidden: false,
-      })),
+    breadcrumbs: [],
     /*
       Rank Math's own JSON-LD is fetched but NOT emitted. The schema layer
       builds its own — it knows which articles are news (NewsArticle) versus
@@ -333,10 +363,18 @@ async function cursorForPage(
 export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
-  const { page = 1, perPage = 9, market, contentType, authorSlug, excludeSlug } = params;
+  /*
+    `market` is accepted but no longer applied here — market archives go through
+    getMarketArticles(), which derives list, count and pagination from one
+    source. Filtering it here filtered a single unfiltered page and produced a
+    list that disagreed with its own count.
+  */
+  const { page = 1, perPage = 9, category, contentType, authorSlug, excludeSlug } = params;
 
   const filters = {
-    category: contentType ?? null,
+    /* Both map to `categoryName`; `category` is the unnarrowed form the
+       /category/<slug> route uses. See ArticleListParams. */
+    category: category ?? contentType ?? null,
     author: authorSlug ?? null,
     search: null,
   };
@@ -364,15 +402,6 @@ export async function getArticles(
 
   let items = data.posts.nodes.map(mapSummary);
 
-  /*
-    Market filtering happens here rather than in the query.
-
-    A taxQuery would be cleaner, but `market` is a custom taxonomy and a wrong
-    enum name would silently return nothing rather than erroring. Filtering a
-    single page in JS is honest and can't fail quietly. Revisit if the archive
-    outgrows a few hundred posts.
-  */
-  if (market) items = items.filter((a) => a.market?.slug === market);
   if (excludeSlug) items = items.filter((a) => a.slug !== excludeSlug);
 
   /*
@@ -388,6 +417,88 @@ export async function getArticles(
     perPage,
     total,
     totalPages: Math.max(1, Math.ceil(total / perPage)),
+  };
+}
+
+/**
+ * How many posts a whole-archive fetch will take. 53 published today.
+ *
+ * If the archive ever exceeds this the market pages under-report rather than
+ * erroring, so `magArchiveOverflowed()` below makes that visible instead of
+ * silent.
+ */
+const ARCHIVE_FETCH_MAX = 100;
+
+let archiveOverflowed = false;
+
+/** True when the archive outgrew ARCHIVE_FETCH_MAX — surfaced on /mag/health. */
+export function magArchiveOverflowed(): boolean {
+  return archiveOverflowed;
+}
+
+/**
+ * Every published summary, in one query.
+ *
+ * WHY THIS EXISTS. Market filtering used to happen in JS over a SINGLE PAGE of
+ * an unfiltered query, while the count came from the taxonomy term's own
+ * `count` field and pagination came from an unfiltered total. Three different
+ * sources for three numbers about the same list, and on
+ * `/mag/market/gold-usd` they disagreed on screen at once: the header said
+ * «۱ مطلب» above two rendered cards.
+ *
+ * It was worse than a wrong label. Filtering one page of `perPage` posts means
+ * a market whose articles sit further down the archive shows FEWER than it has,
+ * or none at all, and `totalPages` came from the unfiltered count so page 2 of
+ * a market re-filtered a different unfiltered page. At 32 posts that mostly
+ * hid; at 53 it does not.
+ *
+ * A taxQuery in the GraphQL layer would be the scalable fix. It is deliberately
+ * NOT what this does: `market` is a custom taxonomy, a wrong enum name returns
+ * nothing rather than erroring, and this build environment cannot reach the CMS
+ * to verify the name — so it would swap a visible wrong number for a silent
+ * empty page. Fetching the archive once and deriving everything from it is
+ * correct at this size, testable without the CMS, and cannot fail quietly.
+ *
+ * Revisit when the archive approaches ARCHIVE_FETCH_MAX.
+ */
+export async function getAllSummaries(): Promise<ArticleSummary[]> {
+  const data = await gql<{ posts: { nodes: WpSummary[] } }>(
+    `query AllArticles($size: Int!) {
+      posts(first: $size, where: { status: PUBLISH }) {
+        nodes { ${SUMMARY_FIELDS} }
+      }
+    }`,
+    { size: ARCHIVE_FETCH_MAX },
+  );
+
+  const nodes = data.posts.nodes;
+  archiveOverflowed = nodes.length >= ARCHIVE_FETCH_MAX;
+
+  return nodes.map(mapSummary);
+}
+
+/**
+ * A market's archive: list, count and pagination from ONE source.
+ *
+ * `total` here is the number of posts actually in this market, so the header
+ * strip, the sidebar and the rendered rows cannot disagree — they are three
+ * readings of the same array.
+ */
+export async function getMarketArticles(
+  marketSlug: string,
+  page: number,
+  perPage: number,
+): Promise<Paginated<ArticleSummary>> {
+  const all = await getAllSummaries();
+  const items = all.filter((a) => a.market?.slug === marketSlug);
+  const start = (Math.max(1, page) - 1) * perPage;
+
+  return {
+    items: items.slice(start, start + perPage),
+    page: Math.max(1, page),
+    perPage,
+    total: items.length,
+    totalPages: Math.max(1, Math.ceil(items.length / perPage)),
   };
 }
 
@@ -513,6 +624,63 @@ export async function getPreviewArticle(id: string, secret: string): Promise<Art
   };
 }
 
+/**
+ * The category taxonomy, live.
+ *
+ * SOURCED FROM THE CMS RATHER THAN A CONSTANT, unlike CONTENT_TYPES. That is
+ * the difference the routes are built on: `/mag/category/<slug>` must exist for
+ * a category the editors add tomorrow without a deploy, and `generateStaticParams`
+ * reads this. Content types are four values the frontend defines and resolves
+ * per article, so they stay in code.
+ *
+ * `count` IS `node.count` here, where the market archives deliberately derive
+ * theirs from the posts instead. The reason the markets do that does not apply:
+ * there the count disagreed with a list the same page rendered, because market
+ * filtering happened in JS over one unfiltered page. A category archive queries
+ * `categoryName` server-side, so its list and its count are already the same
+ * question asked of the same index. Deriving these would mean partitioning the
+ * archive by a field `mapSummary` throws away — it resolves ONE content type
+ * per post and drops the rest — so it would under-count every overlapping term.
+ *
+ * `hideEmpty` is not passed. It is a real WPGraphQL argument, but an unknown
+ * field fails the whole query rather than being ignored, and this session
+ * cannot reach GraphiQL to confirm the spelling on this schema version. Empty
+ * terms are filtered here instead, which costs nothing at this size.
+ */
+export async function getCategories(): Promise<Category[]> {
+  const data = await gql<{
+    categories: {
+      nodes: Array<{ slug: string; name: string; description: string | null; count: number | null }>;
+    };
+  }>(
+    `query Categories {
+      categories(first: 100) { nodes { slug name description count } }
+    }`,
+    {},
+    3600,
+  );
+
+  return data.categories.nodes
+    .filter((node) => !isExcludedCategory(node.slug) && (node.count ?? 0) > 0)
+    .map((node) => ({
+      slug: node.slug,
+      name: node.name,
+      /* WordPress stores an empty description as '', not null. Normalised so
+         the archive header's `description ?? fallback` actually fires. */
+      description: node.description?.trim() ? node.description.trim() : null,
+      count: node.count ?? 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export async function getCategory(slug: string): Promise<Category> {
+  const category = (await getCategories()).find(
+    (c) => c.slug === slug || decodeURIComponent(c.slug) === decodeURIComponent(slug),
+  );
+  if (!category) throw new MagNotFoundError(slug);
+  return category;
+}
+
 export async function getMarkets(): Promise<Market[]> {
   const data = await gql<{
     markets: {
@@ -526,11 +694,31 @@ export async function getMarkets(): Promise<Market[]> {
     3600,
   );
 
+  /*
+    COUNTS COME FROM THE POSTS, NOT FROM `node.count`.
+
+    WordPress's term counter is a cached number maintained by term-relationship
+    bookkeeping. It disagreed with reality after the 53-post migration — the
+    gold-usd header read «۱ مطلب» over two rendered cards — and it counts
+    attachments to the term rather than "published posts the frontend will
+    show", so the two can drift apart for reasons that have nothing to do with
+    staleness.
+
+    Deriving from the same summaries the archives render means the sidebar, the
+    header strip and the rows are all reading one array.
+  */
+  const all = await getAllSummaries();
+  const perMarket = new Map<string, number>();
+  for (const article of all) {
+    const slug = article.market?.slug;
+    if (slug) perMarket.set(slug, (perMarket.get(slug) ?? 0) + 1);
+  }
+
   return data.markets.nodes.map((node) => ({
     slug: node.slug as MarketSlug,
     name: node.name,
     description: node.marketDescription,
-    count: node.count ?? 0,
+    count: perMarket.get(node.slug) ?? 0,
   }));
 }
 

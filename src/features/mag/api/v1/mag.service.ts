@@ -32,10 +32,15 @@ const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 
  */
 type MagSource = {
   getArticles: typeof mock.getArticles;
+  getMarketArticles: typeof mock.getMarketArticles;
+  getAllSummaries: typeof mock.getAllSummaries;
+  magArchiveOverflowed: typeof mock.magArchiveOverflowed;
   getArticle: typeof mock.getArticle;
   getPreviewArticle: typeof mock.getPreviewArticle;
   getMarkets: typeof mock.getMarkets;
   getMarket: typeof mock.getMarket;
+  getCategories: typeof mock.getCategories;
+  getCategory: typeof mock.getCategory;
   getAuthor: typeof mock.getAuthor;
   getAuthors: typeof mock.getAuthors;
   getReports: typeof mock.getReports;
@@ -65,6 +70,12 @@ export const getMarkets: MagSource['getMarkets'] = () => source.getMarkets();
 export const getMarket: MagSource['getMarket'] = (slug) =>
   source.getMarket(slug);
 
+/** The live category taxonomy — what `/category/<slug>` is generated from. */
+export const getCategories: MagSource['getCategories'] = () => source.getCategories();
+
+export const getCategory: MagSource['getCategory'] = (slug) =>
+  source.getCategory(slug);
+
 export const getAuthor: MagSource['getAuthor'] = (slug) =>
   source.getAuthor(slug);
 
@@ -77,4 +88,14 @@ export const searchArticles: MagSource['searchArticles'] = (params) =>
   source.searchArticles(params);
 
 /** Useful in dev banners and diagnostics. */
+/** A market's list, count and pagination from one source — see mag.api.ts. */
+export const getMarketArticles: MagSource['getMarketArticles'] = (slug, page, perPage) =>
+  source.getMarketArticles(slug, page, perPage);
+
+export const getAllSummaries: MagSource['getAllSummaries'] = () => source.getAllSummaries();
+
+/** True when the archive outgrew the single fetch market pages rely on. */
+export const magArchiveOverflowed: MagSource['magArchiveOverflowed'] = () =>
+  source.magArchiveOverflowed();
+
 export const magDataSource = USE_MOCK ? 'mock' : 'wpgraphql';

@@ -29,10 +29,13 @@ function Chip({ item, isActive }: { item: FilterItem; isActive: boolean }) {
       aria-current={isActive ? 'page' : undefined}
       data-active={isActive || undefined}
       className={[
-        'inline-flex min-h-11 shrink-0 snap-start items-center rounded-full border px-4 text-sm whitespace-nowrap transition-colors',
+        /* 36px is the drawn height; min-h-11 keeps the 44px touch target the
+           accessibility floor requires, so the chip is padded rather than
+           shrunk on a phone. */
+        'inline-flex min-h-11 shrink-0 snap-start items-center rounded-full border px-4 text-[13.5px] whitespace-nowrap transition-colors md:min-h-9',
         isActive
-          ? 'border-accent bg-accent text-accent-contrast'
-          : 'border-border-interactive bg-transparent text-text-secondary hover:bg-surface-hover',
+          ? 'border-accent bg-accent font-medium text-accent-contrast'
+          : 'border-border-interactive bg-transparent text-text-secondary hover:border-accent hover:bg-accent-soft hover:text-text-primary',
       ].join(' ')}
     >
       {item.name}
@@ -40,20 +43,52 @@ function Chip({ item, isActive }: { item: FilterItem; isActive: boolean }) {
   );
 }
 
-function Bar({ items, activeSlug }: { items: FilterItem[]; activeSlug: string | null }) {
+/**
+ * ONE CONTROL SHAPE, TWO TAXONOMIES — so each row says which it is.
+ *
+ * The archive's chips filter by content type (همه · اخبار · تحلیل · گزارش ·
+ * آموزش). A market archive's chips filter by market (همه · بورس ایران · طلا و
+ * دلار · …). Identical styling, identical position, one click apart. A reader
+ * learns the row means "type", then it silently means something else.
+ *
+ * The two-axis model is a deliberate decision — `decisions.md` chose two axes
+ * over six because taxonomy bloat is the documented failure of this category —
+ * and this row is the one place it surfaces to the reader. So the fix is to
+ * NAME the axis rather than to blur the two together: unifying them would undo
+ * the decision to keep two, and styling them differently would teach the
+ * difference by rote instead of stating it.
+ *
+ * The label is visible, not just an `aria-label`. A sighted reader has exactly
+ * the same problem the screen-reader user has here.
+ */
+function Bar({
+  items,
+  activeSlug,
+  label,
+}: {
+  items: FilterItem[];
+  activeSlug: string | null;
+  label: string;
+}) {
   return (
     <nav
-      aria-label="فیلتر مطالب"
-      /*
-        Horizontal scroll with snap on mobile, wrapping row on desktop.
-        The mask-image edge fade is theme-agnostic — a coloured gradient would
-        need a value per theme and would be wrong in at least one of them.
-      */
-      className="flex snap-x gap-2 overflow-x-auto pb-1 [mask-image:linear-gradient(to_left,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)] md:flex-wrap md:overflow-visible md:[mask-image:none]"
+      aria-label={label}
+      className="flex items-center gap-3"
     >
-      {items.map((item) => (
-        <Chip key={item.slug} item={item} isActive={item.slug === activeSlug} />
-      ))}
+      <span className="hidden shrink-0 text-[13px] text-text-muted sm:inline">{label}</span>
+
+      <div
+        /*
+          Horizontal scroll with snap on mobile, wrapping row on desktop.
+          The mask-image edge fade is theme-agnostic — a coloured gradient would
+          need a value per theme and would be wrong in at least one of them.
+        */
+        className="flex snap-x gap-2 overflow-x-auto pb-1 [mask-image:linear-gradient(to_left,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)] md:flex-wrap md:overflow-visible md:[mask-image:none]"
+      >
+        {items.map((item) => (
+          <Chip key={item.slug} item={item} isActive={item.slug === activeSlug} />
+        ))}
+      </div>
     </nav>
   );
 }
@@ -61,22 +96,46 @@ function Bar({ items, activeSlug }: { items: FilterItem[]; activeSlug: string | 
 export function ContentTypeFilterBar({
   contentTypes,
   activeSlug = null,
+  routedSlugs = [],
 }: {
   contentTypes: ContentType[];
   activeSlug?: string | null;
+  /**
+   * Slugs that have a real `/category/<slug>` route — i.e. the categories the
+   * CMS actually holds. Everything else keeps `?type=`.
+   */
+  routedSlugs?: string[];
 }) {
-  /* Query-string filtering on the archive, not separate routes. One canonical
-     archive URL with a filter parameter beats four thin near-duplicate pages. */
+  /*
+    THIS ROW USED TO BE ALL QUERY STRINGS, and the note said one canonical
+    archive URL with a filter parameter beat four thin near-duplicate pages.
+    That reasoning was about duplication and it was right about duplication. It
+    was wrong about indexing, and the second problem is the bigger one:
+    `/archive?type=education` CANNOT be indexed by this build at all. Reading
+    `searchParams` opts a route out of prerendering, so the filtered archive is
+    a dynamic page Google is asked to crawl on demand — 41 articles' worth of
+    topical authority sitting behind a URL shape that never becomes static.
+
+    So a filter that has a category behind it now links to the path route, and
+    the near-duplicate worry is handled where it belongs: the thin ones are
+    `noindex` and out of the sitemap (see lib/taxonomy.ts), rather than the
+    substantial ones being unindexable.
+
+    «گزارش» has no category in the taxonomy yet, so its chip keeps `?type=` and
+    keeps working. This is why the set is passed in rather than assumed.
+  */
+  const routed = new Set(routedSlugs);
+
   const items: FilterItem[] = [
     { slug: 'all', name: 'همه', href: '/archive' },
     ...contentTypes.map((c) => ({
       slug: c.slug,
       name: c.name,
-      href: `/archive?type=${c.slug}`,
+      href: routed.has(c.slug) ? `/category/${c.slug}` : `/archive?type=${c.slug}`,
     })),
   ];
 
-  return <Bar items={items} activeSlug={activeSlug ?? 'all'} />;
+  return <Bar items={items} activeSlug={activeSlug ?? 'all'} label="نوع مطلب" />;
 }
 
 export function MarketFilterBar({
@@ -98,5 +157,5 @@ export function MarketFilterBar({
       .map((m) => ({ slug: m.slug, name: m.name, href: `/market/${m.slug}` })),
   ];
 
-  return <Bar items={items} activeSlug={activeSlug ?? 'all'} />;
+  return <Bar items={items} activeSlug={activeSlug ?? 'all'} label="بازار" />;
 }

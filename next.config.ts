@@ -1,6 +1,54 @@
 import type { NextConfig } from 'next';
 
+/**
+ * A stable identifier for this build, readable at runtime from /mag/health.
+ *
+ * Two problems it answers, both of which have already cost this project time:
+ *
+ *  - The container on the frontend server was three weeks stale and nothing on
+ *    the running site said so. Pages are generated at build time, so a stale
+ *    image silently serves stale content and a restart does not fix it.
+ *  - A report shipped with its two halves measured against two different
+ *    servers, one of them running an older build, and the contradiction was
+ *    only caught in review.
+ *
+ * `generateBuildId` and `env` are fed from the same constant, so the value
+ * Next uses internally and the value the app reports can never disagree. Set
+ * BUILD_ID to pin it — the Dockerfile does, since the image has no .git.
+ */
+function resolveBuildId(): string {
+  if (process.env.BUILD_ID) return process.env.BUILD_ID;
+
+  /*
+    The git SHA, NOT a timestamp. next.config is evaluated twice — once by
+    `next build` and again by the server at startup — so a timestamp produces
+    two different values and the build the server reports never matches the one
+    on disk. It was off by exactly one second, which is the kind of "nearly
+    right" that a comparison must reject and a human would wave through.
+
+    The SHA also answers the more useful question: which commit is deployed.
+    In the container there is no .git, so the Dockerfile passes BUILD_ID above.
+  */
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('node:child_process')
+      .execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
+  }
+}
+
+const BUILD_ID = resolveBuildId();
+
 const nextConfig: NextConfig = {
+  generateBuildId: () => BUILD_ID,
+
+  /* Inlined at build time. Not a secret — it is a build identifier, and the
+     point of it is to be visible. */
+  env: { MAG_BUILD_ID: BUILD_ID },
+
   /**
    * The app is served at thefinance.ir/mag.
    *
@@ -39,14 +87,32 @@ const nextConfig: NextConfig = {
 
   images: {
     /**
-     * Both hosts are allowed.
+     * Both hosts are allowed, at DIFFERENT paths, and the difference is the
+     * whole point.
      *
-     * Existing media lives at thefinance.ir/wp-content/uploads/... and those
+     * Public media lives at `thefinance.ir/mag/wp-content/uploads/...`. Those
      * URLs must never change — moving them would break Google Images indexing
-     * and every external hotlink. nginx proxies that path to the CMS host.
+     * and every external hotlink — and they are what `MagImage.url`, JSON-LD
+     * and og:image carry. nginx proxies that path to the CMS host.
+     *
+     * The optimizer does not use them. It fetches server-side from inside the
+     * container, where a request to thefinance.ir hairpins out through the CDN
+     * and times out, so `imageSrc` addresses the CMS host directly — and there
+     * the uploads sit at the ROOT, not under `/mag`. Measured:
+     *
+     *     https://wp.thefinance.ir/wp-content/uploads/X.jpg      200
+     *     https://wp.thefinance.ir/mag/wp-content/uploads/X.jpg  404
+     *
+     * The `wp.` entry carried `/mag/` until now, so it allow-listed the one
+     * shape the CMS answers 404 to. A pattern mismatch here does not fail
+     * loudly either: the optimizer returns 400 and the page still renders with
+     * every image missing, which is how the first deployment shipped.
+     *
+     * These two patterns and `CMS_ORIGIN` in src/features/mag/lib/site.ts are
+     * one decision written in two files. Change them together.
      */
     remotePatterns: [
-      { protocol: 'https', hostname: 'thefinance.ir', pathname: '/wp-content/uploads/**' },
+      { protocol: 'https', hostname: 'thefinance.ir', pathname: '/mag/wp-content/uploads/**' },
       { protocol: 'https', hostname: 'wp.thefinance.ir', pathname: '/wp-content/uploads/**' },
     ],
   },

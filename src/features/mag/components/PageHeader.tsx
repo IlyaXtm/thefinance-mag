@@ -1,4 +1,5 @@
 import { magPath } from '../lib/site';
+import { bidiTitle } from '../lib/bidi-title';
 
 /**
  * Page header for the listing.
@@ -22,7 +23,7 @@ export function PageHeader({
     <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
         <h1 className="text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
-          {title}
+          {bidiTitle(title)}
         </h1>
         {subtitle && <p className="mt-2 text-text-secondary">{subtitle}</p>}
       </div>

@@ -84,9 +84,17 @@ Two tokens are new system additions introduced by Mag: `--border-interactive` (i
 3. Real font weights only (400/600/700) — no synthetic bold.
 4. ZWNJ (نیم‌فاصله) must render: «می‌شود», «نمی‌کند», «سرمایه‌گذاری». A mid-word fallback break is the fastest sign of a font failure.
 5. Line-height: body `1.9`, headings `1.5`, captions `1.7`.
-6. Body `18px` desktop / `17px` mobile. Content column `700px` (measures 70–73 characters).
+6. Body `18px` desktop / `17px` mobile. Content column `700px` (measures 70–73
+   characters in IRANYekanX). The column is calibrated to the face — a typeface
+   change means re-measuring it. Blog v4 tried Vazirmatn and had to cut the
+   column to `570px` to stay near 70; both were reverted together.
 7. Persian digits (۱۲۳) for dates, read time, counts. Latin digits for tickers and prices.
-8. Font self-hosted and subset via `next/font`, preloaded. **No Google Fonts, no foreign CDN.**
+8. Font self-hosted and subset via `next/font`, preloaded. **No Google Fonts, no
+   foreign CDN.** The face is **IRANYekanX**, and it is not Mag's to change:
+   it is the design system's typeface across the whole product, so swapping it
+   here alone rebuilds the visual detachment this project exists to remove.
+   Blog v4 shipped Vazirmatn and it was reverted for that reason, not a
+   technical one — see `docs/changelog.md`, 2026-08-29.
 
 ---
 
@@ -94,9 +102,28 @@ Two tokens are new system additions introduced by Mag: `--border-interactive` (i
 
 Signal-selling and guaranteed-return claims are prohibited by Iranian securities law and by the brand book. Flag violations rather than implementing them.
 
+**REVERSED BY BLOG v4: the one-image index.** The previous listing showed
+artwork exactly once, because every featured image had the article's headline
+baked into it and a card grid printed each title twice. The v4 design is
+deliberately image-led — a featured image on every card — and that is now the
+built design. The reasoning behind the old rule has not gone away, it has moved:
+the artwork is now a real dependency, so a missing or wrong-aspect image reads
+as broken rather than as restraint. `CardImage` fixes every box so the grid
+cannot reflow, and every image needs a real Persian `alt`.
+
 **Never build:** view counts, comment counts, reaction counts, trending/popular sections, urgency badges, countdown timers, flame or rocket icons, live price tickers anywhere in Mag, follower counts or superlative claims on author pages, "did you mean" spelling suggestions.
 
 Their absence is deliberate and documented. Do not add them back thinking they were forgotten.
+
+**This list survived Blog v4 intact, and two of its items were tested by it.**
+The v4 handoff specified «پرخواننده‌های این ماه» (a most-read ranking) and
+«تابلوی امروز» (a market-data board with price rows and an update stamp). Both
+were dropped. The ranking is a popular section, which this list rules out and
+which the handoff's own Compliance section rules out two paragraphs later. The
+board is live price data, which `decisions.md` excludes because it invites a
+signal-channel reading of an anti-hype publication — market data belongs in
+InChart. Their sidebar slots carry editorially-chosen link lists instead
+(«پرونده‌های مرتبط», «ادامه‌ی مسیر»), which do the same navigational job.
 
 ---
 
@@ -126,7 +153,7 @@ LCP is the featured card image (listing) and hero (article): `priority` + `next/
 
 ## Working agreements
 
-- Staging (`new.thefinance.ir`) validates everything before production.
+- Staging validates everything before production. It is a **path on the production host** — `https://thefinance.ir/mag-next/`, served with `noindex` — not a separate hostname. `new.thefinance.ir` was dropped on 2026-09-06.
 - Production repo `xthefinance/thefinance-front` is not touched without explicit instruction. Work happens on `new` in `IlyaXtm/thefinance-front-redesign`; `main` is the release branch.
 - Ambiguities get flagged, not assumed.
 - Decisions get logged as briefs in `docs/`.

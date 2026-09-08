@@ -16,7 +16,7 @@
 services:
   mag:
     build:
-      context: ..
+      context: ../..
       dockerfile: Dockerfile
       args:
         # Must match the runtime values below. Prerendered pages bake the

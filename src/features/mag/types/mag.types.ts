@@ -129,6 +129,18 @@ export interface ArticleSummary {
   modifiedAt: string | null;
   author: Author;
   /**
+   * The editor-written excerpt, or null.
+   *
+   * `excerpt(format: RAW)` returns ONLY the manual field — WordPress's
+   * auto-generated summary is what `RENDERED` would give, and that is the
+   * mid-sentence truncation `decisions.md` rejected as a dek source. So a
+   * non-empty value here is something a person actually wrote.
+   *
+   * Standard WPGraphQL, present on every schema, so unlike `outlineHeadings`
+   * it carries no plugin-version dependency.
+   */
+  excerpt: string | null;
+  /**
    * The article's own H2 headings, server-derived.
    * Feeds both the featured card's «در این مقاله» block and the article ToC —
    * one source, two consumers, so they can never disagree.
@@ -184,9 +196,43 @@ export interface ArticleListParams {
   perPage?: number;
   market?: MarketSlug;
   contentType?: ContentTypeSlug;
+  /**
+   * A raw WordPress category slug, for `/category/<slug>`.
+   *
+   * This and `contentType` are THE SAME GraphQL argument (`categoryName`) —
+   * `contentType` is it narrowed to the four slugs the frontend models as
+   * types. `category` is the unnarrowed form, because the category taxonomy
+   * holds terms that are not content types («مقالات», «اینچارت») and new terms
+   * appear without a deploy. Setting both is a bug; `category` wins.
+   */
+  category?: string;
   authorSlug?: string;
   /** Excluded from results — used by RelatedArticles. */
   excludeSlug?: string;
+}
+
+/**
+ * A WordPress category, as `/mag/category/<slug>` renders it.
+ *
+ * NOT the same thing as `ContentType`. The content-type axis is four fixed
+ * slugs the frontend defines and resolves per article; this is whatever terms
+ * the category taxonomy actually holds, counts included, straight from the
+ * CMS. They overlap — `education`, `news` and `analysis` are both — and they
+ * differ: «مقالات» (39 posts) is a category and is not a type, and «گزارش» is
+ * a type with no category behind it yet.
+ *
+ * `count` is the term's own published-post count. Categories overlap, so the
+ * counts sum to more than the archive: 41 + 39 + 10 + 2 + 2 against 53 posts,
+ * because most educational pieces are filed under «آموزش» and «مقالات» both.
+ * That is expected and is why the count is read per term rather than derived
+ * by partitioning the archive.
+ */
+export interface Category {
+  slug: string;
+  name: string;
+  /** Taxonomy description field. Usually empty; the archive renders without. */
+  description: string | null;
+  count: number;
 }
 
 export interface SearchParams {

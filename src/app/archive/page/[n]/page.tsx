@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
+import { getCategories } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
 import { ArchiveView } from '../../_components/ArchiveView';
 
 /**
@@ -34,7 +35,7 @@ export async function generateMetadata({
   return toMetadata({
     seo: null,
     path: `/archive/page/${page}`,
-    fallbackTitle: `آرشیو — صفحه ${toPersianDigits(page)}`,
+    fallbackTitle: `آرشیو — صفحه ${toPersianDigitsUngrouped(page)}`,
     fallbackDescription: `همه مطالب ${MAG_NAME}`,
   });
 }
@@ -51,6 +52,16 @@ export default async function ArchivePaginatedPage({
   const page = parse(n);
 
   if (!page) notFound();
+
+  /* Same redirect as page one, carrying the page number across — a filtered
+     archive that is now at a path must not strand its pages two and up at the
+     old query-string shape. */
+  if (type) {
+    const categories = await getCategories();
+    if (categories.some((category) => category.slug === type)) {
+      permanentRedirect(`/category/${type}/page/${page}`);
+    }
+  }
 
   const contentType = CONTENT_TYPES.find((t) => t.slug === type);
 
