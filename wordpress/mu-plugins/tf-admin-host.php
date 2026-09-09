@@ -1,0 +1,80 @@
+<?php
+/**
+ * Plugin Name: TheFinance — admin on the CMS host
+ *
+ * siteurl is https://thefinance.ir/mag because article permalinks, canonical
+ * URLs and media URLs must be public. But that path is a Next.js route now,
+ * so every admin URL WordPress builds from siteurl lands on the frontend and
+ * 404s — login redirects, admin assets, all of it.
+ *
+ * Defining WP_SITEURL fixes the admin and breaks WPGraphQL: the /graphql
+ * route is registered against siteurl, so moving it makes the endpoint render
+ * as a blog archive instead. Verified on 8 September 2026 — the endpoint
+ * returned HTML.
+ *
+ * These filters move only the admin-facing URLs. siteurl itself, the GraphQL
+ * route, permalinks and media are untouched.
+ */
+
+
+const TF_ADMIN_HOST = 'https://wp.thefinance.ir';
+
+add_filter('admin_url', function ($url) {
+    return preg_replace('#^https://thefinance\.ir/mag#', TF_ADMIN_HOST, $url);
+}, 10, 1);
+
+add_filter('login_url', function ($url) {
+    return preg_replace('#^https://thefinance\.ir/mag#', TF_ADMIN_HOST, $url);
+}, 10, 1);
+
+add_filter('logout_url', function ($url) {
+    return preg_replace('#^https://thefinance\.ir/mag#', TF_ADMIN_HOST, $url);
+}, 10, 1);
+
+/* includes_url covers the scripts and styles wp-admin loads from
+   /wp-includes/, which are on this host, not the frontend. */
+add_filter('includes_url', function ($url) {
+    return preg_replace('#^https://thefinance\.ir/mag#', TF_ADMIN_HOST, $url);
+}, 10, 1);
+
+/* After a successful login wp-login.php sends the browser to redirect_to,
+   which it built from siteurl before admin_url could touch it. Without
+   this the login succeeds and lands on a Next.js 404. */
+add_filter("login_redirect", function ($to) {
+    return preg_replace("#^https://thefinance\.ir/mag#", TF_ADMIN_HOST, $to);
+}, 10, 1);
+
+add_filter("site_url", function ($url, $path, $scheme) {
+    if (in_array($scheme, array("login", "login_post", "admin"), true)) {
+        return preg_replace("#^https://thefinance\.ir/mag#", TF_ADMIN_HOST, $url);
+    }
+    return $url;
+}, 10, 3);
+
+function tf_admin_asset_host($src) {
+    if (!is_admin() && ($GLOBALS["pagenow"] ?? "") !== "wp-login.php") return $src;
+    return preg_replace("#^https://thefinance\.ir/mag#", TF_ADMIN_HOST, $src);
+}
+add_filter("style_loader_src", "tf_admin_asset_host", 10, 1);
+add_filter("script_loader_src", "tf_admin_asset_host", 10, 1);
+
+/* The login form is served from this host but WordPress sets its test
+   cookie against siteurl, which is thefinance.ir — so the browser never
+   sends it back and login fails with "cookies are blocked". Defined here
+   rather than in wp-config so it stays next to the reason. */
+if (!defined("COOKIE_DOMAIN")) define("COOKIE_DOMAIN", "wp.thefinance.ir");
+if (!defined("COOKIEPATH")) define("COOKIEPATH", "/");
+if (!defined("SITECOOKIEPATH")) define("SITECOOKIEPATH", "/");
+if (!defined("ADMIN_COOKIE_PATH")) define("ADMIN_COOKIE_PATH", "/wp-admin");
+
+/* Per-source filters miss anything not registered with an absolute URL —
+   jQuery among them, which takes every admin script down with it. Rewrite
+   the finished admin HTML instead: one pass, nothing to miss. Runs only
+   on admin screens, so the front end and the API never see it. */
+function tf_admin_ob_start() {
+    if (!is_admin()) return;
+    ob_start(function ($html) {
+        return str_replace("https://thefinance.ir/mag/wp-", TF_ADMIN_HOST . "/wp-", $html);
+    });
+}
+add_action("admin_init", "tf_admin_ob_start", 1);
