@@ -954,3 +954,69 @@ chip needs a destination, and the three candidates are not equal:
 Do not build the row before the query. A tag row over an untagged archive is a
 heading with nothing under it, which is the one thing the rich template's own
 governing rule forbids.
+
+---
+
+## B28 — 🟠 Target size: 24px or 44px for inline navigation?
+
+**Status:** open, one decision, everything else already done.
+
+The responsive pass found seven controls on the article page under the 44px
+floor. Six are fixed outright — the ToC disclosure (21 → 44), the ToC links
+(39 → 44), the search input (21 → 44), and the byline row's wrapping. The
+seventh group is not a bug so much as a conflict between two rules:
+
+  breadcrumb links     21 → 24
+  category chips       20 → 28
+  author name link     20 → 24
+  footer legal links   20 → 24
+
+All four now clear **WCAG 2.2 SC 2.5.8 (Target Size Minimum, 24×24)**. None
+reaches **Mag's own floor of 44px for controls**, which is stricter than the
+standard and is what `CLAUDE.md` states.
+
+**Why they were not simply taken to 44.** The breadcrumb is the clearest case:
+it was just changed from two wrapped lines to one scrolling line specifically
+to reclaim vertical space above the headline on a phone. Two wrapped lines
+measured about 42px. A 44px trail would cost MORE than the defect did — the fix
+would undo itself. The chips and the inline links have the same shape of
+problem in smaller amounts.
+
+**The argument for leaving them at 24.** WCAG 2.2 exempts targets that are
+inline in a sentence or block of text, on the reasoning that enlarging them
+would disrupt the line. A breadcrumb trail and an author byline are arguably
+that; the category chips, which sit on their own row, are arguably not.
+
+"Arguably" is why this is a backlog item rather than a decision. Three possible
+answers, and they are not equivalent:
+
+  1. **Keep 24 and write the exemption down** — amend the accessibility floor
+     in `CLAUDE.md` to say 44 for controls, 24 for links inline in text. The
+     floor then describes what the product actually does.
+  2. **Go to 44 and accept the height** — honest, and gives back the vertical
+     space this round spent effort reclaiming.
+  3. **44 via invisible padding** — `::before` inset overlays that extend the
+     hit area without changing layout. It works, and it puts overlapping
+     invisible boxes on a row of adjacent chips, which creates its own problem.
+
+Nothing is under 24px anywhere on the article page at 320, 360, 390, 414 or 768
+today. This is about which number the floor should be, not about a gap.
+
+---
+
+## B29 — 🟠 Page padding is 20/40, and CLAUDE.md says 20/100
+
+**Status:** open, small, found while measuring something else.
+
+`CLAUDE.md` states page horizontal padding of **20px mobile / 100px desktop**.
+Every page container in the app is `px-5 lg:px-10` — 20 and **40**.
+
+It has been that way since the listing was built, so this is a documentation
+question at least as much as a layout one: the max-width container plus 40px
+produces a similar optical inset at 1440 to what 100px would give on a
+narrower content column, and nobody has complained about the built pages.
+
+Not changed here because it is site-wide chrome and this round was the article
+page. Someone should decide which number is right and then make the two agree —
+a stated constraint that the code has never met is worse than either value,
+because the next person to read it will "fix" the code to match.

@@ -8,6 +8,106 @@ why it was made.
 
 ---
 
+## 2026-09-09 (evening) — Title scale, a one-block header, and the mobile nav
+
+Four changes to the article page and the mobile header, plus a responsive
+pass that produced most of the small fixes.
+
+**The type scale is derived from two numbers.** h1 at 20 mobile / 24
+desktop is the reviewer's decision and is recorded as that, not as a
+measurement of the reference. Everything else follows: desktop steps down
+from 24 at ~1.125, mobile from 20 at ~1.09. The full table is in
+`decisions.md` → Type scale.
+
+The body scale HAD to come down with it. `.article-body h2` was 22/24
+against an h1 of 30/44, so at 24 the desktop pair was exactly level and a
+section heading read as equal to the article's own name. h2 is now 18/21.
+Body text does not move — 17/18 — which means h3 sits 1px above body at
+desktop and level with it at mobile, and carries the difference in weight
+and colour instead. That is the cost of a 20px title and it is stated
+rather than smoothed over.
+
+**And the scale shipped dead for one build.** Written as plain element
+rules in `tokens.css`, which is imported above `@tailwind base`, they lost
+to preflight's `h1..h6 { font-size: inherit }`. `.article-body h2`
+measured 18px at 1440 — exactly `--fs-body` — while `--fs-h2` on `:root`
+read 21px and the h1 was correctly 24 because it carries a utility class.
+Right in the custom properties, wrong on every unclassed heading. They
+live in `@layer base` now.
+
+**The article header is one block.** Text column and image side by side,
+so the header occupies one screen and the body begins under it — where
+before the reader met a headline, then meta, then a full-width picture,
+and only then a sentence. Bounding the hero to the title's measure last
+round fixed the height and left that order alone.
+
+  1440 / 1280   text 700 · image 320
+  1024          text 604 · image 300
+  768           text 456 · image 240
+  390 / 320     stacked, image first
+
+700 is the calibrated measure, so below xl the image gives way rather
+than the column dropping under it. Direction is logical throughout: the
+text column is first in the DOM and takes column 1, which RTL resolves to
+the right. Mobile stacks image-first through `order`, so DOM order stays
+text-first and a screen reader does not meet a figure before the h1.
+
+**Two bugs found by measuring rather than looking.** The `<figure>` was a
+direct grid child at `order: 0`, so it sorted before the text column and
+took the 700px track while the text took 320 — which looks deliberate in
+a screenshot, because the picture simply appears to be the wide one. And
+a 404 hero left its column standing: `575f922`'s rule is that a missing
+image leaves no trace, and removing the figure satisfied it when the hero
+was a full-width block but not when it is a column. The guard marks the
+grid now and it collapses.
+
+**The mobile strip became a hamburger, one day after shipping.** The
+strip's own argument is why: every cost it listed — a tap, a bundle, a
+focus trap, a motion case — is a cost of HIDING things, and a scrollable
+row hid nothing. It now carries three groups and is cut off mid-item at
+390px, so it hides things badly instead of not at all. A menu that is cut
+off communicates less than one that is honestly closed. The four costs
+are paid: `aria-expanded`, Escape returning focus, a Tab trap verified
+over sixteen presses, scroll lock restored to its previous value, and
+180ms of opacity and slide that `prefers-reduced-motion` removes
+entirely rather than shortening.
+
+**The header is sticky on mobile and hides on scroll down**, which
+reverses half of its own NOT STICKY note — the half about vertical cost.
+The other half stands and is why desktop is untouched: every sticky
+sidebar offset is `top-[76px]` measured against a static header.
+
+**The progress bar moved onto the header's bottom edge, and the
+measurement did not move with it.** ArticleAside still owns the number and
+publishes it as `--reading-progress` on `<html>`; the bar reads the custom
+property in CSS and measures nothing. A separate flag says whether there
+is an article at all, because 0% is a real state and testing the number
+would hide the bar exactly where it should read empty.
+
+**The breadcrumb is one line on mobile and scrolls** — 485px of trail
+inside a 350px region at 390, zero page overflow, no level dropped and no
+ellipsis. The sweep asserts the structure, because the overflow check
+exempts anything under an `overflow-x` ancestor and could never have
+caught it.
+
+**The responsive pass** at 320 / 360 / 390 / 414 / 768 — and 768 is in the
+sweep permanently now, as the boundary where the header becomes two
+columns and the image column is at its narrowest. It found the ToC
+disclosure at 21px and its links at 39, a search input at 21 inside a
+42px form, chips at 20, and a byline that measured 125px at 320 because
+`flex-wrap` and a 305px intrinsic column put the AVATAR on its own line.
+All fixed; the byline is 73px at 320 and 49 at 414.
+
+**What was not fixed, and why.** Four inline controls are now 24px, which
+clears WCAG 2.2 SC 2.5.8 but not Mag's own 44px floor. Taking the
+breadcrumb to 44 would make the trail taller than the two wrapped lines
+this round removed — the fix costing more than the defect. WCAG exempts
+links inline in text and a breadcrumb is arguably that; "arguably" is not
+a decision, so it is B28. Page padding is `px-5 lg:px-10` where CLAUDE.md
+states 20/100 — pre-existing, site-wide, and B29.
+
+---
+
 ## 2026-09-09 — The richer article template, and what it turned out not to need
 
 The Claude Design export for a long-form article adds a kicker, a dek, a

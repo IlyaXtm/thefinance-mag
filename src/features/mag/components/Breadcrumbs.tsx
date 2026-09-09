@@ -70,15 +70,23 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
                   /* `whitespace-nowrap` below lg so the title stays on the
                      scrolling line intact; the desktop clamp keeps a long
                      title from taking a second wrapped row. */
-                  className="inline-flex min-h-6 items-center whitespace-nowrap text-text-secondary lg:line-clamp-1 lg:whitespace-normal"
+                  className="inline-block whitespace-nowrap leading-6 text-text-secondary lg:line-clamp-1 lg:whitespace-normal"
                 >
                   {bidiTitle(item.name)}
                 </span>
               ) : (
                 <Link
                   href={item.href}
-                  /* 24px, not 44. See the note above the component. */
-                  className="inline-flex min-h-6 items-center whitespace-nowrap transition-colors hover:text-text-primary"
+                  /* 24px, not 44 — see the note above the component.
+                     `inline-block` with `leading-6`, NOT `inline-flex`. Flex
+                     makes every child a flex item and DROPS whitespace-only
+                     text nodes, and `bidiTitle` returns exactly that shape:
+                     text, an isolate <span>, text. The first version used
+                     inline-flex and the trail rendered
+                     «نات کوین(Notcoin)چیست؟» — the spaces around the Latin run
+                     gone. A 24px line box gets the same height with the text
+                     nodes intact. */
+                  className="inline-block whitespace-nowrap leading-6 transition-colors hover:text-text-primary"
                 >
                   {bidiTitle(item.name)}
                 </Link>

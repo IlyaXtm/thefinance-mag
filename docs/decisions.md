@@ -349,6 +349,57 @@ returns. A route is not a nav slot: «مقالات» has 39 posts and stays out 
 it is a catch-all tag nobody chose as a section, and «گزارش» stays out because
 the category does not exist yet.
 
+**Mobile is a disclosure, not a strip.** Reversed 2026-09-09; the strip lasted
+one day.
+
+The strip was chosen over a drawer on a specific argument: "with two links, a
+drawer costs a tap, a JS bundle, a focus trap and a motion-preference case, all
+to hide two words." Every item on that list is a cost of HIDING things, and a
+scrollable row hid nothing. The argument was right and its premise expired.
+
+The row now carries three groups — sections, markets with their counts, and the
+exit — and at 390px it is cut off mid-item, which is the sideways scroll it was
+built to avoid. **A menu that is cut off communicates less than one that is
+honestly closed**: the reader cannot see what is there, cannot tell how much
+more there is, and the only affordance is a horizontal drag that phones make
+easy to miss.
+
+So the four costs are paid in full and listed in `MobileNav.tsx`. What does not
+change is the source: one `SECTION_NAV`, one `markets` prop, one `SITE_EXIT`,
+and the same axis-naming the desktop disclosure does. A forked mobile nav is
+how a section gets added in one place and not the other.
+
+**The header is sticky on mobile and hides on scroll down.** Amended
+2026-09-09; the previous entry said NOT STICKY.
+
+That entry gave two grounds. The first — a fixed bar costs vertical space on
+mobile — is what hide-on-scroll-down answers: the header costs its height on
+the way in and again only when the reader asks for it, which on a 41-minute
+article is the difference between paying 64px once and permanently.
+
+The second ground stands and is why this is mobile-only: every sticky sidebar
+offset is `top-[76px]`, measured against a static header, and at `lg` and up
+the header is still static. Desktop has no transform and no sticky.
+
+`sticky`, not `fixed`, so nothing below needs a compensating offset that has to
+stay in sync with the header's height.
+
+**The reading-progress bar belongs to the header, and the measurement does
+not.** The bar was `fixed top-0`, rendered from ArticleAside so there would be
+one implementation of the number. That reasoning is intact; what changed is
+that a separately-fixed bar stays put while a sticky header slides out from
+under it, and two fixed things at the top of a phone screen is one too many.
+
+ArticleAside still owns the number and publishes it as `--reading-progress` on
+the document element, with a `data-reading` flag beside it. The header's
+hairline reads the custom property in CSS and measures nothing. A custom
+property crosses a component boundary without a context, a store or a second
+listener — and unlike a second measurement it cannot drift.
+
+The flag is separate from the number because **0% is a real state**: a reader
+at the top of an article. Testing the number would hide the bar exactly where
+it should read empty.
+
 ---
 
 ## Wide content
@@ -417,6 +468,45 @@ aspect clamp already does the work at any width.
 in the artwork. Until where that text sits has actually been measured (B14), any
 treatment that crops is a guess, and the width constraint is the treatment that
 does not need the answer.
+
+**The header is one block, and the hero is a column in it.** Amended
+2026-09-09; supersedes the 820px measure above without changing its reasoning.
+
+Bounding the hero to the title's measure fixed the height and left the ORDER
+alone: title, then meta, then a picture, then finally a sentence. The reader
+still met a headline and an image before any prose. So the header became two
+columns — text and image side by side, the whole thing inside one screen, and
+the body beginning directly under it.
+
+Measured on the built page:
+
+  1440 / 1280   text 700 · image 320   (31% of the pair)
+  1024          text 604 · image 300
+  768           text 456 · image 240
+  390 / 320     stacked, image first, full width
+
+**700 is the number that does not move.** It is the measure calibrated to
+IRANYekanX at 70–73 characters, so below xl the IMAGE gives way rather than the
+text column dropping under it. The no-cropping rule above is untouched and now
+does even less work: at 320px wide, no clamp is being asked for much.
+
+**Mobile stacks with the image first, and that is a choice.** On a phone the
+picture establishes the subject in space a headline does not have. DOM order
+stays text-first so a screen reader does not meet a figure before the page's
+h1; `order` moves the visual sequence only.
+
+**With no image there is no grid.** `grid-cols` applies in the hero branch
+only, so the text column is an ordinary block at its own measure — no empty
+cell, no reserved track, no gap collapsing to nothing. A grid with one child
+still reserves the second column, which is why this is a class swap and not a
+conditional child.
+
+**And a 404 hero collapses the same way.** `575f922`'s rule is that a missing
+image leaves no trace; removing the `<figure>` satisfied it when the hero was a
+full-width block below the title, and does not here — the column's 320px track
+stays open, an empty third of the header. MediaErrorGuard now marks the grid and
+it collapses to the single-column form. An article whose image 404s renders
+identically to one that never had an image, verified at 1440 and 390.
 
 Desktop only. Mobile keeps full width and natural ratio.
 
@@ -490,6 +580,57 @@ measurement of `getBoundingClientRect().top` while scrolled.
 
 Both sidebars on the post page now use the same shape. Two sidebars in one grid
 with two positioning strategies is how the last one drifted.
+
+---
+
+## Type scale
+
+**One derived scale, anchored on two numbers.** Decided 2026-09-09.
+
+`--fs-h1` is **20px mobile / 24px desktop**. Those two figures are the
+reviewer's decision and are recorded as that — not as a measurement of a
+reference. Everything else is derived: desktop steps down from 24 at ~1.125,
+mobile from 20 at ~1.09.
+
+                mobile  desktop   weight  colour
+  h1              20      24        700   primary
+  h2              18      21        700   primary
+  h3              17      19        700   primary
+  h4            15.5      17        700   primary
+  h5              14      15        600   secondary
+  h6              13    13.5        600   muted
+  body            17      18        400   —
+  dek             17      18        400   secondary
+  meta          12.5      13        400   muted
+  caption         13      14        400   muted
+
+**Derived, not adjusted tag by tag.** Forty-odd `text-[Npx]` literals with no
+relationship to each other is how a hierarchy drifts a pixel at a time: a new
+heading gets whatever number looked right that day. A scale stays consistent
+when someone adds a level later.
+
+**The body scale had to come down with the title.** `.article-body h2` was
+22/24 against an h1 of 30/44. At an h1 of 24 the desktop pair was exactly
+level, and a section heading reading as equal to the article's own name is the
+hierarchy inverting.
+
+**Body text does not move**, and there is a cost. At 17/18 it is already the
+smallest thing a reader spends 41 minutes with, so h3 lands 1px above body at
+desktop and level with it at mobile. Weight and colour carry the difference
+there — 700 primary against 400 secondary — which is legible, and is what a
+scale this compressed has to rely on. h4/h5 are 1.5px apart at mobile, which is
+decorative, so they separate by colour instead. Mag's accessibility floor never
+reaches h4–h6; they exist so a heading added later inherits a considered value.
+
+**Values in tokens.css, application in globals.css, and the layer matters.**
+Written as plain element rules in tokens.css they lose to Tailwind's preflight
+(`h1..h6 { font-size: inherit }`), because that file is imported above
+`@tailwind base`. It shipped that way for one build: `.article-body h2`
+measured 18px at 1440 — exactly `--fs-body` — while `--fs-h2` on `:root` read
+21px and the h1, which carries a utility class, was correctly 24. **A scale
+that is right in the custom properties and wrong on every unclassed heading.**
+Inside `@layer base` it wins over preflight, and a component's own utility
+still wins over both, which is the order that lets components override.
 
 ---
 
@@ -568,7 +709,18 @@ being protected.
 
 ## Mobile navigation
 
-**A scrollable category strip, not a drawer.** Decided 2026-09-06.
+**SUPERSEDED 2026-09-09 — the strip is a disclosure now.** The entry below is
+kept because its reasoning is the reason the replacement is defensible, not
+because it was wrong. Read it first; the reversal is in the Navigation section
+above, and `MobileNav.tsx` carries the implementation.
+
+The short version: every cost the note lists is a cost of HIDING things, and
+that is exactly why a row was correct while it hid nothing. It now carries
+three groups and is cut off mid-item at 390px, so it hides things badly instead
+of not at all. The costs get paid rather than avoided.
+
+**A scrollable category strip, not a drawer.** Decided 2026-09-06, reversed
+2026-09-09.
 
 Below `lg` the header carried the logo, a search icon and the theme toggle and
 nothing else. Every section was reachable only from the footer — roughly
