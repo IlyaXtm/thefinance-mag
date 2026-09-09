@@ -22,8 +22,14 @@ export function CategoryChip({
   variant?: 'soft' | 'solid';
   className?: string;
 }) {
+  /* `min-h-7`: the chip measured 20px, under WCAG 2.2 SC 2.5.8's 24px floor.
+     On a card it is a passive label and exempt from the 44px rule, but in the
+     article header it is a real link and the article's primary navigational
+     claim — so the shared component takes the larger box and the cards get it
+     too. Still short of 44; see the note in Breadcrumbs.tsx, which is the same
+     open question. */
   const base =
-    'inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium leading-none';
+    'inline-flex min-h-7 items-center rounded-full px-3 py-1 text-[12px] font-medium leading-none';
   const fill =
     variant === 'solid'
       ? 'bg-accent text-accent-contrast'

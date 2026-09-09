@@ -97,6 +97,97 @@
  */
 @layer components {
   /*
+   * The breadcrumb scroller — mobile only.
+   *
+   * The trail keeps every level, so on a phone it is wider than the viewport
+   * and has to go somewhere. It goes here, in its own overflow region, which
+   * is the rule `eba3f20` set for wide content: the element scrolls, the page
+   * does not.
+   *
+   * The fade tells the reader it scrolls. It is a mask rather than a coloured
+   * gradient so it works on any theme's surface without knowing which, and it
+   * is applied to ONE edge — the one content disappears behind — because a
+   * symmetric fade dims the first crumb even when nothing overflows.
+   *
+   * A mask gradient has no logical direction, so there are two rules. RTL
+   * overflows to the left; LTR to the right. Getting this wrong fades the edge
+   * the reader is looking at and leaves the cut one hard.
+   */
+  .mag-breadcrumb-scroll {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to left, #000 calc(100% - 24px), transparent 100%);
+  }
+
+  [dir='ltr'] .mag-breadcrumb-scroll {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+  }
+
+  .mag-breadcrumb-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Desktop wraps, as it did. No scroll region, no fade — there is room, and
+     both would be chrome for a problem that does not exist there. */
+  @media (min-width: 1024px) {
+    .mag-breadcrumb-scroll,
+    [dir='ltr'] .mag-breadcrumb-scroll {
+      overflow-x: visible;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+  }
+
+  /*
+   * The reading-progress hairline on the header's bottom edge.
+   *
+   * Plain CSS rather than a stacked arbitrary Tailwind variant: the condition
+   * is an attribute on <html> combined with a breakpoint, and
+   * `lg:[html[data-reading]_&]:hidden` is a class nobody can read and that
+   * fails silently if the variant syntax shifts.
+   *
+   * `display: none` by default, so on a listing page — where nothing publishes
+   * a measurement — this is not in the layout at all rather than being a
+   * zero-width bar. At `lg` it goes away again: desktop keeps its readout in
+   * the ToC panel, where the header is static and the scrollbar already
+   * answers the question.
+   *
+   * No track. An empty track would draw a permanent line across the top of
+   * every article; at rest there is no chrome at all.
+   */
+  .mag-reading-progress {
+    display: none;
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3px;
+    pointer-events: none;
+  }
+
+  html[data-reading] .mag-reading-progress {
+    display: block;
+  }
+
+  @media (min-width: 1024px) {
+    html[data-reading] .mag-reading-progress {
+      display: none;
+    }
+  }
+
+  .mag-reading-progress > span {
+    display: block;
+    height: 100%;
+    width: var(--reading-progress, 0%);
+    background: var(--accent);
+    /* Nothing animates per frame: the custom property updates on a
+       rAF-throttled scroll and CSS interpolates between values. The global
+       reduced-motion rule removes this, giving a bar that steps. */
+    transition: width 150ms linear;
+  }
+
+  /*
    * The article header when its image turned out to be a 404.
    *
    * MediaErrorGuard removes the <figure> and marks the grid; this collapses

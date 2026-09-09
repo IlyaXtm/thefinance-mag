@@ -31,7 +31,7 @@ export function ArticleMeta({
   const revised = showRevision && hasVisibleRevision(publishedAt, modifiedAt);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-text-muted">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta text-text-muted">
       <span>{formatReadingTime(readingTime)}</span>
 
       <span aria-hidden="true">·</span>

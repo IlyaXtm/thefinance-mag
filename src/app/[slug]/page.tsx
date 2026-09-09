@@ -461,18 +461,30 @@ export default async function ArticlePage({
           </p>
         )}
 
-        <div className="mt-5 flex flex-wrap items-center gap-4">
+        <div
+          /*
+            NOT `flex-wrap`, and that was the whole defect. The name-and-meta
+            column has an intrinsic width of 305px, so at 390 the row needed
+            357 against 350 available and the AVATAR wrapped onto a line of its
+            own — 101px of byline where the column alone is 49. Measured at
+            320 it was 125.
+
+            `flex-1 min-w-0` on the column lets it shrink instead, so the meta
+            wraps inside it, which is the thing that is supposed to wrap.
+          */
+          className="mt-5 flex items-center gap-3 md:gap-4"
+        >
           <span
             aria-hidden="true"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[16px] text-text-secondary"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[15px] text-text-secondary md:h-11 md:w-11 md:text-[16px]"
           >
             {authorInitial(article.author.name)}
           </span>
 
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <Link
               href={`/author/${article.author.slug}`}
-              className="text-[15px] font-medium text-text-primary transition-colors hover:text-accent"
+              className="inline-flex min-h-6 items-center text-[15px] font-medium text-text-primary transition-colors hover:text-accent"
             >
               {article.author.name}
             </Link>

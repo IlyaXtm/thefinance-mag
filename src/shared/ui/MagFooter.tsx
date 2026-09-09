@@ -153,7 +153,14 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               © {year} {ORGANIZATION.name}
             </span>
             <span aria-hidden="true">·</span>
-            <a href={SITE_ORIGIN} className="transition-colors hover:text-text-primary">
+            {/* `min-h-6` clears WCAG 2.2 SC 2.5.8's 24px on the two links in
+                the legal row, which measured 20. The rest of the footer's
+                links already carry `min-h-11`; these sit inline in a sentence
+                with the copyright, where a 44px box would break the line. */}
+            <a
+              href={SITE_ORIGIN}
+              className="inline-flex min-h-6 items-center transition-colors hover:text-text-primary"
+            >
               thefinance.ir
             </a>
             <span aria-hidden="true">·</span>
@@ -162,7 +169,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               dir="ltr"
               rel="noopener noreferrer"
               target="_blank"
-              className="transition-colors hover:text-text-primary"
+              className="inline-flex min-h-6 items-center transition-colors hover:text-text-primary"
               style={{ unicodeBidi: 'isolate' }}
             >
               Paradigm

@@ -215,7 +215,16 @@ for (const route of ROUTES) {
   everybody measures. A breakpoint boundary is where layout breaks; testing
   only the middle of each range is testing where it cannot.
 */
-for (const width of [320, 360, 390, 414, 1024]) {
+/*
+  768 JOINED THIS LIST for the responsive pass on the article header. It is the
+  `md` boundary — the width at which the header becomes two columns and the
+  image column appears at its narrowest (240px against 456px of text). A
+  two-column layout is tightest at the width it starts, and that width was not
+  being measured.
+*/
+const SWEEP_WIDTHS = [320, 360, 390, 414, 768, 1024];
+
+for (const width of SWEEP_WIDTHS) {
   for (const route of ROUTES) {
     const page = await browser.newPage({ viewport: { width, height: 844 } });
     await page.goto(BASE + route, { waitUntil: 'networkidle' });
@@ -303,6 +312,46 @@ for (const width of [320, 360, 390, 414, 1024]) {
       );
     }
 
+    /*
+      THE BREADCRUMB SCROLLS; THE PAGE DOES NOT.
+
+      It runs on one line below lg and keeps every level, so on a phone it is
+      routinely wider than the viewport. That is fine as long as it lives in
+      its own overflow region — and catastrophic if it does not, because the
+      trail's last item is the full article title and it would drag the whole
+      page sideways on every article.
+
+      Structure again, not symptom: the overflow sweep exempts anything under
+      an `overflow-x` ancestor, so if the breadcrumb lost its container the
+      sweep would report the page overflow with no idea which element caused
+      it — which is the reading that took two rounds to diagnose last time.
+    */
+    const crumbs = await page.evaluate(() => {
+      const nav = document.querySelector('nav[aria-label="مسیر"]');
+      if (!nav) return null;
+      const list = nav.querySelector('ol');
+      const ox = getComputedStyle(nav).overflowX;
+      return {
+        scrolls: ox === 'auto' || ox === 'scroll',
+        wraps: getComputedStyle(list).flexWrap === 'wrap',
+        listWidth: Math.round(list.getBoundingClientRect().width),
+        navWidth: Math.round(nav.getBoundingClientRect().width),
+      };
+    });
+
+    if (crumbs) {
+      /* Below lg it must scroll; at lg and up it must wrap instead — a
+         scroller that survived to desktop would silently disable the wrap the
+         desktop trail relies on. */
+      const wantsScroll = width < 1024;
+      check(
+        route,
+        `breadcrumb ${wantsScroll ? 'scrolls' : 'wraps'} at ${width}px`,
+        wantsScroll ? crumbs.scrolls : crumbs.wraps,
+        `overflowX scrolls=${crumbs.scrolls} flexWrap=${crumbs.wraps} list=${crumbs.listWidth} nav=${crumbs.navWidth}`,
+      );
+    }
+
     await page.close();
   }
 }
@@ -319,4 +368,10 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`\n✓ all invariants hold across ${ROUTES.length} routes (1440 · 1024 · 414 · 390 · 360 · 320)\n`);
+/* Built from the list, not retyped beside it. The hardcoded version said
+   "1440 · 1024 · 414 · 390 · 360 · 320" for one run after 768 was added — a
+   report that understates what it measured is a report nobody can audit. */
+console.log(
+  `\n✓ all invariants hold across ${ROUTES.length} routes ` +
+    `(1440 · ${[...SWEEP_WIDTHS].reverse().join(' · ')})\n`,
+);

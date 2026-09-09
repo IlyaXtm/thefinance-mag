@@ -3,8 +3,9 @@ import { SECTION_NAV, SITE_EXIT } from '@/features/mag/lib/nav';
 import { magPath } from '@/features/mag/lib/site';
 import { NEWSLETTER_ENABLED } from '@/features/mag/lib/newsletter';
 import type { Market } from '@/features/mag/types/mag.types';
-import { toPersianDigits } from '@/features/mag/lib/format';
+import { MagHeaderShell } from './MagHeaderShell';
 import { MagLogo } from './MagLogo';
+import { MobileNav } from './MobileNav';
 import { MarketMenu } from './MarketMenu';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -29,10 +30,18 @@ import { ThemeToggle } from './ThemeToggle';
  * ایران · کریپتو · آموزش · اخبار», three markets then two types, with nothing
  * to say they are different axes. See MarketMenu.
  *
- * NOT STICKY. A fixed bar costs vertical space on mobile and would compete
- * with the article page's sticky table of contents, which is the one thing on
- * the site that genuinely benefits from staying put. The `top-[76px]` on every
- * sticky sidebar is measured against this header NOT being fixed.
+ * STICKY ON MOBILE ONLY, and hiding on scroll down — see MagHeaderShell.
+ *
+ * The original note here said NOT STICKY, on two grounds. The first — a fixed
+ * bar costs vertical space on mobile — is what hide-on-scroll-down answers:
+ * the header costs its height on the way in and again only when the reader
+ * asks for it. The second still stands and is why desktop is untouched: the
+ * `top-[76px]` on every sticky sidebar is measured against this header being
+ * static, and at `lg` and up it still is.
+ *
+ * THE MOBILE STRIP IS GONE. It carried three groups and was cut off mid-item
+ * at 390px — the sideways scroll it existed to avoid. See MobileNav for why
+ * the argument that chose it over a drawer expired rather than being wrong.
  *
  * The search field is a real GET form, so it works with JavaScript off and the
  * browser's own history does what the reader expects. `magPath` is mandatory:
@@ -40,13 +49,11 @@ import { ThemeToggle } from './ThemeToggle';
  * `action="/search"` posts to the main site and silently leaves the magazine.
  */
 export function MagHeader({ markets }: { markets: Market[] }) {
-  /* Empty markets are suppressed everywhere they appear. «مسکن ۰» is not a
-     thin promise, it is a promise of nothing — a link whose page renders its
-     own empty state. It returns on its own when it has an article. */
-  const populated = markets.filter((market) => (market.count ?? 0) > 0);
-
+  /* Markets go to both consumers unfiltered. Suppressing the empty ones —
+     «مسکن ۰» is a promise of nothing — is done inside MarketMenu and MobileNav,
+     from the same rule, so the header does not hold a copy of it. */
   return (
-    <header className="border-b border-border-subtle">
+    <MagHeaderShell>
       <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-4 px-5 md:h-20 md:gap-9 lg:px-10">
         <Link
           href="/"
@@ -62,8 +69,8 @@ export function MagHeader({ markets }: { markets: Market[] }) {
           <MagLogo className="h-[28px] w-auto md:h-[30px]" />
         </Link>
 
-        {/* Sections at lg and up, then the markets disclosure. Below lg both
-            move to the scrollable strip under this row — see the note on it. */}
+        {/* Sections at lg and up, then the markets disclosure. Below lg all of
+            it is behind the hamburger at the end of this row. */}
         <nav aria-label="بخش‌های مجله" className="hidden items-center gap-6 lg:flex">
           {SECTION_NAV.map((link) => (
             <Link
@@ -83,7 +90,7 @@ export function MagHeader({ markets }: { markets: Market[] }) {
           action={magPath('/search')}
           method="get"
           role="search"
-          className="hidden h-[42px] items-center gap-2.5 rounded-full border border-border-subtle bg-surface-raised px-3.5 focus-within:border-border-interactive md:flex"
+          className="hidden h-11 items-center gap-2.5 rounded-full border border-border-subtle bg-surface-raised px-3.5 focus-within:border-border-interactive md:flex"
         >
           <svg
             width="15"
@@ -104,7 +111,9 @@ export function MagHeader({ markets }: { markets: Market[] }) {
             name="q"
             type="search"
             placeholder="جست‌وجو در مجله"
-            className="w-[150px] min-w-0 bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-muted lg:w-[190px]"
+            /* `h-full`: the FORM is 44px but the input was 21, so the control
+               the reader taps was under the floor while its container was not. */
+            className="h-full w-[150px] min-w-0 bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-muted lg:w-[190px]"
           />
         </form>
 
@@ -193,145 +202,12 @@ export function MagHeader({ markets }: { markets: Market[] }) {
             <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
         </a>
+
+        {/* Last in the row, and only below lg — the sections, the markets and
+            the exit are all visible up there. */}
+        <MobileNav markets={markets} />
       </div>
 
-      {/*
-        MOBILE NAVIGATION.
-
-        Below lg the header carried the logo, a search icon and the theme
-        toggle, and nothing else. Every section was reachable only from the
-        footer — roughly 4,000px of scroll down the home page. The reasoning
-        recorded against a hamburger («with two links, a drawer costs a tap, a
-        JS bundle, a focus trap and a motion-preference case, all to hide two
-        words») was sound when there were two links. There are five now, and
-        that argument does not carry.
-
-        A STRIP, NOT A DRAWER — and the old note is the reason why. Every cost
-        it lists is a cost of hiding things: the tap, the JS, the focus trap,
-        the motion-preference case. A scrollable row pays none of them, because
-        it hides nothing. It is markup and one CSS property.
-
-        Horizontal scroll and RTL: NO manual scrollLeft arithmetic — its sign
-        differs across browsers, which CLAUDE.md rules out. Native overflow
-        handles direction correctly on its own. The edge fade is a mask-image
-        rather than a coloured gradient so it works on any theme's surface
-        without knowing which one it is on.
-      */}
-      <div className="border-b border-border-subtle lg:hidden">
-        <div
-          /* THE SCROLLER IS THE OUTER BOX, and all three groups sit inside it.
-             With `overflow-x-auto` on the first <nav> only, the markets and the
-             exit fell outside the scrolling area and either wrapped or pushed
-             the page sideways. `w-max` on the row is what lets it exceed the
-             viewport and scroll rather than compress. */
-          className="mx-auto max-w-[1440px] overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{
-            maskImage:
-              'linear-gradient(to left, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)',
-            WebkitMaskImage:
-              'linear-gradient(to left, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%)',
-          }}
-        >
-          <div className="flex w-max items-center gap-1.5">
-          <nav aria-label="بخش‌های مجله">
-          {/*
-            TWO GROUPS IN ONE ROW, EACH NAMED — the same distinction the desktop
-            header draws with a dropdown, drawn here with a caption instead.
-
-            NOT a dropdown. A menu anchored inside a horizontal scroller either
-            clips at the container's edge or scrolls away from its own trigger,
-            and at 390px it would cover the row it belongs to. The markets are
-            simply listed, with their counts, as a labelled section of the strip.
-
-            Two <nav> elements rather than one list with a heading inside it: a
-            caption that is a list item is a list item a screen reader reads as
-            content, whereas two labelled navs announce the axis the way the
-            desktop header's «بازارها» button does.
-          */}
-            <ul className="flex items-center gap-1.5 py-2">
-            {SECTION_NAV.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  /* h-11: a control, so it takes the 44px target. */
-                  className="inline-flex h-11 items-center whitespace-nowrap rounded-full px-3.5 text-[14px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary motion-reduce:transition-none"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {populated.length > 0 && (
-          <nav
-            aria-label="بازارها"
-            className="flex shrink-0 items-center gap-1.5 py-2"
-          >
-            <span
-              aria-hidden="true"
-              className="h-5 w-px shrink-0 bg-border-subtle"
-            />
-            {/* The caption names the axis. `aria-hidden` because the nav's own
-                label already says «بازارها» to a screen reader, and reading it
-                twice is noise. */}
-            <span
-              aria-hidden="true"
-              className="shrink-0 whitespace-nowrap ps-1 text-[12px] text-text-muted"
-            >
-              بازارها
-            </span>
-            <ul className="flex w-max items-center gap-1.5">
-              {populated.map((market) => (
-                <li key={market.slug}>
-                  <Link
-                    href={`/market/${market.slug}`}
-                    className="inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[14px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary motion-reduce:transition-none"
-                  >
-                    {market.name}
-                    <span
-                      dir="ltr"
-                      style={{ unicodeBidi: 'isolate' }}
-                      className="text-[11.5px] tabular-nums text-text-muted"
-                    >
-                      {toPersianDigits(market.count ?? 0)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
-
-        {/* The exit, last in the strip. The mobile header had no route to the
-            main site at all — the desktop one is `sm:inline-flex` and this is
-            the only place below that breakpoint. */}
-        <nav aria-label="خروج از مجله" className="flex shrink-0 items-center py-2">
-          <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border-subtle" />
-          <a
-            href={SITE_EXIT.href}
-            className="inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[14px] text-text-muted"
-          >
-            {SITE_EXIT.label}
-            <svg
-              viewBox="0 0 24 24"
-              width="12"
-              height="12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              className="scale-x-[-1]"
-            >
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </a>
-        </nav>
-          </div>
-        </div>
-      </div>
-    </header>
+    </MagHeaderShell>
   );
 }

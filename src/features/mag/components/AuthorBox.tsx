@@ -67,7 +67,7 @@ export function AuthorBox({
         ) : (
           <Link
             href={`/author/${author.slug}`}
-            className="font-semibold text-text-primary transition-colors hover:text-accent"
+            className="inline-flex min-h-6 items-center font-semibold text-text-primary transition-colors hover:text-accent"
           >
             {author.name}
           </Link>
