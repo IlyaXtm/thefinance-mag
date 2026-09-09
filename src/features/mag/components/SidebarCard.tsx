@@ -52,7 +52,22 @@ export function CategoryListCard({
   if (populated.length === 0) return null;
 
   return (
-    <SidebarCard title="دسته‌بندی‌ها">
+    /*
+      «بازارها», not «دسته‌بندی‌ها». THE HEADING NAMED THE WRONG TAXONOMY.
+
+      This card lists اقتصاد جهانی, بورس ایران, طلا و دلار, فارکس, کریپتو —
+      markets, every one. The real categories are آموزش, مقالات, اخبار, تحلیل,
+      اینچارت, and none of them appears here. The label said one axis and the
+      list showed the other, on a site whose whole taxonomy decision is that
+      there are exactly two axes and they are kept apart.
+
+      Renamed rather than switching the list to categories: the counts, the
+      links and the `activeSlug` a market archive passes in are all market
+      data, so changing the list would mean changing the component's job. The
+      header now names both axes explicitly, which is what made this
+      contradiction worth fixing rather than tolerable.
+    */
+    <SidebarCard title="بازارها">
       <ul className="flex flex-col">
         {populated.map((market) => {
           const isActive = market.slug === activeSlug;

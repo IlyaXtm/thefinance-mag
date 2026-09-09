@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { MagLogo } from './MagLogo';
 import {
-  CATEGORY_NAV,
+  SECTION_NAV,
   FOOTER_MAG_LINKS,
   FOOTER_PRODUCT_LINKS,
   SOCIAL_LINKS,
@@ -80,13 +80,27 @@ export function MagFooter({ markets }: { markets: Market[] }) {
             )}
           </div>
 
-          <FooterColumn title="دسته‌بندی‌ها">
+          {/*
+            «بازارها», not «دسته‌بندی‌ها» — THIS COLUMN LISTS MARKETS.
+
+            Same mislabel the review found on the home sidebar: the heading
+            named one taxonomy and the list showed the other. It is not in the
+            review's list, and it is corrected anyway: the header now draws the
+            two axes apart explicitly, and a footer still calling markets
+            «categories» contradicts the thing the header just taught.
+
+            The title follows the content rather than being fixed, because the
+            fallback is a different axis. With no market tagged, market links
+            would be an empty column, so it falls back to the section links —
+            and then it is not «بازارها» any more and does not say so.
+          */}
+          <FooterColumn title={populated.length > 0 ? 'بازارها' : 'بخش‌ها'}>
             {(populated.length > 0
               ? populated.map((market) => ({
                   label: market.name,
                   href: `/market/${market.slug}`,
                 }))
-              : CATEGORY_NAV
+              : SECTION_NAV
             ).map((link) => (
               <FooterLink key={link.href} href={link.href}>
                 {link.label}
