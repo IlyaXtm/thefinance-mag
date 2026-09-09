@@ -222,6 +222,48 @@ the category does not exist yet.
 
 ---
 
+## Wide content
+
+**Nothing in the article body may be wider than the body.** Decided
+2026-09-09.
+
+Anything that can exceed the column — a table, a `pre`, an embed, an element
+with an inline pixel width — either scrolls inside its own `overflow-x: auto`
+box or is clamped to `max-width: 100%`. The page body never scrolls sideways.
+
+Clamp in CSS, do not strip in the sanitizer: an author's deliberate
+`width: 60%` is intent, and stripping every width would destroy it to fix a
+`width: 900px` that CSS can simply cap.
+
+**Fixtures are not evidence about real bodies.** A twelve-route, fifteen-width
+sweep reported no overflow while production scrolled sideways, because every
+fixture body was written against this design and real ones are not. When a
+check covers content, it has to run against content shaped like the real thing —
+`check-invariants.mjs` carries fixtures built from migrated markup for exactly
+this reason, and names the offending element rather than reporting a number.
+
+---
+
+## Hero proportion
+
+**The hero is bounded by width, not by a height cap.** Decided 2026-09-09;
+closes backlog B19.
+
+A height cap with `object-fit: cover` crops, and the crop lands worst on the
+most common image: measured, a 480px cap takes 33% off a 1200×630 that
+currently loses nothing. Constraining the hero to the title block's measure
+produces a shorter hero with no new cropping at all, because the per-image
+aspect clamp already does the work at any width.
+
+**Never crop through baked-in text.** Several featured images have the headline
+in the artwork. Until where that text sits has actually been measured (B14), any
+treatment that crops is a guess, and the width constraint is the treatment that
+does not need the answer.
+
+Desktop only. Mobile keeps full width and natural ratio.
+
+---
+
 ## Missing media
 
 **A missing image leaves no trace.** Decided 2026-09-09.

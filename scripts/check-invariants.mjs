@@ -42,6 +42,9 @@ const ROUTES = [
   '/mag/fundamental-analysis',
   '/mag/market/crypto',
   '/mag/category/education',
+  /* Real-shaped article bodies. See the overflow note below. */
+  '/mag/stress-wide-content',
+  '/mag/stress-long-technical-analysis',
 ];
 
 /* News rows carry 78px thumbnails that are below the fold on every viewport
@@ -129,7 +132,15 @@ for (const route of ROUTES) {
     return {
       eager: imgs.filter((i) => i.loading !== 'lazy').length,
       lazy: imgs.filter((i) => i.loading === 'lazy').length,
-      noSizes: imgs.filter((i) => !i.getAttribute('sizes')).length,
+      /*
+        `sizes` ONLY MEANS ANYTHING ALONGSIDE `srcset`, and requiring it on
+        every image was an invariant that had never met a raw CMS <img>. The
+        article body is dangerouslySetInnerHTML from WordPress: those images
+        have one src, no candidate list, and nothing for `sizes` to choose
+        between. Scoped to the images that actually have a choice to make,
+        which in practice is every next/image output.
+      */
+      noSizes: imgs.filter((i) => i.getAttribute('srcset') && !i.getAttribute('sizes')).length,
       noAlt: imgs.filter((i) => i.getAttribute('alt') === null).length,
       h1: document.querySelectorAll('h1').length,
       skips,
@@ -181,6 +192,10 @@ for (const route of ROUTES) {
 /*
   390px is the viewport CLAUDE.md's overflow rule is written against.
 
+  320, 360 AND 414 ARE HERE BECAUSE 390 PASSED WHILE PRODUCTION SCROLLED
+  SIDEWAYS. 390 is the design's mobile width and it is not the narrowest phone
+  in use; an embed that fits at 390 by luck does not fit at 320.
+
   1024 IS HERE BECAUSE 390 AND 1440 BOTH PASSED WHILE PRODUCTION OVERFLOWED.
   It is the `lg` boundary: the five-link category nav appears at exactly 1024
   while the header row has not yet grown to hold it and the newsletter button
@@ -189,14 +204,57 @@ for (const route of ROUTES) {
   everybody measures. A breakpoint boundary is where layout breaks; testing
   only the middle of each range is testing where it cannot.
 */
-for (const width of [390, 1024]) {
+for (const width of [320, 360, 390, 414, 1024]) {
   for (const route of ROUTES) {
     const page = await browser.newPage({ viewport: { width, height: 844 } });
     await page.goto(BASE + route, { waitUntil: 'networkidle' });
-    const over = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+
+    const result = await page.evaluate(() => {
+      const de = document.documentElement;
+      const vw = de.clientWidth;
+
+      /*
+        NAME THE ELEMENT, DO NOT JUST REPORT THE NUMBER.
+
+        `scrollWidth > clientWidth` says the page scrolls sideways and nothing
+        about why, which is how a real overflow survived a clean sweep: the
+        report was "ok" on twelve routes and the offending markup was simply
+        not in any of them. Naming the culprit turns a re-run into a diagnosis.
+
+        An element is only guilty if NO ancestor scrolls or clips it — a wide
+        table inside its own `overflow-x: auto` box is the design working, not
+        a defect, and counting it would make this check cry wolf on every
+        article that has a table.
+      */
+      const contained = (el) => {
+        for (let n = el.parentElement; n; n = n.parentElement) {
+          const ox = getComputedStyle(n).overflowX;
+          if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') return true;
+        }
+        return false;
+      };
+
+      const wide = [...document.querySelectorAll('body *')]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && (r.right > vw + 1 || r.left < -1) && !contained(el);
+        })
+        .map((el) => {
+          const cls = typeof el.className === 'string' && el.className
+            ? '.' + el.className.split(' ')[0]
+            : '';
+          return `${el.tagName.toLowerCase()}${cls} w=${Math.round(el.getBoundingClientRect().width)}`;
+        });
+
+      return { over: de.scrollWidth - vw, wide: [...new Set(wide)].slice(0, 4) };
+    });
+
+    check(
+      route,
+      `no horizontal overflow at ${width}px`,
+      result.over <= 0,
+      `+${result.over}px${result.wide.length ? ' — ' + result.wide.join(', ') : ''}`,
     );
-    check(route, `no horizontal overflow at ${width}px`, !over, 'scrollWidth exceeds viewport');
     await page.close();
   }
 }
@@ -213,4 +271,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`\n✓ all invariants hold across ${ROUTES.length} routes (1440 · 1024 · 390)\n`);
+console.log(`\n✓ all invariants hold across ${ROUTES.length} routes (1440 · 1024 · 414 · 390 · 360 · 320)\n`);

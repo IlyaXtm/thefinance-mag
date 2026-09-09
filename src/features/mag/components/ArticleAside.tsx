@@ -11,6 +11,10 @@ import { toPersianDigits } from '../lib/format';
  * ends — "what is in this?" and "how much is left?" — and both derive from the
  * same scroll position, so splitting them would mean two scroll listeners.
  *
+ * That is also why the MOBILE progress rule is rendered from here rather than
+ * from a component of its own: one measurement, one listener, no chance of the
+ * two readouts disagreeing about how far in the reader is.
+ *
  * A client component only for that. The article body and everything indexable
  * stays server-rendered.
  *
@@ -303,6 +307,60 @@ export function ArticleAside({ headings }: { headings: string[] }) {
           {links}
         </ul>
       </nav>
+
+      {/*
+        MOBILE READING PROGRESS.
+
+        The panel above is `xl:block`, so below 1280 the only table of contents
+        is the closed <details> beneath — and the progress readout lives inside
+        the panel. A mobile reader therefore had NO progress feedback at all, on
+        articles that run to 41 minutes, and mobile is the majority of this
+        audience.
+
+        It matters MORE on a phone, not less: the scrollbar is hidden, so there
+        is no other cue about how much is left. On desktop the scrollbar already
+        answers the question and the panel readout is a refinement.
+
+        ── Rendered from here, and that is the point ──────────────────────
+        RENDERED FROM THIS COMPONENT rather than a new one, so there is exactly
+        one implementation of the measurement AND exactly one scroll listener.
+        A separate mobile component would have meant a second rAF handler
+        computing the same number from the same element — and two
+        implementations of one measurement drift, which is the failure this
+        avoids rather than merely tidies.
+
+        ── Why a rule at the top of the viewport ──────────────────────────
+        The brief rules out a full-width bar pinned under a sticky header, and
+        that is not what this is: THIS HEADER IS NOT STICKY (see MagHeader — the
+        `top-[76px]` on every sticky sidebar is measured against it not being),
+        so the rule sits at the top of the viewport with nothing above it to
+        compete with. It is 3px of accent on one edge, no track, so at rest
+        there is no chrome at all — an empty track would draw a permanent line
+        across the top of every article.
+
+        ── It cannot show 2% while the hero is on screen ──────────────────
+        `progress` is measured against `[data-article-body]`, so it is zero
+        until the body's top passes the viewport top — which is to say until the
+        hero has scrolled away. The `> 0` test IS "past the hero"; no separate
+        threshold is needed and adding one would be a second definition of the
+        same moment.
+
+        The width transition is the same 150ms the panel uses and
+        `motion-reduce` removes it, so a reduced-motion reader gets a bar that
+        steps rather than one that slides. Nothing animates per frame: the state
+        updates on a rAF-throttled scroll and CSS interpolates between values.
+      */}
+      {progress > 0 && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-x-0 top-0 z-40 h-[3px] xl:hidden"
+        >
+          <div
+            className="h-full bg-accent transition-[width] duration-150 motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
 
       {/* Mobile: native disclosure, closed by default, no custom JS. */}
       <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 xl:hidden">

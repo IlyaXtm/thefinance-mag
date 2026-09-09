@@ -394,7 +394,48 @@ export default async function ArticlePage({
            404s, rather than treating it as a card and keeping an empty box.
            The hero renders through CardImage, so without this marker it is
            indistinguishable from a thumbnail. */
-        <figure data-hero="" className="mt-7">
+        /*
+          THE HERO IS CONSTRAINED TO THE TITLE'S MEASURE AT DESKTOP, not capped
+          in height — and the numbers are why.
+
+          THE COMPLAINT IS REAL: full-bleed at 1360px, a 1.9 image stands 714px
+          tall, so on a 1440×900 screen the reader gets a headline and a picture
+          and has to scroll to reach a sentence.
+
+          The brief recommended a height cap of 420–480px with a centred crop,
+          and flagged the risk itself: several featured images have the headline
+          baked into the artwork, and a crop through baked text is worse than a
+          tall image. Measured against the known ratios at 1360px wide:
+
+            cap 480, centre crop        1.90 → 33% cropped (16% off EACH edge)
+                                        1.50 → 47% cropped (24% off each edge)
+                                        2.50 → 12% cropped
+            width 820, same clamp       1.90 → 430px tall, 0% cropped
+                                        1.50 → 432px tall, 21% (UNCHANGED)
+                                        2.50 → 328px tall, 0% cropped
+
+          The cap crops a THIRD off the majority image — the 1200×630 OG size
+          that most of the archive uses and that currently crops nothing. That
+          is precisely the cropping the natural-ratio change was made to remove,
+          reintroduced on the most common case.
+
+          Constraining the width gets a SHORTER hero than the cap would (430px
+          against 480) with no new cropping whatever, because the existing
+          [1.9, 2.8] desktop clamp already does the work at any width. One
+          number changes and the height problem solves itself.
+
+          IT ALSO REMOVES A RISK THAT COULD NOT BE MEASURED. The CMS is
+          unreachable from this environment, so where baked-in headlines sit in
+          the frame is unknown — and a centre crop is only safe if they sit away
+          from the vertical edges. Not cropping means not needing the answer.
+          See B14 for the measurement that is still owed.
+
+          Aligned to the title block's start edge rather than centred: the
+          headline, the byline and the hero share one reading edge. Mobile is
+          untouched — full width, natural ratio, its own [1.5, 2.8] clamp — and
+          the complaint was desktop-only.
+        */
+        <figure data-hero="" className="mt-7 md:max-w-[820px]">
           {/*
             The box takes the IMAGE's shape, not a shape of its own.
 
