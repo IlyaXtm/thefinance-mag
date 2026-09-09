@@ -31,6 +31,7 @@ import {
   lazyLoadBodyImages,
   sanitizeArticleHtml,
   stripInjectedToc,
+  wrapBodyTables,
 } from '../../lib/sanitize';
 
 /**
@@ -47,7 +48,9 @@ import {
  */
 function prepareContent(html: string): string {
   return addHeadingIds(
-    sanitizeArticleHtml(lazyLoadBodyImages(fixBodyImageUrls(stripInjectedToc(html)))),
+    wrapBodyTables(
+      sanitizeArticleHtml(lazyLoadBodyImages(fixBodyImageUrls(stripInjectedToc(html)))),
+    ),
   );
 }
 

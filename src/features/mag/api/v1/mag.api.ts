@@ -36,6 +36,7 @@ import {
   lazyLoadBodyImages,
   sanitizeArticleHtml,
   stripInjectedToc,
+  wrapBodyTables,
 } from '../../lib/sanitize';
 import { SITE_ORIGIN } from '../../lib/site';
 
@@ -574,7 +575,7 @@ export function magInjectedTocSurvivors(): string[] {
  * The article body pipeline, in the one order that works.
  *
  *   strip the injected ToC → repair image URLs → lazy-load them → strip
- *   banned inline styles → stamp heading ids
+ *   banned inline styles → wrap tables → stamp heading ids
  *
  * Image URLs are repaired AFTER the ToC strip, so the plugin's own list — which
  * contains no images — is not scanned, and BEFORE the style strip, which is a
@@ -585,6 +586,12 @@ export function magInjectedTocSurvivors(): string[] {
  * stamping had already walked over. Ids go LAST because they must survive
  * every earlier transform — that ordering is why sanitising and stamping were
  * split in the first place.
+ *
+ * Table wrapping goes after the style strip and before the ids, and only one
+ * of those two edges matters: it must follow the style strip, because a
+ * migrated table often carries `style="width:900px"` and wrapping it first
+ * would put a scroll container around a table that is about to stop being
+ * wide. Heading ids never touch a table either way.
  */
 function prepareBody(html: string, slug: string): string {
   const stripped = lazyLoadBodyImages(fixBodyImageUrls(stripInjectedToc(html)));
@@ -595,7 +602,7 @@ function prepareBody(html: string, slug: string): string {
      than an article that 500s. */
   if (articleHasInjectedToc(stripped)) injectedTocSurvivors.add(slug);
 
-  return addHeadingIds(sanitizeArticleHtml(stripped));
+  return addHeadingIds(wrapBodyTables(sanitizeArticleHtml(stripped)));
 }
 
 export async function getArticle(slug: string): Promise<Article> {

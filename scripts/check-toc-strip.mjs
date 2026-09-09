@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 /**
- * Unit-check `stripInjectedToc` against the plugin markup shapes we know of.
+ * Unit-check the two SCANNERS in the article-body pipeline — `stripInjectedToc`
+ * and `wrapBodyTables`. Both walk the document with a depth counter, both were
+ * written against markup this environment cannot fetch, and both fail silently
+ * when they get it wrong.
  *
  *   npm run check:toc
  *
@@ -40,7 +43,7 @@ execFileSync(
   { stdio: 'inherit' },
 );
 
-const { stripInjectedToc, articleHasInjectedToc } = await import(
+const { stripInjectedToc, articleHasInjectedToc, wrapBodyTables } = await import(
   pathToFileURL(join(out, 'sanitize.js')).href
 );
 
@@ -82,3 +85,62 @@ if (fail) {
   process.exit(1);
 }
 console.log(`\n\u2713 all ${cases.length} injected-ToC cases pass\n`);
+
+/*
+  ── wrapBodyTables ───────────────────────────────────────────────────────
+
+  The case that matters is the nested one. A non-greedy
+  `<table[\s\S]*?</table>` closes the OUTER table at the INNER closing tag, so
+  the wrapper's `</div>` lands in the middle of the outer table — inside a
+  <td>, where the parser moves it out and leaves the rest of the table
+  unwrapped. Nested tables are not hypothetical in a WordPress edited since
+  2019: a pasted email signature and a classic-editor layout column both
+  produce one.
+
+  Table counts have to be preserved exactly. A scanner that drops or
+  duplicates a table is worse than one that wraps nothing, and both failures
+  render as "a table looks slightly wrong" rather than as an error.
+*/
+const TABLE = '<table><thead><tr><th>الف</th><th>ب</th></tr></thead><tbody><tr><td>۱</td><td>۲</td></tr></tbody></table>';
+const NESTED = '<table><tbody><tr><td>' + TABLE + '</td></tr></tbody></table>';
+
+const tableCases = [
+  ['no table at all', '<p>متن.</p>', 0, 0],
+  ['one bare table', '<p>پیش</p>' + TABLE + '<p>پس</p>', 1, 1],
+  ['two tables', TABLE + '<p>میان</p>' + TABLE, 2, 2],
+  ['nested table wraps once, at the outside', NESTED, 2, 1],
+  ['core/table figure wrapper', '<figure class="wp-block-table">' + TABLE + '</figure>', 1, 1],
+  ['uppercase tag', TABLE.replace(/table/g, 'TABLE'), 1, 1],
+  ['attributes on the tag', TABLE.replace('<table>', '<table class="x" style="width:900px">'), 1, 1],
+  ['unclosed table (malformed)', '<table><tr><td>۱</td></tr>' + '<p>ادامه</p>', 1, 0],
+];
+
+let tableFail = 0;
+for (const [name, html, expectTables, expectWraps] of tableCases) {
+  const out = wrapBodyTables(html);
+  const tables = (out.match(/<table/gi) || []).length;
+  const wraps = (out.match(/data-table-scroll/g) || []).length;
+  const closes = (out.match(/<\/div>/g) || []).length;
+  const malformed = name.includes('malformed');
+
+  /* Malformed input comes back byte-identical: an unbalanced table is the
+     INPUT's problem, and wrapping to the end of the document would put the
+     rest of the article inside a scroll box. */
+  const ok = malformed
+    ? out === html
+    : tables === expectTables && wraps === expectWraps && closes === expectWraps;
+
+  if (!ok) tableFail++;
+  console.log(
+    (ok ? 'PASS ' : 'FAIL ') + name.padEnd(38),
+    'tables=' + String(tables).padEnd(4),
+    'wraps=' + String(wraps).padEnd(4),
+    'closingDivs=' + String(closes).padEnd(4),
+  );
+}
+
+if (tableFail) {
+  console.error(`\n\u2717 ${tableFail} of ${tableCases.length} table-wrap cases failed\n`);
+  process.exit(1);
+}
+console.log(`\n\u2713 all ${tableCases.length} table-wrap cases pass\n`);

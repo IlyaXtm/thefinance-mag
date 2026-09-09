@@ -281,6 +281,89 @@ const BANNED_DECLARATIONS = [
   /direction\s*:\s*ltr\s*;?/gi,
 ];
 
+/**
+ * Wrap every body table in its own horizontal scroll container.
+ *
+ * ── What this replaces, and why the old rule was not enough ──────────────
+ *
+ * The stylesheet used to put `display: block; overflow-x: auto` on the table
+ * ITSELF. That does stop a wide table widening the page, and it is why the
+ * mobile-overflow sweep passed. It also quietly costs the table its layout: a
+ * `display: block` table is a block container, its rows generate an anonymous
+ * table box inside it, and `width: 100%` then sizes the BLOCK — the anonymous
+ * table shrink-to-fits. So a narrow table stopped filling the column, and no
+ * amount of styling the <table> could put it back.
+ *
+ * A wrapper separates the two jobs. The container scrolls; the table is a
+ * table again, at `width: 100%` with a `min-width` floor so five columns do
+ * not collapse into one word each on a 360px screen.
+ *
+ * ── Why it is done here and not in CSS ───────────────────────────────────
+ *
+ * There is no CSS that adds an element. `core/table` wraps its table in
+ * `<figure class="wp-block-table">`, which could carry the overflow — but the
+ * classic editor, and every one of the 54 migrated bodies, emits a bare
+ * `<table>` with no wrapper at all. Styling only the figure would fix the
+ * shape nobody has and miss the shape everybody has.
+ *
+ * ── Depth counting, again ────────────────────────────────────────────────
+ *
+ * Tables nest, in real WordPress content more often than they should — a
+ * layout table from a pasted email, a table inside a cell. A non-greedy regex
+ * closes the outer table at the inner `</table>` and puts the wrapper's
+ * closing tag in the middle of the document. Same failure the injected-ToC
+ * strip was rewritten to avoid, so it uses the same scanner.
+ *
+ * The wrapper is focusable. A region that scrolls but cannot be reached by
+ * keyboard fails WCAG 2.2 SC 2.1.1 — a mouse can drag it and a keyboard has
+ * no way in. `tabindex="0"` with a name is the fix; a focusable region with no
+ * accessible name is announced as nothing at all, which is why the role and
+ * the label go on together.
+ */
+export function wrapBodyTables(html: string): string {
+  const OPEN = /<table\b/gi;
+  const CLOSE = /<\/table\s*>/gi;
+
+  let out = '';
+  let rest = html;
+
+  for (;;) {
+    OPEN.lastIndex = 0;
+    const start = OPEN.exec(rest);
+    if (!start) return out + rest;
+
+    const from = start.index;
+    let cursor = from + start[0].length;
+    let depth = 1;
+
+    while (depth > 0) {
+      OPEN.lastIndex = cursor;
+      CLOSE.lastIndex = cursor;
+      const nextOpen = OPEN.exec(rest);
+      const nextClose = CLOSE.exec(rest);
+
+      /* Malformed: leave the remainder exactly as it arrived rather than
+         wrapping to the end of the document. */
+      if (!nextClose) return out + rest;
+
+      if (nextOpen && nextOpen.index < nextClose.index) {
+        depth += 1;
+        cursor = nextOpen.index + nextOpen[0].length;
+      } else {
+        depth -= 1;
+        cursor = nextClose.index + nextClose[0].length;
+      }
+    }
+
+    out +=
+      rest.slice(0, from) +
+      `<div data-table-scroll="" tabindex="0" role="region" aria-label="جدول">` +
+      rest.slice(from, cursor) +
+      '</div>';
+    rest = rest.slice(cursor);
+  }
+}
+
 export function sanitizeArticleHtml(html: string): string {
   /* The leading \s is part of the match so the attribute can be removed
      cleanly, without leaving a double space behind. */

@@ -193,11 +193,50 @@
     font-style: normal;
   }
 
-  /* Tables scroll horizontally on mobile rather than breaking the layout. */
-  .article-body table {
-    display: block;
+  /*
+   * Tables scroll inside their own container — see `wrapBodyTables`, which
+   * puts a <div data-table-scroll> around every one of them.
+   *
+   * THE OVERFLOW USED TO BE ON THE TABLE ITSELF, as `display: block`. That
+   * stopped a wide table widening the page, which is all the mobile sweep
+   * asked of it, and it cost the table its layout in exchange: a
+   * `display: block` table is a block container whose rows generate an
+   * anonymous table box, so `width: 100%` sized the block and the real table
+   * shrink-to-fitted inside it. Narrow tables stopped filling the column and
+   * nothing done to the <table> could put it back.
+   *
+   * With the container doing the scrolling, this is a table again.
+   */
+  .article-body [data-table-scroll] {
     overflow-x: auto;
+    max-width: 100%;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+  }
+
+  /*
+   * The scroll container is focusable so a keyboard can reach it, which means
+   * it needs a visible focus ring like every other focusable thing.
+   */
+  .article-body [data-table-scroll]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .article-body table {
     width: 100%;
+    /*
+     * The floor that makes the container worth having. Five columns of Persian
+     * inside 320px is one word per line per cell — technically no overflow,
+     * and unreadable. A swipe is the better failure.
+     *
+     * It is on the table and not the container on purpose: the container stays
+     * at the column width, so the PAGE never grows. That is what keeps this
+     * inside the exemption the overflow invariant already makes for anything
+     * under an overflow-x ancestor.
+     */
+    min-width: 620px;
     border-collapse: collapse;
     font-size: 15px;
   }
@@ -616,6 +655,7 @@
   .article-body figure,
   .article-body img,
   .article-body table,
+  .article-body [data-table-scroll],
   .article-body pre,
   .article-body blockquote {
     break-inside: avoid;
@@ -624,9 +664,21 @@
 
   /* Tables and code scroll on screen; on paper there is nowhere to scroll. */
   .article-body table,
+  .article-body [data-table-scroll],
   .article-body pre {
     overflow: visible !important;
     white-space: pre-wrap;
+  }
+
+  /*
+   * And the floor that makes the scroll container useful on screen has to go
+   * on paper. A4 at the usual margins leaves roughly 660px of content, so a
+   * 620px minimum is inside it by 40px — near enough that a slightly wider
+   * margin silently clips the last column, with no scrollbar to hint that
+   * anything is missing.
+   */
+  .article-body table {
+    min-width: 0;
   }
 
   /*

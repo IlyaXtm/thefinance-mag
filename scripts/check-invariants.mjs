@@ -255,6 +255,43 @@ for (const width of [320, 360, 390, 414, 1024]) {
       result.over <= 0,
       `+${result.over}px${result.wide.length ? ' — ' + result.wide.join(', ') : ''}`,
     );
+
+    /*
+      EVERY BODY TABLE IS INSIDE ITS OWN SCROLL CONTAINER.
+
+      The overflow check above cannot catch a table that loses its wrapper,
+      and that is the whole point of adding this one. `contained()` exempts
+      anything under an `overflow-x` ancestor — which is correct, and it means
+      an unwrapped table would have to overflow the PAGE before the sweep saw
+      it. The comparison table carries `min-width: 620px` precisely so five
+      Persian columns do not crush to one word each, so an unwrapped one is
+      guaranteed to push the page sideways at 360px and guaranteed to look
+      fine at 1440. That is the same shape of bug as the iframe: invisible at
+      the width everyone measures.
+
+      Asserting the STRUCTURE rather than the symptom also survives a future
+      table that happens to be narrow. It is wrapped or it is a failure,
+      regardless of whether today's content is wide enough to prove it.
+    */
+    const tables = await page.evaluate(() => {
+      const all = [...document.querySelectorAll('.article-body table')];
+      return {
+        total: all.length,
+        loose: all
+          .filter((t) => !t.closest('[data-table-scroll]'))
+          .map((t) => `table[${t.rows.length}x${t.rows[0]?.cells.length ?? 0}]`),
+      };
+    });
+
+    if (tables.total > 0) {
+      check(
+        route,
+        `body tables wrapped for overflow at ${width}px`,
+        tables.loose.length === 0,
+        `${tables.loose.length} of ${tables.total} unwrapped — ${tables.loose.join(', ')}`,
+      );
+    }
+
     await page.close();
   }
 }
