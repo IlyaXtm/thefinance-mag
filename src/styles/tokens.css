@@ -283,13 +283,101 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
-h4 {
-  line-height: 1.5;
-  text-wrap: pretty;
+/*
+ * ── THE TYPE SCALE ──────────────────────────────────────────────────────
+ *
+ * ONE SCALE, TWO BREAKPOINTS, DERIVED FROM TWO NUMBERS.
+ *
+ * `--fs-h1` is 20px mobile / 24px desktop. Those two figures are the
+ * REVIEWER'S DECISION, not a measurement of anything — recorded as such in the
+ * changelog. Every other level is derived from them, and that is the point:
+ * before this file the sizes were forty-odd `text-[Npx]` literals with no
+ * relationship to each other, so a new heading got whatever number looked
+ * right that day and the hierarchy drifted a pixel at a time.
+ *
+ * Desktop steps down from 24 at roughly 1.125 (a major second); mobile steps
+ * down from 20 at roughly 1.09, because 20px leaves far less headroom above
+ * body text than 24 does. That compression is a real consequence of the
+ * decision and it shows up in the gaps below.
+ *
+ * ── The title has to keep outranking the body's own headings ────────────
+ *
+ * At 24px an h1 is close to what `.article-body h2` used to be — 24px on
+ * desktop, exactly level. So the body scale came DOWN with it: h2 is now
+ * 21/18. Without that the hierarchy inverts and a section heading reads as
+ * more important than the article's name.
+ *
+ * ── Body text does not move ─────────────────────────────────────────────
+ *
+ * 17/18 as it has always been. It is already the smallest thing a reader
+ * spends 41 minutes with, and the complaint was about the title.
+ *
+ * A consequence worth stating: at desktop h3 (19) is barely above body (18),
+ * and at mobile h3 (17) is level with it. Weight and colour carry the
+ * difference there — 700 primary against 400 secondary — which is legible and
+ * is what the scale relies on once it is this compressed.
+ *
+ * ── Where size stops doing the work ─────────────────────────────────────
+ *
+ * h4 and h5 are 1.5px apart at mobile, which is decorative rather than
+ * legible. They are separated by COLOUR instead: h4 primary, h5 secondary, h6
+ * muted. All three are defined for completeness — Mag's accessibility floor
+ * puts h2 on sections and h3 on card titles, so the article body in practice
+ * never goes below h3, and these exist so a heading added later inherits a
+ * considered value rather than a browser default of 1.5em.
+ *
+ * ── These are ELEMENT defaults, not the only sizes ──────────────────────
+ *
+ * Components that need a different size still set one, and a Tailwind utility
+ * beats an element selector, so nothing that already carries `text-[Npx]`
+ * changes underneath it. Card titles are component sizes; these are the
+ * document's.
+ */
+:root {
+  --fs-h1: 20px;
+  --fs-h2: 18px;
+  --fs-h3: 17px;
+  --fs-h4: 15.5px;
+  --fs-h5: 14px;
+  --fs-h6: 13px;
+
+  --fs-body: 17px;
+  --fs-dek: 17px;
+  --fs-meta: 12.5px;
+  --fs-caption: 13px;
 }
+
+@media (min-width: 768px) {
+  :root {
+    --fs-h1: 24px;
+    --fs-h2: 21px;
+    --fs-h3: 19px;
+    --fs-h4: 17px;
+    --fs-h5: 15px;
+    --fs-h6: 13.5px;
+
+    --fs-body: 18px;
+    --fs-dek: 18px;
+    --fs-meta: 13px;
+    --fs-caption: 14px;
+  }
+}
+
+/*
+ * The element rules that APPLY this scale live in globals.css, inside
+ * `@layer base`, and they have to.
+ *
+ * Tailwind's preflight sets `h1..h6 { font-size: inherit; font-weight: inherit }`
+ * — deliberately, so headings do not carry browser defaults. This file is
+ * @imported ABOVE `@tailwind base`, so a plain `h2 { font-size: … }` written
+ * here loses to preflight and every unclassed heading falls back to inheriting
+ * its container's size.
+ *
+ * That is not a hypothetical: it shipped for one build. `.article-body h2`
+ * measured 18px at 1440 — exactly `--fs-body` — while `--fs-h2` on :root read
+ * 21px and the h1, which carries a `text-h1` UTILITY, was correctly 24px. A
+ * scale that is right in the custom properties and wrong on the page.
+ */
 
 /*
  * Never italicise Persian. There is no true italic for Persian faces and the

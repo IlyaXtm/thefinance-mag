@@ -51,7 +51,30 @@ const config: Config = {
         heading: '1.5',
         caption: '1.7',
       },
+      /*
+       * The type scale, from tokens.css. Tailwind CONSUMES the tokens — it
+       * never introduces a parallel set of sizes, which is the same rule the
+       * colour tokens follow.
+       *
+       * Each step carries its own line-height so `text-h2` cannot be used
+       * without the leading Persian needs: 1.5 on headings, 1.9 on body, 1.7
+       * on the small stuff. A size utility that leaves line-height to whatever
+       * was inherited is how a heading ends up on 1.9.
+       *
+       * `body-mobile` and `body` are kept as literals: they predate the scale,
+       * a few components pin one breakpoint deliberately, and body size is the
+       * one thing the rescale was told not to move.
+       */
       fontSize: {
+        h1: ['var(--fs-h1)', { lineHeight: '1.5' }],
+        h2: ['var(--fs-h2)', { lineHeight: '1.5' }],
+        h3: ['var(--fs-h3)', { lineHeight: '1.5' }],
+        h4: ['var(--fs-h4)', { lineHeight: '1.5' }],
+        h5: ['var(--fs-h5)', { lineHeight: '1.5' }],
+        h6: ['var(--fs-h6)', { lineHeight: '1.5' }],
+        dek: ['var(--fs-dek)', { lineHeight: '1.9' }],
+        meta: ['var(--fs-meta)', { lineHeight: '1.7' }],
+        caption: ['var(--fs-caption)', { lineHeight: '1.7' }],
         'body-mobile': '17px',
         body: '18px',
       },

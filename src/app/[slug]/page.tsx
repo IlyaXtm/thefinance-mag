@@ -257,6 +257,11 @@ export default async function ArticlePage({
     ? heroAspectRatios(article.featuredImage)
     : null;
 
+  /* Both, not either. The ratios are derived from the image's own dimensions,
+     and an image without them cannot be laid out CLS-safely — so it does not
+     get a column either. */
+  const hasHero = Boolean(article.featuredImage && heroRatios);
+
   /*
     THE PANEL IS NAMED AFTER WHAT IT SHOWS, and the name is computed because
     the content can fall back.
@@ -301,7 +306,57 @@ export default async function ArticlePage({
       </div>
 
       {/* Title block, capped at 820 — the design's measure for a 44px h1. */}
-      <div className="mt-5 max-w-[820px]">
+      {/*
+        THE HEADER IS ONE BLOCK, NOT THREE STACKED ONES.
+
+        It used to run title → meta → full-width hero → body, so the reader met
+        a headline and a picture before a sentence. Bounding the hero to the
+        title's measure shortened the picture without changing that order. This
+        changes the order: text column and image sit side by side, the whole
+        header occupies one screen, and the body starts directly under it.
+
+        DIRECTION. The text column is FIRST IN THE DOM and takes grid column 1,
+        which RTL resolves to the right — text right, image left, matching the
+        reference. Nothing here names a side: swap `dir` and the whole thing
+        mirrors. `left`/`right` would have looked identical in Persian and been
+        silently wrong in the LTR case.
+
+        MOBILE STACKS WITH THE IMAGE FIRST, via `order`, and that is a choice
+        rather than a fallback — on a phone the picture establishes the subject
+        in the space a headline does not have. DOM order stays text-first so a
+        screen reader does not meet a figure before the page's h1; `order` moves
+        only the visual sequence, which is the one case where the two are
+        allowed to disagree.
+      */}
+      <div
+        /*
+          THE TEXT COLUMN IS THE 700px MEASURE, and that is the number that
+          cannot move: it is calibrated to IRANYekanX at 70–73 characters (see
+          tailwind.config.ts). The image takes the rest.
+
+          Below xl both shrink together; at md the pair has 728px to live in, so
+          the IMAGE drops to 240 rather than the text column dropping under its
+          measure. Rendered widths are in the changelog — measured, not taken
+          from the reference's numbers.
+
+          WITH NO IMAGE THIS IS NOT A GRID AT ALL. `grid-cols` applies only in
+          the hero branch, so the text column becomes an ordinary block at its
+          own measure: no empty cell, no reserved track, no gap collapsing to
+          nothing. A grid with one child still reserves the second column, which
+          is why this is a class swap and not a conditional child.
+
+          54 of 54 articles take the no-image branch whenever the CMS has no
+          featured image, and `575f922`'s rule governs it — a missing image
+          leaves no trace.
+        */
+        data-hero-grid=""
+        className={
+          hasHero
+            ? 'mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10 xl:max-w-[1076px] xl:grid-cols-[minmax(0,700px)_320px] xl:gap-14'
+            : 'mt-5 max-w-[700px]'
+        }
+      >
+        <div className="order-2 min-w-0 md:order-1">
         {/*
           THE KICKER — one chip or two, and the design's third is missing on
           purpose.
@@ -355,7 +410,7 @@ export default async function ArticlePage({
           `bidi-title.tsx` this change would reintroduce the mirrored bracket,
           so the two are a pair and neither should be removed alone.
         */}
-        <h1 className="mt-4 text-[30px] font-bold leading-[1.3] tracking-[-0.6px] text-text-primary [text-wrap:balance] md:text-[44px]">
+        <h1 className="mt-4 text-h1 text-text-primary [text-wrap:balance]">
           {bidiTitle(article.title)}
         </h1>
 
@@ -401,12 +456,12 @@ export default async function ArticlePage({
           last line.
         */}
         {article.excerpt && (
-          <p className="mt-5 text-[18px] leading-[1.9] text-text-secondary [text-wrap:pretty] md:text-[20px]">
+          <p className="mt-4 text-dek text-text-secondary [text-wrap:pretty]">
             {article.excerpt}
           </p>
         )}
 
-        <div className="mt-6 flex flex-wrap items-center gap-4 border-b border-border-subtle pb-6">
+        <div className="mt-5 flex flex-wrap items-center gap-4">
           <span
             aria-hidden="true"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[16px] text-text-secondary"
@@ -448,89 +503,102 @@ export default async function ArticlePage({
             useful, so that is the one taken.
           */}
         </div>
+        </div>
+
+        {/*
+          THE IMAGE COLUMN.
+
+          The wrapper is not decoration. Without it the <figure> is a direct
+          grid child at the default `order: 0`, so it sorts BEFORE the text
+          column's `order: 1` and takes the 700px track while the text takes
+          320. Measured that way for one build — and it looks deliberate in a
+          screenshot, because the picture simply appears to be the wide one.
+        */}
+        <div className="order-1 min-w-0 md:order-2">
+        {/* Featured image — the ONE priority image on this page. */}
+        {article.featuredImage && heroRatios && (
+          /* `data-hero`: tells MediaErrorGuard to REMOVE this figure if the image
+             404s, rather than treating it as a card and keeping an empty box.
+             The hero renders through CardImage, so without this marker it is
+             indistinguishable from a thumbnail. */
+          /*
+            THE HERO IS CONSTRAINED TO THE TITLE'S MEASURE AT DESKTOP, not capped
+            in height — and the numbers are why.
+
+            THE COMPLAINT IS REAL: full-bleed at 1360px, a 1.9 image stands 714px
+            tall, so on a 1440×900 screen the reader gets a headline and a picture
+            and has to scroll to reach a sentence.
+
+            The brief recommended a height cap of 420–480px with a centred crop,
+            and flagged the risk itself: several featured images have the headline
+            baked into the artwork, and a crop through baked text is worse than a
+            tall image. Measured against the known ratios at 1360px wide:
+
+              cap 480, centre crop        1.90 → 33% cropped (16% off EACH edge)
+                                          1.50 → 47% cropped (24% off each edge)
+                                          2.50 → 12% cropped
+              width 820, same clamp       1.90 → 430px tall, 0% cropped
+                                          1.50 → 432px tall, 21% (UNCHANGED)
+                                          2.50 → 328px tall, 0% cropped
+
+            The cap crops a THIRD off the majority image — the 1200×630 OG size
+            that most of the archive uses and that currently crops nothing. That
+            is precisely the cropping the natural-ratio change was made to remove,
+            reintroduced on the most common case.
+
+            Constraining the width gets a SHORTER hero than the cap would (430px
+            against 480) with no new cropping whatever, because the existing
+            [1.9, 2.8] desktop clamp already does the work at any width. One
+            number changes and the height problem solves itself.
+
+            IT ALSO REMOVES A RISK THAT COULD NOT BE MEASURED. The CMS is
+            unreachable from this environment, so where baked-in headlines sit in
+            the frame is unknown — and a centre crop is only safe if they sit away
+            from the vertical edges. Not cropping means not needing the answer.
+            See B14 for the measurement that is still owed.
+
+            Aligned to the title block's start edge rather than centred: the
+            headline, the byline and the hero share one reading edge. Mobile is
+            untouched — full width, natural ratio, its own [1.5, 2.8] clamp — and
+            the complaint was desktop-only.
+          */
+          <figure data-hero="">
+            {/*
+              The box takes the IMAGE's shape, not a shape of its own.
+
+              `h-[220px] md:h-[420px]` full-bleed is a 3.24 ratio at 1440, and
+              nothing in the archive is that shape — see lib/hero-ratio.ts for the
+              measured spread and the clamp. The ratio is inline rather than a
+              Tailwind class because it is per-image data, and inline is also what
+              makes it CLS-safe: it is in the markup before the image loads, so
+              the height is final from first paint.
+            */}
+            <div
+              className="aspect-[var(--hero-ratio-sm)] md:aspect-[var(--hero-ratio-md)]"
+              style={
+                {
+                  '--hero-ratio-sm': heroRatios.mobile,
+                  '--hero-ratio-md': heroRatios.desktop,
+                } as CSSProperties
+              }
+            >
+              <CardImage
+                image={article.featuredImage}
+                sizes="(max-width: 767px) 100vw, (max-width: 1279px) 300px, 320px"
+                priority
+                rounded="rounded-card"
+              />
+            </div>
+            {article.featuredImage.alt && (
+              <figcaption className="mt-2.5 text-caption text-text-muted">
+                {article.featuredImage.alt}
+              </figcaption>
+            )}
+          </figure>
+        )}
+        </div>
       </div>
 
-      {/* Featured image — the ONE priority image on this page. */}
-      {article.featuredImage && heroRatios && (
-        /* `data-hero`: tells MediaErrorGuard to REMOVE this figure if the image
-           404s, rather than treating it as a card and keeping an empty box.
-           The hero renders through CardImage, so without this marker it is
-           indistinguishable from a thumbnail. */
-        /*
-          THE HERO IS CONSTRAINED TO THE TITLE'S MEASURE AT DESKTOP, not capped
-          in height — and the numbers are why.
-
-          THE COMPLAINT IS REAL: full-bleed at 1360px, a 1.9 image stands 714px
-          tall, so on a 1440×900 screen the reader gets a headline and a picture
-          and has to scroll to reach a sentence.
-
-          The brief recommended a height cap of 420–480px with a centred crop,
-          and flagged the risk itself: several featured images have the headline
-          baked into the artwork, and a crop through baked text is worse than a
-          tall image. Measured against the known ratios at 1360px wide:
-
-            cap 480, centre crop        1.90 → 33% cropped (16% off EACH edge)
-                                        1.50 → 47% cropped (24% off each edge)
-                                        2.50 → 12% cropped
-            width 820, same clamp       1.90 → 430px tall, 0% cropped
-                                        1.50 → 432px tall, 21% (UNCHANGED)
-                                        2.50 → 328px tall, 0% cropped
-
-          The cap crops a THIRD off the majority image — the 1200×630 OG size
-          that most of the archive uses and that currently crops nothing. That
-          is precisely the cropping the natural-ratio change was made to remove,
-          reintroduced on the most common case.
-
-          Constraining the width gets a SHORTER hero than the cap would (430px
-          against 480) with no new cropping whatever, because the existing
-          [1.9, 2.8] desktop clamp already does the work at any width. One
-          number changes and the height problem solves itself.
-
-          IT ALSO REMOVES A RISK THAT COULD NOT BE MEASURED. The CMS is
-          unreachable from this environment, so where baked-in headlines sit in
-          the frame is unknown — and a centre crop is only safe if they sit away
-          from the vertical edges. Not cropping means not needing the answer.
-          See B14 for the measurement that is still owed.
-
-          Aligned to the title block's start edge rather than centred: the
-          headline, the byline and the hero share one reading edge. Mobile is
-          untouched — full width, natural ratio, its own [1.5, 2.8] clamp — and
-          the complaint was desktop-only.
-        */
-        <figure data-hero="" className="mt-7 md:max-w-[820px]">
-          {/*
-            The box takes the IMAGE's shape, not a shape of its own.
-
-            `h-[220px] md:h-[420px]` full-bleed is a 3.24 ratio at 1440, and
-            nothing in the archive is that shape — see lib/hero-ratio.ts for the
-            measured spread and the clamp. The ratio is inline rather than a
-            Tailwind class because it is per-image data, and inline is also what
-            makes it CLS-safe: it is in the markup before the image loads, so
-            the height is final from first paint.
-          */}
-          <div
-            className="aspect-[var(--hero-ratio-sm)] md:aspect-[var(--hero-ratio-md)]"
-            style={
-              {
-                '--hero-ratio-sm': heroRatios.mobile,
-                '--hero-ratio-md': heroRatios.desktop,
-              } as CSSProperties
-            }
-          >
-            <CardImage
-              image={article.featuredImage}
-              sizes="(max-width: 1023px) 100vw, 1360px"
-              priority
-              rounded="rounded-card"
-            />
-          </div>
-          {article.featuredImage.alt && (
-            <figcaption className="mt-2.5 text-[12.5px] leading-[1.7] text-text-muted">
-              {article.featuredImage.alt}
-            </figcaption>
-          )}
-        </figure>
-      )}
 
       {/*
         THREE COLUMNS ONLY AT xl (1280+).

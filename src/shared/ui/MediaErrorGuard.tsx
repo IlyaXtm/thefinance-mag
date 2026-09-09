@@ -89,7 +89,23 @@ function handleFailure(img: HTMLImageElement) {
   */
   const hero = img.closest('[data-hero]');
   if (hero) {
+    /*
+      REMOVING THE FIGURE IS NO LONGER ENOUGH.
+
+      The hero now sits in its own column of the article header's two-column
+      grid. Deleting the figure leaves the column's 320px track open and holds
+      it open — an empty third of the header, which is exactly the trace this
+      guard exists to avoid, in a shape it did not have when the hero was a
+      full-width block below the title.
+
+      So the grid is told as well. `data-hero-missing` flips it back to the
+      single-column form the no-image branch already renders server-side, and
+      the two end up identical: an article whose image 404s looks like an
+      article that never had one.
+    */
+    const grid = hero.closest('[data-hero-grid]');
     hero.remove();
+    if (grid) grid.setAttribute('data-hero-missing', '');
     return;
   }
 

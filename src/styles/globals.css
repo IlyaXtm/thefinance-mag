@@ -4,6 +4,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * The type scale, applied. Values are in tokens.css; this is where they reach
+ * the elements.
+ *
+ * `@layer base` and not a bare rule: preflight lives in the same layer and
+ * resets every heading to `font-size: inherit`. Written outside a layer these
+ * would win by cascade order, which sounds fine and is worse — an unlayered
+ * rule beats every layered one, so a component's own `text-[Npx]` utility
+ * would stop working on headings. Inside `base`, later-in-layer wins over
+ * preflight and any utility still wins over both, which is the order that
+ * lets components keep overriding.
+ *
+ * h5 and h6 carry colour rather than size: at mobile they sit 1–1.5px apart
+ * from their neighbours, which is decorative rather than legible. Mag's
+ * accessibility floor puts h2 on sections and h3 on card titles, so nothing in
+ * the product reaches them — they exist so a heading added later inherits a
+ * considered value instead of a browser default.
+ */
+@layer base {
+  h1 {
+    font-size: var(--fs-h1);
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: var(--fs-h2);
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: var(--fs-h3);
+    font-weight: 700;
+  }
+
+  h4 {
+    font-size: var(--fs-h4);
+    font-weight: 700;
+  }
+
+  h5 {
+    font-size: var(--fs-h5);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  h6 {
+    font-size: var(--fs-h6);
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+}
+
 /**
  * Utility for isolating Latin fragments inside Persian text.
  *
@@ -34,8 +96,25 @@
  *   - 18px desktop / 17px mobile; smaller loses legibility in Persian
  */
 @layer components {
+  /*
+   * The article header when its image turned out to be a 404.
+   *
+   * MediaErrorGuard removes the <figure> and marks the grid; this collapses
+   * the grid to the same single column the server renders when there is no
+   * featured image at all. Without it the removed figure leaves its 320px
+   * track standing — an empty third of the header.
+   *
+   * `!important` on the display: the grid classes are utilities and utilities
+   * beat components. This is a runtime correction to a server-rendered class
+   * list, which is the case the escape hatch is for.
+   */
+  [data-hero-grid][data-hero-missing] {
+    display: block !important;
+    max-width: 700px;
+  }
+
   .article-body {
-    font-size: 17px;
+    font-size: var(--fs-body);
     line-height: 1.9;
     color: var(--text-secondary);
     text-align: start;
@@ -54,44 +133,42 @@
     overflow-wrap: break-word;
   }
 
-  @media (min-width: 768px) {
-    .article-body {
-      font-size: 18px;
-    }
-  }
-
   .article-body > * + * {
     margin-block-start: 1.4em;
   }
 
+  /*
+   * Body headings come off the scale now — see tokens.css.
+   *
+   * THEY HAD TO COME DOWN. h2 was 22/24 against an h1 of 30/44; with the h1 at
+   * 20/24 the desktop pair was exactly level at 24, so a section heading read
+   * as equal in weight to the article's own name. The scale puts h2 at 18/21,
+   * which restores a step in both directions.
+   *
+   * Only the SPACING is set here. Size, weight and leading are the document's,
+   * not this component's, and duplicating them is how the two drift apart.
+   */
   .article-body h2 {
     margin-block-start: 2em;
     margin-block-end: 0.6em;
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.5;
     color: var(--text-primary);
-  }
-
-  @media (min-width: 768px) {
-    .article-body h2 {
-      font-size: 24px;
-    }
   }
 
   .article-body h3 {
     margin-block-start: 1.6em;
     margin-block-end: 0.5em;
-    font-size: 19px;
-    font-weight: 600;
-    line-height: 1.5;
     color: var(--text-primary);
   }
 
-  @media (min-width: 768px) {
-    .article-body h3 {
-      font-size: 20px;
-    }
+  .article-body h4,
+  .article-body h5,
+  .article-body h6 {
+    margin-block-start: 1.4em;
+    margin-block-end: 0.4em;
+  }
+
+  .article-body h4 {
+    color: var(--text-primary);
   }
 
   .article-body ul,
@@ -187,7 +264,7 @@
 
   .article-body figcaption {
     margin-block-start: 0.6em;
-    font-size: 14px;
+    font-size: var(--fs-caption);
     line-height: 1.7;
     color: var(--text-muted);
     font-style: normal;
