@@ -8,6 +8,137 @@ why it was made.
 
 ---
 
+## 2026-09-09 — Header navigation, and images that are not there
+
+### 1 🔴 A missing image now leaves no trace
+
+**The null hero was already correct**, and establishing that is what pointed at
+the real cause. Measured on both null-image fixtures: zero `<figure>` elements,
+no hero markup at all, the body starting where the hero would have been.
+`featuredImage: null` has never rendered anything.
+
+**The empty dark rectangle is a 404, not a null** — and the mechanism is that
+the hero renders through `CardImage`, so it carries `data-card-image` and took
+the CARD branch of the new guard: kept its box, painted the placeholder,
+full-bleed and empty. Measured with the branches in the wrong order: hero figure
+still on the page, full height, nothing in it. The hero is checked first now. A
+card must keep its box because its neighbours in the grid have images; a hero
+has no neighbours, so there is nothing to hold the row for.
+
+Client-side, and it cannot be anything else — in-body HTML is
+`dangerouslySetInnerHTML` from the CMS, so the server never fetches those URLs.
+
+Two things about the implementation are load-bearing and both look like details:
+
+- **`error` does not bubble.** A listener on a container never sees an image
+  fail inside it. Capture phase is the only one that reaches it, which is why
+  the naive version of this component does nothing while looking correct.
+- **The sweep on mount is not optional.** Images usually fail BEFORE hydration,
+  so a guard that only listens catches almost nothing on a cold load — the load
+  that matters. `complete && naturalWidth === 0` catches the finished ones.
+
+Three responses, because the right answer differs by context: body → remove the
+figure, caption and all; hero → remove the figure; card → the reserved
+placeholder, never removal, because the v4 review settled that box and the grid
+must not reflow.
+
+**On `cta_inchart`: the investigation the brief asked for could not be run.**
+This environment cannot reach `thefinance.ir` (`curl` returns `000` in ~0.2s —
+refused by the proxy allow-list, not a timeout). Two hypotheses, one of which is
+now handled and counted:
+
+1. **A wrong path.** A body image whose src is `/wp-content/uploads/…` resolves
+   against the main site's root under `basePath: '/mag'` and is a certain 404 —
+   and that is exactly what pre-cutover content carries, because WordPress was
+   the site root then. Now rewritten to `/mag/wp-content/uploads/…`, src and
+   srcset both, and COUNTED on `/mag/health` as `rewrittenBodyImages`.
+2. **A missing upload.** Then this changes nothing, the counter stays at zero,
+   and it is a content problem to hand back rather than a rendering one.
+
+Only that one URL shape is touched. Absolute URLs are left alone in both
+directions — the public host works and so does the CMS host, since the reader's
+browser is outside the container and the optimizer's hairpin problem does not
+apply to markup the browser fetches for itself. Anything broader would be
+guessing at a fix that could break images that currently work.
+
+### 2–4 🔴🟠 The header: masthead, taxonomies, exit
+
+**These are one change, not three.** The logo could only stop pointing at the
+main site once the main site had its own entry, and that entry could only be
+added once the row was not already carrying two taxonomies' worth of links.
+
+**The masthead goes to `/mag`.** It pointed at thefinance.ir on the reasoning
+that a reader from search needs a route back — true, and now the exit link's
+job. A reader three articles deep could reach the main site and could not reach
+the magazine's own front page except through a breadcrumb.
+
+**Content types are flat links, markets are behind a labelled disclosure.** The
+row read «طلا و ارز · بورس ایران · کریپتو · آموزش · اخبار»: three markets then
+two types, with nothing to say they are different axes. Same defect the review
+found on the filter chips; same fix — name the axis rather than blur it.
+
+«تحلیل» joins «اخبار» and «آموزش». «گزارش» does not: a content type with no
+category behind it, so the link would point at an archive that does not exist.
+«مقالات» does not either, for the opposite reason — 39 posts, but a catch-all
+tag nobody chose as a section. Both are the rule from the category routes: **a
+route is not a nav slot.** Still hand-picked.
+
+**The counts are the point, not decoration.** کریپتو ۵ · فارکس ۳ · اقتصاد جهانی
+۳ · بورس ایران ۲ · طلا و دلار ۱ · مسکن ۰ — four of six under three articles. A
+menu where half the entries lead to a one-article page teaches a reader the menu
+is not worth using, so «طلا و دلار ۱» sets its own expectation before the click.
+
+Hiding the thin ones is worse and was rejected for a specific reason: the menu
+would change shape as articles are tagged, so a reader who found فارکس last week
+finds it missing this week with nothing to explain why. A stable menu with
+honest numbers beats a shifting one with flattering ones. **Empty is different**
+and is suppressed — «مسکن ۰» is a promise of nothing — and it returns on its own
+because the counts come from the live query the sitemap floor already uses.
+
+**Mobile is a labelled section of the strip, not a nested menu.** A dropdown
+anchored inside a horizontal scroller either clips at the container's edge or
+scrolls away from its own trigger, and at 390px it covers the row it belongs to.
+Three labelled `<nav>` groups instead, which announces the axis the same way the
+desktop button does.
+
+**Two bugs found by measuring rather than reasoning.** The strip's
+`overflow-x-auto` sat on the sections `<nav>`, so the two new groups fell
+outside the scrolling area entirely. And the exit rendered TWICE between 640 and
+1023px — the desktop copy was `sm:inline-flex` while the strip carrying its own
+copy is `lg:hidden`; both are `lg` now.
+
+**The exit is the quietest thing in the row**, by design. It leaves the magazine
+rather than moving within it: muted, hairline-separated, arrow pointing out. One
+link — InChart, Academy and Paradigm stay in the footer, and repeating them here
+would trade the magazine's navigation for a product menu.
+
+### 5 🟡 «دسته‌بندی‌ها» named the wrong taxonomy
+
+The home sidebar was headed «دسته‌بندی‌ها» and listed markets. Renamed to
+«بازارها» rather than switching the list: the counts, the links and the
+`activeSlug` a market archive passes in are all market data, so changing the
+list would change the component's job rather than fix its label.
+
+**The footer had the same bug and is not in the review's list.** Its
+«دسته‌بندی‌ها» column also lists markets. Fixed anyway, for the reason the
+review gave for the sidebar: the header now draws the two axes apart explicitly,
+so a footer still calling markets «categories» contradicts what the header just
+taught. That column's title follows its content, because its fallback is a
+different axis.
+
+### What the nav does at each breakpoint
+
+| width | masthead | sections | markets | exit |
+|---|---|---|---|---|
+| <1024 | `/mag` | strip, group 1 | strip, group 2, with counts | strip, group 3 |
+| ≥1024 | `/mag` | flat links in the row | «بازارها ▾» disclosure | end of the row |
+
+Verified at 320 · 360 · 390 · 480 · 639 · 640 · 767 · 768 · 1023 · 1024 · 1100 ·
+1279 · 1280 · 1440 · 1920 across twelve routes: no horizontal overflow anywhere,
+exactly one exit at every width.
+
+---
+
 ## 2026-09-08 — The SEO team's article-page review, nine items
 
 Their PDF was marked up on the live site. **Three of the nine were already fixed

@@ -190,6 +190,57 @@ destination".
 
 ---
 
+## Navigation
+
+**One control, one taxonomy.** Decided 2026-09-09.
+
+Content types are flat links in the header; markets are behind a disclosure
+labelled «بازارها». Mixing them in one row — which is what shipped — gives a
+reader two axes with nothing to say they are different, and it is the same
+defect the filter chips had. The fix in both places is to NAME the axis, never
+to merge them: `decisions.md` chose two axes over six because taxonomy bloat is
+this category's documented failure, and a nav that blurs them undoes that
+quietly.
+
+**The masthead links to the magazine.** Every publication's masthead links to
+that publication's home. The route back to the main site is a separate, quieter
+link at the end of the row — an exit, not a destination the magazine promotes,
+and exactly one of them, because InChart, Academy and Paradigm live in the
+footer and a header full of products is not the magazine's navigation.
+
+**A thin section shows its count; an empty one is suppressed.** Four of six
+markets hold fewer than three articles. Showing «طلا و دلار ۱» sets an honest
+expectation before the click; hiding the thin ones would make the menu change
+shape as articles are tagged, which is confusing in a worse way. Zero is
+different — a link to nothing is not a promise worth making, and it returns on
+its own when the term has an article.
+
+**The nav is hand-picked, and this is why.** It is not derived from what the CMS
+returns. A route is not a nav slot: «مقالات» has 39 posts and stays out because
+it is a catch-all tag nobody chose as a section, and «گزارش» stays out because
+the category does not exist yet.
+
+---
+
+## Missing media
+
+**A missing image leaves no trace.** Decided 2026-09-09.
+
+No placeholder, no icon, no alt text sitting alone. A reader who sees a broken
+image learns the site is broken; a reader who sees clean text learns nothing,
+which is correct, because the missing image was never load-bearing.
+
+The one exception is a CARD THUMBNAIL, which keeps its reserved box: its
+neighbours in the grid have images, and a card that loses its box makes the row
+reflow. Everything else — hero, in-body figure — is removed entirely, so a dead
+image and an absent one look identical to a reader.
+
+**Never substitute.** No category cover, no gradient, no generated art. An
+invented image is worse than none: it tells the reader something about the
+article that nobody wrote.
+
+---
+
 ## Brand assets
 
 **The logo is inline SVG with `currentColor` ink, not two theme files.**

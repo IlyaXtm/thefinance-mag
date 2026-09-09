@@ -673,3 +673,47 @@ A wide image is now a thin band; a tall one pushes the article down. The old
 band cropped everything equally instead, which is why it was replaced. Ask which
 they saw before changing it — and take the measurement in B14 at the same time,
 since it is the same query and the same session.
+
+---
+
+## B20 — `cta_inchart` and the in-body images that 404
+
+**Status:** open, and it needs one person with a browser and five minutes.
+
+A live article rendered a broken image with `alt="cta_inchart"`. The rendering
+side is fixed — `MediaErrorGuard` removes a failed figure so the reader sees
+nothing rather than a broken icon — but **that hides the symptom and does not
+find the cause**, and a CTA banner that silently disappears from every article
+is still a CTA banner nobody sees.
+
+The investigation could not be run from the build environment: `thefinance.ir`
+and `wp.thefinance.ir` both return `000` in ~0.2s, refused by the proxy
+allow-list rather than timing out.
+
+Run this where the site is reachable:
+
+```bash
+# every in-body image on the reported article
+curl -s "https://thefinance.ir/mag/best-crypto-wallets" \
+  | grep -o 'src="[^"]*"' | grep -v _next | sort -u
+
+# then check each one
+for u in <the URLs above>; do printf '%s %s\n' "$(curl -s -o /dev/null -w '%{http_code}' "$u")" "$u"; done
+```
+
+**Two outcomes, and they are different problems:**
+
+- **A wrong path.** If the dead URLs are root-relative `/wp-content/uploads/…`,
+  they are already repaired by `fixBodyImageUrls` — check
+  `/mag/health → rewrittenBodyImages`, which counts them. Non-zero means this
+  was it and it is fixed.
+- **A missing upload.** If `rewrittenBodyImages` is zero and images are still
+  dead, the file is not on the CMS. That is a CONTENT problem: someone deleted
+  or never uploaded the banner. Hand it to whoever maintains the CTA, and check
+  whether it is one image or a pattern across articles — a shared CTA snippet
+  pasted into many posts fails in all of them at once.
+
+Also worth checking while there: whether the CTA is inserted as raw HTML into
+post bodies at all. A banner that appears in many articles by copy-paste is a
+Gutenberg block waiting to happen (B7) — one component, one source, and it
+cannot rot in fifty places independently.
