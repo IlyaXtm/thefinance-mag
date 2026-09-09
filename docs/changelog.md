@@ -8,6 +8,66 @@ why it was made.
 
 ---
 
+## 2026-09-09 (servers) — A day of infrastructure work, none of it in the repo
+
+Recorded after the fact from a session log. Nothing here is a frontend change;
+the rules it produced are in `decisions.md` and the five open items are B22–B26.
+
+**Two WordPress installs were reachable and one of them was swallowing
+content.** A `location ^~ /mag/wp-admin/` block was pointed at the old Jannah
+install while fixing admin assets, so every editor opening
+`thefinance.ir/mag/wp-admin/` wrote into an installation no longer connected to
+the site. One article (`best-crypto-wallets`) was published that way and 404'd;
+recovered by `wp export` and re-import, minus its featured image. Jannah is
+`docker stop`ped now — kept on disk as the rollback path, not running.
+
+Nothing failed while this was happening. The editor saw a successful publish.
+
+**🔴 `WP_SITEURL` was defined, and the GraphQL endpoint started returning the
+blog archive as HTML.** The WPGraphQL route registers relative to `siteurl`, so
+moving `siteurl` moves the endpoint. The magazine kept serving from the ISR
+cache for several minutes and nobody noticed — the window in which this looks
+fine is the window in which it gets committed. Reverted from a `wp-config.php`
+backup, and written into `decisions.md` as a never, because it is exactly the
+lever someone reaches for next time admin URLs are wrong.
+
+**The admin now reaches the CMS host through filters instead.** Thirteen of
+them, plus an output buffer over the finished admin HTML — and the buffer is not
+belt-and-braces. Per-source filters only catch URLs registered as absolute;
+jQuery's is not, and without jQuery the whole admin JavaScript fails. The same
+shape as an invariant sweep that passes because it only met well-formed input.
+
+`wp.ajax.settings.url` needed both halves of a two-part fix, because it prints
+as a RELATIVE path and no PHP filter can match one — there is no host to
+rewrite. An inline script after `wp-util`, and an nginx rewrite on the CMS host
+for everything else built the same way.
+
+**`wp core download --force` without `--locale=fa_IR`** put English core on a
+Persian install: 31 `wp is not defined` errors, admin JavaScript dead. The 404
+that prompted it was for `wp-admin/css/colors/fresh/`, which does not exist —
+removed in WordPress 7.1, replaced by `modern`.
+
+**The GraphQL rate limit had never fired.** The server's nginx had
+`location = /graphql` where the repo had `location = /mag/graphql`; `=` is an
+exact match, so the limit had been configured for months and applied to nothing.
+The repo version went to the server, and the rules that existed only on the
+server — public-page 404s, an `?author=` guard — came back to the repo.
+
+**Then the limit killed the first production build.** `burst=20` rejected 21 of
+40 concurrent requests; Next prerenders 82 pages in parallel. Raised to
+`burst=200`, 40 of 40 answered. The limit is for scrapers, and the build is the
+only legitimate caller that bursts this hard.
+
+**The market taxonomy is checkboxes now** — `hierarchical => true`. A free-text
+tag box for six fixed terms invites a typo, and a misspelled market is a market
+the archive cannot find. Interface only; term counts unchanged.
+
+Three of these were mistakes made during the session — the admin block wired to
+the wrong WordPress, the locale-less core download, and the rate limit that
+stopped the build. They are in `decisions.md` as rules for that reason.
+
+---
+
 ## 2026-09-09 (later) — Hero proportion, mobile progress, real overflow, hover
 
 ### 3 🔴 The page scrolled sideways on mobile — REPRODUCED, and the previous clean sweep was the problem

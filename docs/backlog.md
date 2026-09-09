@@ -762,6 +762,119 @@ print(c.most_common(30))"
 
 Anything in that list without a rule in `globals.css` is the next
 `<iframe width>`. Known unknowns worth checking specifically: `<table>` with
-inline widths, `<blockquote class=\"twitter-tweet\">` (loads a third-party
+inline widths, `<blockquote class="twitter-tweet">` (loads a third-party
 script, which CLAUDE.md forbids outright), `<script>` in body content, and
 Gutenberg block wrappers the article-body styles do not name.
+
+---
+
+## B22 — 🔴 Editors are logged out of the panel every few minutes
+
+**Status:** open, diagnosed, **fix untried**.
+
+The session drops after a few minutes and the editor has to sign in again. The
+diagnosis is the cookie path: WordPress sets the auth cookie on `path=/mag/`
+because that is `home_url`, but the panel is served at `/wp-admin/` on the CMS
+host, so the browser never sends it back.
+
+The likely fix is three constants:
+
+```php
+define('COOKIEPATH', '/');
+define('SITECOOKIEPATH', '/');
+define('ADMIN_COOKIE_PATH', '/wp-admin');
+```
+
+**THEY MUST GO IN `wp-config.php`, NOT IN A mu-plugin.** WordPress reads cookie
+constants before plugins load, so a mu-plugin sets them too late to have any
+effect — and it would look like the fix simply did not work.
+
+**This is a hypothesis, not a plan.** It has not been tried. `wp-config.php` is
+the one file whose breakage takes the whole CMS down with no way to recover from
+the panel, so: back it up first, change one constant at a time, and confirm
+login survives between each. If `siteurl` is ever touched in the same session,
+re-read the `WP_SITEURL` entry in `decisions.md` first.
+
+---
+
+## B23 — 🔴 Draft preview redirects to an ID, and the article route needs a slug
+
+**Status:** open.
+
+The secret handshake works — no secret gives 401, a correct secret gives 307 —
+so draft mode itself is fine. The destination is wrong: it redirects to
+`/mag/<id>` where the article route resolves `/mag/<slug>`, so the preview lands
+on a 404 after a successful authentication.
+
+Either the redirect resolves the ID to a slug before redirecting, or the article
+route learns to accept a numeric ID in preview mode. The first is preferable —
+the second puts a second URL shape in front of a route whose whole design is one
+canonical path per article.
+
+**Hygiene, from the same debugging session:** `WP_PREVIEW_SECRET` had to be
+rotated twice in one day, the second time because a diagnostic query printed its
+value. No diagnostic should ever print a secret — the first eight characters or
+a hash is enough to compare two values.
+
+---
+
+## B24 — 🟠 `best-crypto-wallets` has no featured image
+
+**Status:** open, one manual action.
+
+The article was published into the wrong WordPress (see the "only one WordPress
+may be reachable" note in `decisions.md`), exported with `wp export` and
+re-imported into the CMS. The featured image did not come across the import and
+has to be uploaded again by hand.
+
+Worth checking whether anything else moved in that export lost an attachment —
+it was one article, but the failure is silent and the article renders
+correctly-but-imageless either way, which is now indistinguishable from a
+deliberate no-image post because `MediaErrorGuard` renders nothing for both.
+
+---
+
+## B25 — 🟠 Nine plugins that a headless CMS has no use for
+
+**Status:** open. Low risk except the last line, which is the opposite.
+
+Three classic-editor plugins are active — `tinymce-advanced`,
+`classic-editor-addon`, `classic-widgets` — and they are meaningless against a
+headless frontend. They are also not inert: they are what made the posts screen
+render broken for one user and fine for another.
+
+Six are Jannah's, for a theme that no longer renders the site:
+`jannah-extensions`, `jannah-autoload-posts`, `jannah-optimization`,
+`jannah-switcher`, `tielabs-instagram`, `wm-video-playlists`.
+
+Deactivate rather than delete first, and one group at a time — a plugin that
+turns out to be load-bearing is easier to identify when it is the only thing
+that changed.
+
+**`wp-graphql` has an update available and it is NOT in this cleanup.** It is
+the magazine's spine: every page is rendered from it. After any update, test
+every field the frontend actually reads — `markets`, `seo`, `modifiedAtIso`,
+`magRedirects`, `outlineHeadings` — because GraphQL rejects an unknown field
+outright and the failure is a build that stops, not a page that degrades.
+
+Related but separate: B18 (`easy-table-of-contents`), which needs its own
+shortcode audit first.
+
+---
+
+## B26 — 🟠 Remove the Jannah WordPress, and the main site's `wp-json` timeout
+
+**Status:** open, deliberately waiting.
+
+The old Jannah install is `docker stop`ped, not deleted. It stays until the
+cutover has been stable for a few weeks AND the main site has stopped pointing
+at it.
+
+**The main site is still reading `wp-json` from the CMS and timing out.** Seen
+in the nginx log: a `?per_page=10&_embed` request, which is heavy — `_embed`
+pulls the full author, term and media objects for every post. Whatever the main
+site renders from that call is currently rendering slowly or not at all, and
+nobody has looked at which. `handover-main-site-dev.md` covers it.
+
+Removing Jannah before that call is repointed would turn a slow response into a
+failed one, on the main site's home page.

@@ -65,6 +65,78 @@ Rank Math derives canonicals from it, so leaving it there means canonicals are
 correct with no rewriting. Moving it to the CMS host would require rewriting
 every canonical in the SEO layer.
 
+**NEVER DEFINE `WP_SITEURL` ON THIS INSTALL.** Tried on 2026-09-09, to make
+admin URLs resolve to the CMS host. The GraphQL endpoint stopped returning JSON
+and started returning **the blog archive as HTML** — the WPGraphQL route is
+registered relative to `siteurl`, so moving `siteurl` moves the endpoint out
+from under the frontend.
+
+The magazine kept serving for several minutes from the ISR cache and nobody
+noticed, which is worse than an outage that announces itself: the window in
+which this looks fine is exactly the window in which it gets committed.
+Reverted from a `wp-config.php` backup.
+
+It will be reached for again — it is the obvious lever whenever admin URLs are
+wrong, and the rule above (`siteurl` must stay public for canonicals) does not
+by itself explain why the constant is dangerous. The admin-URL problem has a
+different answer; see the next entry.
+
+**The admin lives on the CMS host through FILTERS, never through core
+constants.** `siteurl` is public, so every admin URL WordPress builds from it
+points at a path Next.js now serves — a 404 for the editor. The fix is
+`wordpress/mu-plugins/tf-admin-host.php`, rewriting admin, login, asset and
+media-library URLs to `wp.thefinance.ir` while leaving `siteurl` alone. The
+filters are documented in that file and are not re-listed here.
+
+Two findings from building it generalise beyond WordPress, and both are why the
+file cannot be trimmed:
+
+**A per-source URL filter only catches what was registered with an ABSOLUTE
+URL.** jQuery is not, and without jQuery every admin script fails. That is why
+`tf-admin-host.php` also runs an output buffer over the finished admin HTML —
+one pass that cannot miss a source, after thirteen filters that each can. The
+buffer looks redundant next to the filters and removing it breaks the admin.
+Same shape as an invariant sweep that passes because it only ever saw
+well-formed cases: a check that sees only the registered URLs reports clean.
+
+**A relative path cannot be filtered in PHP at all** — there is no host to
+rewrite. `wp.ajax.settings.url` prints as `/mag/wp-admin/admin-ajax.php`, so the
+media library sent every request to a path Next.js owns and got a 404: an empty
+library, and no uploading from inside an article. Two halves, neither sufficient
+alone — `wp_add_inline_script` after `wp-util`, which is where `wp.ajax` is
+defined (`admin_print_scripts` runs too early and the value was overwritten
+again), AND `rewrite ^/mag(/wp-.*)$ $1 last;` at server level on the CMS host,
+for everything else WordPress builds the same way.
+
+**`--locale=fa_IR` on every `wp core download`.** A `--force` download without it
+put English core files on a Persian install: 31 `wp is not defined` errors and
+the whole admin JavaScript dead, because the JS translation files no longer
+matched core. `wp core verify-checksums` confirms the repair.
+
+(The 404 that prompted the download was for `wp-admin/css/colors/fresh/`, which
+does not exist — `fresh` was removed in WordPress 7.1 and `modern` replaced it.
+The missing file was not the problem it looked like.)
+
+**Config sync runs repo → server, never the reverse.** A sync on 2026-09-09
+found the server's nginx carrying `location = /graphql` where the repo had
+`location = /mag/graphql`. `=` is an exact match, so it had never fired: the
+GraphQL rate limit had been configured for months and applied to nothing.
+
+Before committing anything taken FROM a server, read `git diff` for what
+DISAPPEARS, not for what arrives. That same sync found rules living only on the
+server — public-page 404s, an `?author=` enumeration guard — which had to be
+added to the repo rather than overwritten by it.
+
+**A rate limit is for scrapers, and a build must never be what it stops.**
+`limit_req zone=graphql burst=20` went live and the next production build failed
+with `GraphQL responded 503` — measured, 21 of 40 concurrent requests rejected,
+because Next prerenders 82 pages in parallel. Raised to `burst=200`: 40 of 40
+answered 200.
+
+The build is the only legitimate caller that bursts this hard. Any limit on an
+endpoint the build reads has to be sized against the page count, and the page
+count grows with the archive.
+
 ---
 
 ## Content model
@@ -364,6 +436,21 @@ is `/%postname%/`, so nothing changes.
 **The old WordPress theme is never deleted.** It's the rollback path. While
 WordPress can still render `/mag`, reverting the cutover is an nginx upstream
 change and a reload — seconds rather than a redeploy.
+
+**But only ONE WordPress may be REACHABLE, and the rollback install is not
+free.** On 2026-09-09 a `location ^~ /mag/wp-admin/` block was pointed at the
+old Jannah install on port 9080 while fixing admin assets. Every editor who
+opened `thefinance.ir/mag/wp-admin/` was then writing into **the wrong
+WordPress** — an installation no longer connected to the site.
+
+One article was published that way (`best-crypto-wallets`, ID 2284) and 404'd on
+the live site. It was recovered with `wp export` and re-imported; its featured
+image did not survive the import.
+
+So the rollback install stays on disk and is `docker stop`ped, not running. Two
+reachable installs means one of them eventually swallows content, and the
+discovery takes days because NOTHING FAILS — the editor sees a successful
+publish. Kept a few weeks to confirm nothing depends on it, then removed; B26.
 
 **Media URLs never change.** Existing images are at
 `thefinance.ir/wp-content/uploads/...`. The public path stays and nginx proxies
