@@ -45,38 +45,54 @@ export const HEADER_LINKS: NavLink[] = [
  * for topical authority on a site this small.
  */
 /**
- * The header's category nav — the v4 design's five links.
+ * The header's section links — CONTENT TYPES ONLY.
  *
- * The design draws one flat category axis. This codebase keeps two taxonomies
- * (`market` and `contentType`) because `decisions.md` chose "two axes, not
- * six", so each label here resolves to whichever axis actually holds that
- * content. No new taxonomy, no migration, no new URLs to redirect.
+ * ── What was wrong ─────────────────────────────────────────────────────
  *
- * THE LIST IS HAND-PICKED AND STAYS THAT WAY. `/mag/category/<slug>` is now
- * generated from the live taxonomy, so every category the CMS holds has a
- * route — but a route is not a nav slot. Rendering the CMS's category list
- * here would put «مقالات» (39 posts, a catch-all tag nobody chose as a
- * section) in the header for being large, and would let an editorial decision
- * about the top of every page be made by whoever adds a term. Five links,
- * chosen; new categories are reachable, indexed where they earn it, and not
- * automatically promoted.
+ * The row read «طلا و ارز · بورس ایران · کریپتو · آموزش · اخبار». The first
+ * three are MARKETS and the last two are CONTENT TYPES: two taxonomies side by
+ * side with nothing to tell a reader they are different axes. It is the same
+ * defect the review already flagged on the filter chips, where the fix was to
+ * NAME the axis rather than blur the two — and `decisions.md` keeps them
+ * deliberately separate because taxonomy bloat is this category's documented
+ * failure.
  *
- * ONE SUBSTITUTION, stated rather than fudged: the design's fifth link is
- * «تحلیل تکنیکال», and there is no such term. Roughly 60% of the archive IS
- * technical-analysis material, but it is filed as آموزش — so that is the label
- * used, pointing where the content really is. Inventing a term to match a
- * label would put a nav link in front of an archive nobody tagged.
+ * So the flat links are one axis now, and markets move behind a labelled
+ * disclosure that says «بازارها» on it.
+ *
+ * ── Why these three and not four ───────────────────────────────────────
+ *
+ * «گزارش» is a content type with no category behind it in the taxonomy, so a
+ * nav link would point at an archive that does not exist. It appears the moment
+ * the term does. «مقالات» is the reverse — a category with 39 posts and no
+ * content type — and it stays out for a different reason: it is a catch-all tag
+ * nobody chose as a section, and putting it in the header would promote it for
+ * being large. Both are the same rule from the category-route work: a route is
+ * not a nav slot.
+ *
+ * STILL HAND-PICKED. Not derived from what the CMS returns.
  */
-export const CATEGORY_NAV: NavLink[] = [
-  { label: 'طلا و ارز', href: '/market/gold-usd' },
-  { label: 'بورس ایران', href: '/market/tse' },
-  { label: 'کریپتو', href: '/market/crypto' },
-  /* The path route, not `?type=education`. The query-string shape cannot be
-     prerendered or indexed — see src/app/category/[slug]/page.tsx — and this
-     is the nav slot pointing at the largest category on the site (41 of 53). */
-  { label: 'آموزش', href: '/category/education' },
+export const SECTION_NAV: NavLink[] = [
   { label: 'اخبار', href: '/news' },
+  { label: 'آموزش', href: '/category/education' },
+  { label: 'تحلیل', href: '/category/analysis' },
 ];
+
+/**
+ * The way out of the magazine.
+ *
+ * The masthead used to be the only route back to thefinance.ir, which meant the
+ * magazine's own logo did not go to the magazine's own front page — a reader
+ * three articles deep could reach the main site but not `/mag`. Every
+ * publication's masthead links to that publication's home; that is what a
+ * masthead is. So the logo now points at `/mag` and the exit lives here.
+ *
+ * ONE LINK, NOT A PRODUCT MENU. InChart, Academy and Paradigm are in the
+ * footer. Repeating them in the header would trade the magazine's own
+ * navigation for a product list, which is the thing the header exists not to
+ * be.
+ */
+export const SITE_EXIT: NavLink = { label: 'فایننس', href: SITE_ORIGIN, external: true };
 
 export const FOOTER_PRODUCT_LINKS: NavLink[] = [
   { label: 'اینچارت', href: 'https://inchart.thefinance.ir', external: true },

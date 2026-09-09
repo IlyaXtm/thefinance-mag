@@ -115,7 +115,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             page, because `error` does not bubble — one capture listener at the
             document reaches every image on the site. See MediaErrorGuard. */}
         <MediaErrorGuard />
-        <MagHeader />
+        <MagHeader markets={markets} />
         <div className="flex-1">{children}</div>
         <MagFooter markets={markets} />
       </body>

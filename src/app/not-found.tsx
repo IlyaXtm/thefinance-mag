@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CATEGORY_NAV } from '@/features/mag/lib/nav';
+import { SECTION_NAV } from '@/features/mag/lib/nav';
 import { magPath, MAG_NAME, SITE_ORIGIN } from '@/features/mag/lib/site';
 import { Section } from '@/features/mag/components';
 
@@ -122,7 +122,7 @@ export default function NotFound() {
             </h2>
 
             <ul className="mt-4 flex flex-wrap gap-2.5">
-              {CATEGORY_NAV.map((link) => (
+              {SECTION_NAV.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
