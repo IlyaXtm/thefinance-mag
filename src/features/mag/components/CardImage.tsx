@@ -64,7 +64,23 @@ export function CardImage({
   }
 
   return (
-    <span className={`relative block h-full w-full overflow-hidden ${rounded} ${className}`}>
+    <span
+      /*
+        The hook MediaErrorGuard looks for, and the failed state it paints.
+
+        A card thumbnail that 404s must NOT be removed — its neighbours in the
+        grid have images, and a card that loses its box makes the row reflow.
+        So the wrapper carries the same placeholder treatment the no-image
+        branch above uses, revealed by `data-image-failed`, and the reader sees
+        a deliberately empty slot instead of a broken icon.
+
+        Tailwind arbitrary variant rather than a stylesheet rule so the failed
+        and empty states are described in one place; if the placeholder changes,
+        both change together.
+      */
+      data-card-image=""
+      className={`relative block h-full w-full overflow-hidden ${rounded} ${className} data-[image-failed]:bg-surface-hover data-[image-failed]:shadow-[inset_0_0_0_1px_var(--border-subtle)]`}
+    >
       <Image
         src={imageSrc(image.url)}
         alt={image.alt}

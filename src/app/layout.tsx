@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
 import { feedAlternate, SITE_ORIGIN } from '@/features/mag/lib/site';
-import { MagFooter, MagHeader } from '@/shared/ui';
+import { MagFooter, MagHeader, MediaErrorGuard } from '@/shared/ui';
 import { THEME_DARK, THEME_INIT_SCRIPT } from '@/features/mag/lib/theme';
 import '@/styles/globals.css';
 
@@ -110,6 +110,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {/* flex column + mt-auto on the footer keeps it at the bottom on short
           pages without a fixed height or a viewport calculation. */}
       <body className="flex min-h-screen flex-col">
+        {/* Removes images that 404 rather than letting the browser draw a
+            broken icon with the alt text beside it. In the layout, not per
+            page, because `error` does not bubble — one capture listener at the
+            document reaches every image on the site. See MediaErrorGuard. */}
+        <MediaErrorGuard />
         <MagHeader />
         <div className="flex-1">{children}</div>
         <MagFooter markets={markets} />

@@ -176,6 +176,75 @@ export function articleHasInjectedToc(html: string): boolean {
 }
 
 /* ------------------------------------------------------------------ */
+/* In-body image URLs                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Root-relative upload URLs, which are missing the `/mag` prefix and 404.
+ *
+ * The app runs under `basePath: '/mag'` and nginx proxies uploads at
+ * `/mag/wp-content/uploads/`. A body image whose src is `/wp-content/uploads/…`
+ * therefore resolves against the MAIN SITE's root, where nothing serves it — a
+ * certain 404, and one the reader meets as the browser's broken-image icon
+ * because in-body HTML never passes through `next/image`.
+ *
+ * That shape is exactly what content migrated from the pre-cutover site
+ * carries: WordPress WAS the site root then, so a root-relative upload path was
+ * correct. It stopped being correct the moment the magazine moved under `/mag`.
+ *
+ * ── Why ONLY this shape ────────────────────────────────────────────────
+ *
+ * Absolute URLs are left alone in both directions.
+ * `https://thefinance.ir/mag/wp-content/uploads/…` already works, and
+ * `https://wp.thefinance.ir/wp-content/uploads/…` works too — the CMS host is
+ * publicly reachable and the reader's browser is outside the container, so the
+ * optimizer's hairpin problem does not apply to markup the browser fetches for
+ * itself.
+ *
+ * The narrowness is deliberate. A broken image was reported on a live article
+ * (`alt="cta_inchart"`) and COULD NOT BE INSPECTED FROM HERE, so the URL shape
+ * behind it is unconfirmed. Anything broader would be guessing at a fix and
+ * could break images that currently work; this rewrite can only turn a certain
+ * 404 into a request that has a chance. If the live failure turns out to be a
+ * missing upload rather than a wrong path, this changes nothing and the counter
+ * below stays at zero — which is itself the answer, and is why it is counted
+ * rather than assumed.
+ */
+const ROOT_RELATIVE_UPLOAD = /(<img\b[^>]*?\bsrc=")\/wp-content\/uploads\//gi;
+
+/** The same shape inside a srcset, which WordPress emits beside every src. */
+const SRCSET_ATTR = /(\bsrcset=")([^"]*)(")/gi;
+
+let rewrittenBodyImages = 0;
+
+/** How many in-body image URLs were repaired — surfaced on /mag/health. */
+export function magRewrittenBodyImages(): number {
+  return rewrittenBodyImages;
+}
+
+export function fixBodyImageUrls(html: string): string {
+  let count = 0;
+
+  let out = html.replace(ROOT_RELATIVE_UPLOAD, (_whole, head: string) => {
+    count += 1;
+    return `${head}/mag/wp-content/uploads/`;
+  });
+
+  out = out.replace(SRCSET_ATTR, (whole, head: string, value: string, tail: string) => {
+    const fixed = value.replace(
+      /(^|,\s*)\/wp-content\/uploads\//g,
+      '$1/mag/wp-content/uploads/',
+    );
+    if (fixed === value) return whole;
+    count += 1;
+    return `${head}${fixed}${tail}`;
+  });
+
+  rewrittenBodyImages += count;
+  return out;
+}
+
+/* ------------------------------------------------------------------ */
 
 /** Inline style declarations that must never survive into the article body. */
 const BANNED_DECLARATIONS = [

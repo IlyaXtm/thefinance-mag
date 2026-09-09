@@ -390,7 +390,11 @@ export default async function ArticlePage({
 
       {/* Featured image — the ONE priority image on this page. */}
       {article.featuredImage && heroRatios && (
-        <figure className="mt-7">
+        /* `data-hero`: tells MediaErrorGuard to REMOVE this figure if the image
+           404s, rather than treating it as a card and keeping an empty box.
+           The hero renders through CardImage, so without this marker it is
+           indistinguishable from a thumbnail. */
+        <figure data-hero="" className="mt-7">
           {/*
             The box takes the IMAGE's shape, not a shape of its own.
 

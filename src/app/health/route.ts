@@ -3,6 +3,7 @@ import {
   magArchiveOverflowed,
   magInjectedTocSurvivors,
 } from '@/features/mag/api/v1/mag.service';
+import { magRewrittenBodyImages } from '@/features/mag/lib/sanitize';
 import { probeRedirectSource } from '@/features/mag/lib/redirect-source';
 
 /**
@@ -49,6 +50,17 @@ export function GET() {
         the slugs name which articles to open.
       */
       injectedTocSurvivors: magInjectedTocSurvivors(),
+      /*
+        In-body image URLs repaired since this process started: root-relative
+        `/wp-content/uploads/…` paths, which 404 under basePath and are what
+        pre-cutover content carries.
+
+        Zero is a real answer, not a missing one. A broken in-body image was
+        reported on a live article and could not be inspected from the build
+        environment; if this stays at zero while images are still breaking, the
+        cause is a missing upload — a content problem — and not a wrong path.
+      */
+      rewrittenBodyImages: magRewrittenBodyImages(),
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*

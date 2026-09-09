@@ -27,6 +27,7 @@ import { DISCLAIMER_TEXT } from '../../types/mag-blocks.types';
 import {
   addHeadingIds,
   extractHeadings,
+  fixBodyImageUrls,
   sanitizeArticleHtml,
   stripInjectedToc,
 } from '../../lib/sanitize';
@@ -44,7 +45,7 @@ import {
  * different component.
  */
 function prepareContent(html: string): string {
-  return addHeadingIds(sanitizeArticleHtml(stripInjectedToc(html)));
+  return addHeadingIds(sanitizeArticleHtml(fixBodyImageUrls(stripInjectedToc(html))));
 }
 
 /* ------------------------------------------------------------------ */
@@ -460,7 +461,20 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     id: `f${n}`,
     slug: `filler-article-${n}`,
     title: `نمونه صفحه‌بندی ${toPersianDigitsLocal(n)} — مطلبی برای پر کردن فهرست`,
-    featuredImage: img('filler', 'تصویر نمونه'),
+    /*
+      ONE FILLER CARD IN EVERY THREE POINTS AT A FILE THAT IS NOT THERE.
+
+      Without this the card branch of MediaErrorGuard has nothing to act on —
+      every mock cover resolves — so the failed-thumbnail state would ship
+      unverified, and the thing it must protect (the grid NOT reflowing when a
+      thumbnail 404s) would never be measured.
+
+      One in three rather than all of them, so a listing screenshot shows the
+      failed box next to working ones at the same size, which is the actual
+      requirement. The filler articles are the right place: they carry no
+      meaning a broken cover could distort.
+    */
+    featuredImage: img(n % 3 === 1 ? 'filler-missing' : 'filler', 'تصویر نمونه'),
     market: n % 2 === 0 ? MARKETS.crypto : null,
     contentType: n % 3 === 0 ? TYPES.analysis : TYPES.education,
     readingTime: 4 + (n % 7),
@@ -575,6 +589,56 @@ function stressSeo(slug: string, title: string): MagSeo {
 }
 
 const STRESS: Article[] = [
+  {
+    /*
+      IMAGES THAT 404, WHICH THE MOCK HAD NO WAY TO PRODUCE.
+
+      Every mock cover resolves, so `MediaErrorGuard` could have been written,
+      shipped and screenshotted against a page where no image ever fails —
+      the same blind spot the hero ratios and the injected ToC both had.
+
+      Three shapes, because the guard has three responses:
+
+        1. a <figure> with a caption   → the whole figure goes, caption included
+        2. a bare <img>, no figure     → the image alone goes
+        3. a root-relative upload path → REPAIRED by fixBodyImageUrls before it
+                                         ever reaches the browser, so this one
+                                         proves the repair rather than the guard
+
+      The alt text is the one from the live report. It is there to be looked
+      for in a screenshot: if «cta_inchart» is visible anywhere on the rendered
+      page, the guard did not run.
+    */
+    id: 'i1',
+    slug: 'stress-broken-images',
+    title: 'تصویرهای خراب — بررسی حذف تصویر ناموجود',
+    featuredImage: {
+      url: '/mock/covers/does-not-exist.jpg',
+      alt: 'تصویر شاخصی که وجود ندارد',
+      width: 1200,
+      height: 630,
+    },
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 3,
+    publishedAt: '2026-08-04T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content:
+      '<h2>پیش از تصویر</h2><p>این بند باید بماند.</p>' +
+      '<figure><img src="/mag/mock/covers/missing-one.jpg" alt="cta_inchart" width="1200" height="630" />' +
+      '<figcaption>عنوان تصویری که بارگذاری نمی‌شود.</figcaption></figure>' +
+      '<p>این بند هم باید بماند.</p>' +
+      '<img src="/mag/mock/covers/missing-two.jpg" alt="cta_inchart" width="800" height="400" />' +
+      '<h2>پس از تصویر</h2>' +
+      '<p>یک تصویر با نشانی ریشه‌ای که باید تعمیر شود:</p>' +
+      '<figure><img src="/wp-content/uploads/2026/08/chart.jpg" alt="نمودار" ' +
+      'srcset="/wp-content/uploads/2026/08/chart.jpg 1200w" width="1200" height="675" /></figure>',
+    seo: stressSeo('stress-broken-images', 'تصویرهای خراب'),
+  },
   {
     /*
       THE HEADLINE THE SEO REVIEW MARKED UP, VERBATIM.
