@@ -35,6 +35,7 @@ type MagSource = {
   getMarketArticles: typeof mock.getMarketArticles;
   getAllSummaries: typeof mock.getAllSummaries;
   magArchiveOverflowed: typeof mock.magArchiveOverflowed;
+  magInjectedTocSurvivors: typeof mock.magInjectedTocSurvivors;
   getArticle: typeof mock.getArticle;
   getPreviewArticle: typeof mock.getPreviewArticle;
   getMarkets: typeof mock.getMarkets;
@@ -97,5 +98,9 @@ export const getAllSummaries: MagSource['getAllSummaries'] = () => source.getAll
 /** True when the archive outgrew the single fetch market pages rely on. */
 export const magArchiveOverflowed: MagSource['magArchiveOverflowed'] = () =>
   source.magArchiveOverflowed();
+
+/** Slugs whose body still carried a CMS-injected ToC after the strip ran. */
+export const magInjectedTocSurvivors: MagSource['magInjectedTocSurvivors'] = () =>
+  source.magInjectedTocSurvivors();
 
 export const magDataSource = USE_MOCK ? 'mock' : 'wpgraphql';

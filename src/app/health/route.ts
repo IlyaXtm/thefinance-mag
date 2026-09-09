@@ -1,5 +1,9 @@
 import { hasPreviewSecret } from '@/features/mag/lib/preview-secret';
-import { magArchiveOverflowed } from '@/features/mag/api/v1/mag.service';
+import {
+  magArchiveOverflowed,
+  magInjectedTocSurvivors,
+} from '@/features/mag/api/v1/mag.service';
+import { magRewrittenBodyImages } from '@/features/mag/lib/sanitize';
 import { probeRedirectSource } from '@/features/mag/lib/redirect-source';
 
 /**
@@ -35,6 +39,28 @@ export function GET() {
         instead of erroring, so it has to be visible somewhere — this is where.
       */
       archiveOverflowed: magArchiveOverflowed(),
+      /*
+        Articles whose body still contained a CMS-injected table of contents
+        after `stripInjectedToc` ran. Should always be empty.
+
+        It is here because the strip is written against plugin markup this
+        build environment could not verify against the live CMS, and a regex
+        that stops matching does not fail — it silently ships the duplicate ToC
+        it was added to remove. Non-empty means the plugin's markup moved;
+        the slugs name which articles to open.
+      */
+      injectedTocSurvivors: magInjectedTocSurvivors(),
+      /*
+        In-body image URLs repaired since this process started: root-relative
+        `/wp-content/uploads/…` paths, which 404 under basePath and are what
+        pre-cutover content carries.
+
+        Zero is a real answer, not a missing one. A broken in-body image was
+        reported on a live article and could not be inspected from the build
+        environment; if this stays at zero while images are still breaking, the
+        cause is a missing upload — a content problem — and not a wrong path.
+      */
+      rewrittenBodyImages: magRewrittenBodyImages(),
       source: (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 'true' ? 'mock' : 'wpgraphql',
       previewConfigured: hasPreviewSecret(),
       /*

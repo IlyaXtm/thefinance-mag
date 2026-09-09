@@ -24,7 +24,13 @@ import {
 } from '../../types/mag.types';
 import type { MagSeo } from '../../types/mag-seo.types';
 import { DISCLAIMER_TEXT } from '../../types/mag-blocks.types';
-import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
+import {
+  addHeadingIds,
+  extractHeadings,
+  fixBodyImageUrls,
+  sanitizeArticleHtml,
+  stripInjectedToc,
+} from '../../lib/sanitize';
 
 /**
  * The mock runs the SAME content pipeline as the real API.
@@ -39,7 +45,7 @@ import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/s
  * different component.
  */
 function prepareContent(html: string): string {
-  return addHeadingIds(sanitizeArticleHtml(html));
+  return addHeadingIds(sanitizeArticleHtml(fixBodyImageUrls(stripInjectedToc(html))));
 }
 
 /* ------------------------------------------------------------------ */
@@ -455,7 +461,20 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     id: `f${n}`,
     slug: `filler-article-${n}`,
     title: `نمونه صفحه‌بندی ${toPersianDigitsLocal(n)} — مطلبی برای پر کردن فهرست`,
-    featuredImage: img('filler', 'تصویر نمونه'),
+    /*
+      ONE FILLER CARD IN EVERY THREE POINTS AT A FILE THAT IS NOT THERE.
+
+      Without this the card branch of MediaErrorGuard has nothing to act on —
+      every mock cover resolves — so the failed-thumbnail state would ship
+      unverified, and the thing it must protect (the grid NOT reflowing when a
+      thumbnail 404s) would never be measured.
+
+      One in three rather than all of them, so a listing screenshot shows the
+      failed box next to working ones at the same size, which is the actual
+      requirement. The filler articles are the right place: they carry no
+      meaning a broken cover could distort.
+    */
+    featuredImage: img(n % 3 === 1 ? 'filler-missing' : 'filler', 'تصویر نمونه'),
     market: n % 2 === 0 ? MARKETS.crypto : null,
     contentType: n % 3 === 0 ? TYPES.analysis : TYPES.education,
     readingTime: 4 + (n % 7),
@@ -570,6 +589,87 @@ function stressSeo(slug: string, title: string): MagSeo {
 }
 
 const STRESS: Article[] = [
+  {
+    /*
+      IMAGES THAT 404, WHICH THE MOCK HAD NO WAY TO PRODUCE.
+
+      Every mock cover resolves, so `MediaErrorGuard` could have been written,
+      shipped and screenshotted against a page where no image ever fails —
+      the same blind spot the hero ratios and the injected ToC both had.
+
+      Three shapes, because the guard has three responses:
+
+        1. a <figure> with a caption   → the whole figure goes, caption included
+        2. a bare <img>, no figure     → the image alone goes
+        3. a root-relative upload path → REPAIRED by fixBodyImageUrls before it
+                                         ever reaches the browser, so this one
+                                         proves the repair rather than the guard
+
+      The alt text is the one from the live report. It is there to be looked
+      for in a screenshot: if «cta_inchart» is visible anywhere on the rendered
+      page, the guard did not run.
+    */
+    id: 'i1',
+    slug: 'stress-broken-images',
+    title: 'تصویرهای خراب — بررسی حذف تصویر ناموجود',
+    featuredImage: {
+      url: '/mock/covers/does-not-exist.jpg',
+      alt: 'تصویر شاخصی که وجود ندارد',
+      width: 1200,
+      height: 630,
+    },
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 3,
+    publishedAt: '2026-08-04T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content:
+      '<h2>پیش از تصویر</h2><p>این بند باید بماند.</p>' +
+      '<figure><img src="/mag/mock/covers/missing-one.jpg" alt="cta_inchart" width="1200" height="630" />' +
+      '<figcaption>عنوان تصویری که بارگذاری نمی‌شود.</figcaption></figure>' +
+      '<p>این بند هم باید بماند.</p>' +
+      '<img src="/mag/mock/covers/missing-two.jpg" alt="cta_inchart" width="800" height="400" />' +
+      '<h2>پس از تصویر</h2>' +
+      '<p>یک تصویر با نشانی ریشه‌ای که باید تعمیر شود:</p>' +
+      '<figure><img src="/wp-content/uploads/2026/08/chart.jpg" alt="نمودار" ' +
+      'srcset="/wp-content/uploads/2026/08/chart.jpg 1200w" width="1200" height="675" /></figure>',
+    seo: stressSeo('stress-broken-images', 'تصویرهای خراب'),
+  },
+  {
+    /*
+      THE HEADLINE THE SEO REVIEW MARKED UP, VERBATIM.
+
+      Live it broke after «خرید،» and stranded «انتقال و نگهداری BTC» on a line
+      of its own. Persian headlines built with «؛» and «،» read as clauses, and
+      a break inside the second clause reads as a mistake rather than as a line
+      ending.
+
+      It is a fixture because the mock had no title with this shape — every
+      existing one either fits on a line or breaks somewhere harmless — so
+      `text-wrap: balance` could have been added, shipped and measured against
+      titles that never exhibited the defect. Same failure as the hero: the
+      fixtures agreed with the code instead of testing it.
+    */
+    id: 'w1',
+    slug: 'stress-headline-clause-break',
+    title: 'خرید بیت کوین در ایران؛ آموزش کامل خرید، انتقال و نگهداری BTC',
+    featuredImage: img('notcoin', 'نمودار قیمت بیت کوین'),
+    market: MARKETS.crypto,
+    contentType: TYPES.education,
+    readingTime: 9,
+    publishedAt: '2026-08-05T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content: '<h2>مقدمه</h2><p>متن نمونه.</p><h2>کیف پول</h2><p>متن نمونه.</p>',
+    seo: stressSeo('stress-headline-clause-break', 'خرید بیت کوین در ایران'),
+  },
   /* ── The three hero shapes, from the live corpus ─────────────────────── */
   {
     /* The widest: 2.50. Three published images are under 800px wide and this
@@ -722,7 +822,35 @@ const STRESS: Article[] = [
 const LONG_READ = STRESS.find((a) => a.slug === 'stress-long-technical-analysis');
 if (!LONG_READ) throw new Error('stress-long-technical-analysis fixture is missing');
 
-LONG_READ.content = '<h2>تحلیل تکنیکال چیست</h2>\n<p>در این بخش به «تحلیل تکنیکال چیست» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فرض‌های بنیادی این روش</h2>\n<p>در این بخش به «فرض‌های بنیادی این روش» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>نمودار شمعی و خواندن آن</h2>\n<p>در این بخش به «نمودار شمعی و خواندن آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<figure><img src="/mag/mock/covers/chart.jpg" alt="نمودار شمعی نمونه" width="1200" height="675" /><figcaption>نمودار شمعی روزانه؛ هر شمع یک روز معاملاتی است.</figcaption></figure>\n<h2>خطوط روند</h2>\n<p>در این بخش به «خطوط روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حمایت و مقاومت</h2>\n<p>در این بخش به «حمایت و مقاومت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>میانگین متحرک ساده</h2>\n<p>در این بخش به «میانگین متحرک ساده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<ul><li>میانگین کوتاه‌مدت<ul><li>۹ روزه</li><li>۲۱ روزه<ul><li>کاربرد در نوسان‌گیری</li></ul></li></ul></li><li>میانگین بلندمدت</li></ul>\n<h2>میانگین متحرک نمایی</h2>\n<p>در این بخش به «میانگین متحرک نمایی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>اندیکاتور مکدی</h2>\n<p>در این بخش به «اندیکاتور مکدی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>شاخص قدرت نسبی</h2>\n<p>در این بخش به «شاخص قدرت نسبی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<table><thead><tr><th>اندیکاتور</th><th>دوره پیش‌فرض</th><th>نوع</th><th>سیگنال اصلی</th><th>ضعف شناخته‌شده</th></tr></thead><tbody><tr><td><span dir="ltr">RSI</span></td><td>۱۴</td><td>نوسان‌نما</td><td>اشباع خرید و فروش</td><td>در روند قوی دیر برمی‌گردد</td></tr><tr><td><span dir="ltr">MACD</span></td><td>۱۲/۲۶/۹</td><td>روندنما</td><td>تقاطع خطوط</td><td>تأخیر ذاتی</td></tr><tr><td><span dir="ltr">ATR</span></td><td>۱۴</td><td>نوسان</td><td>اندازه حد ضرر</td><td>جهت نمی‌دهد</td></tr></tbody></table>\n<h2>باندهای بولینگر</h2>\n<p>در این بخش به «باندهای بولینگر» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>ایچیموکو</h2>\n<p>در این بخش به «ایچیموکو» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حجم معاملات و تأیید روند</h2>\n<p>در این بخش به «حجم معاملات و تأیید روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>الگوهای بازگشتی</h2>\n<p>در این بخش به «الگوهای بازگشتی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<blockquote><p>بازار می‌تواند بیشتر از آنچه شما توان پرداخت دارید غیرمنطقی بماند.</p></blockquote>\n<h2>الگوهای ادامه‌دهنده</h2>\n<p>در این بخش به «الگوهای ادامه‌دهنده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فیبوناچی اصلاحی</h2>\n<p>در این بخش به «فیبوناچی اصلاحی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>امواج الیوت</h2>\n<p>در این بخش به «امواج الیوت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>واگرایی و انواع آن</h2>\n<p>در این بخش به «واگرایی و انواع آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>تایم‌فریم و انتخاب آن</h2>\n<p>در این بخش به «تایم‌فریم و انتخاب آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<pre><code>ema(close, 21) &gt; ema(close, 55) and rsi(close, 14) &lt; 70 and volume &gt; sma(volume, 20) * 1.5</code></pre>\n<h2>مدیریت ریسک</h2>\n<p>در این بخش به «مدیریت ریسک» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حد ضرر و حد سود</h2>\n<p>در این بخش به «حد ضرر و حد سود» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>خطاهای رایج</h2>\n<p>در این بخش به «خطاهای رایج» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<p>یک شناسه بسیار طولانی بدون فاصله برای آزمودن سرریز ستون: <code>ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789</code></p>\n<h2>ترکیب با تحلیل بنیادی</h2>\n<p>در این بخش به «ترکیب با تحلیل بنیادی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>محدودیت‌های تحلیل تکنیکال</h2>\n<p>در این بخش به «محدودیت‌های تحلیل تکنیکال» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>جمع‌بندی</h2>\n<p>در این بخش به «جمع‌بندی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>';
+/*
+  THE INJECTED TABLE OF CONTENTS, AS THE PLUGIN ACTUALLY EMITS IT.
+
+  Prepended to the 24-heading article — the worst case the review named — so
+  `stripInjectedToc` is exercised by the fixtures rather than trusted. Without
+  this the mock renders one ToC, the strip is a no-op nothing notices, and the
+  regression that matters (the container's nested title <div> swallowing a
+  non-greedy match) is invisible until production.
+
+  The nesting is the point: a <div> containing another <div> and then the list.
+  Anything that stops at the first </div> deletes «فهرست مطالب», keeps the whole
+  list, and leaves an orphaned closing tag in the article body.
+
+  Live this arrives on the Persian slug تحلیل-تکنیکال-چیست; the fixture with 24
+  headings is `stress-long-technical-analysis`, so that is where it goes.
+*/
+const INJECTED_TOC =
+  '<div id="ez-toc-container" class="ez-toc-v2_0_74 counter-hierarchy ez-toc-counter ez-toc-grey">' +
+  '<div class="ez-toc-title-container">' +
+  '<p class="ez-toc-title">فهرست مطالب</p>' +
+  '<span class="ez-toc-title-toggle"><a href="#" class="ez-toc-pull-right ez-toc-btn"></a></span>' +
+  '</div>' +
+  '<nav><ul class="ez-toc-list ez-toc-list-level-1">' +
+  '<li class="ez-toc-heading-level-2"><a class="ez-toc-link" href="#Heading_1">تحلیل تکنیکال چیست</a></li>' +
+  '<li class="ez-toc-heading-level-2"><a class="ez-toc-link" href="#Heading_2">فرض‌های بنیادی این روش</a>' +
+  '<ul class="ez-toc-list-level-3"><li><a class="ez-toc-link" href="#Sub_1">زیربخش</a></li></ul></li>' +
+  '</ul></nav></div>';
+
+LONG_READ.content = INJECTED_TOC + '<span class="ez-toc-section" id="Heading_1"></span><h2>تحلیل تکنیکال چیست</h2>\n<p>در این بخش به «تحلیل تکنیکال چیست» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فرض‌های بنیادی این روش</h2>\n<p>در این بخش به «فرض‌های بنیادی این روش» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>نمودار شمعی و خواندن آن</h2>\n<p>در این بخش به «نمودار شمعی و خواندن آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<figure><img src="/mag/mock/covers/chart.jpg" alt="نمودار شمعی نمونه" width="1200" height="675" /><figcaption>نمودار شمعی روزانه؛ هر شمع یک روز معاملاتی است.</figcaption></figure>\n<h2>خطوط روند</h2>\n<p>در این بخش به «خطوط روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حمایت و مقاومت</h2>\n<p>در این بخش به «حمایت و مقاومت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>میانگین متحرک ساده</h2>\n<p>در این بخش به «میانگین متحرک ساده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<ul><li>میانگین کوتاه‌مدت<ul><li>۹ روزه</li><li>۲۱ روزه<ul><li>کاربرد در نوسان‌گیری</li></ul></li></ul></li><li>میانگین بلندمدت</li></ul>\n<h2>میانگین متحرک نمایی</h2>\n<p>در این بخش به «میانگین متحرک نمایی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>اندیکاتور مکدی</h2>\n<p>در این بخش به «اندیکاتور مکدی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>شاخص قدرت نسبی</h2>\n<p>در این بخش به «شاخص قدرت نسبی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<table><thead><tr><th>اندیکاتور</th><th>دوره پیش‌فرض</th><th>نوع</th><th>سیگنال اصلی</th><th>ضعف شناخته‌شده</th></tr></thead><tbody><tr><td><span dir="ltr">RSI</span></td><td>۱۴</td><td>نوسان‌نما</td><td>اشباع خرید و فروش</td><td>در روند قوی دیر برمی‌گردد</td></tr><tr><td><span dir="ltr">MACD</span></td><td>۱۲/۲۶/۹</td><td>روندنما</td><td>تقاطع خطوط</td><td>تأخیر ذاتی</td></tr><tr><td><span dir="ltr">ATR</span></td><td>۱۴</td><td>نوسان</td><td>اندازه حد ضرر</td><td>جهت نمی‌دهد</td></tr></tbody></table>\n<h2>باندهای بولینگر</h2>\n<p>در این بخش به «باندهای بولینگر» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>ایچیموکو</h2>\n<p>در این بخش به «ایچیموکو» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حجم معاملات و تأیید روند</h2>\n<p>در این بخش به «حجم معاملات و تأیید روند» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>الگوهای بازگشتی</h2>\n<p>در این بخش به «الگوهای بازگشتی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<blockquote><p>بازار می‌تواند بیشتر از آنچه شما توان پرداخت دارید غیرمنطقی بماند.</p></blockquote>\n<h2>الگوهای ادامه‌دهنده</h2>\n<p>در این بخش به «الگوهای ادامه‌دهنده» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>فیبوناچی اصلاحی</h2>\n<p>در این بخش به «فیبوناچی اصلاحی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>امواج الیوت</h2>\n<p>در این بخش به «امواج الیوت» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>واگرایی و انواع آن</h2>\n<p>در این بخش به «واگرایی و انواع آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>تایم‌فریم و انتخاب آن</h2>\n<p>در این بخش به «تایم‌فریم و انتخاب آن» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<pre><code>ema(close, 21) &gt; ema(close, 55) and rsi(close, 14) &lt; 70 and volume &gt; sma(volume, 20) * 1.5</code></pre>\n<h2>مدیریت ریسک</h2>\n<p>در این بخش به «مدیریت ریسک» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>حد ضرر و حد سود</h2>\n<p>در این بخش به «حد ضرر و حد سود» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>خطاهای رایج</h2>\n<p>در این بخش به «خطاهای رایج» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<p>یک شناسه بسیار طولانی بدون فاصله برای آزمودن سرریز ستون: <code>ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789</code></p>\n<h2>ترکیب با تحلیل بنیادی</h2>\n<p>در این بخش به «ترکیب با تحلیل بنیادی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>محدودیت‌های تحلیل تکنیکال</h2>\n<p>در این بخش به «محدودیت‌های تحلیل تکنیکال» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>\n<h2>جمع‌بندی</h2>\n<p>در این بخش به «جمع‌بندی» می‌پردازیم و نشان می‌دهیم چگونه در عمل به کار می‌آید. نکته کلیدی این است که هیچ ابزاری به‌تنهایی سیگنال قطعی نمی‌دهد و باید در کنار بقیه سنجیده شود.</p>';
 
 /* Same pipeline as everything else — a fixture that skips it is testing a
    different component. Outlines are derived, never hand-written, so they
@@ -946,6 +1074,16 @@ export async function getCategory(slug: string): Promise<Category> {
   const category = (await getCategories()).find((c) => c.slug === slug);
   if (!category) throw new MagNotFoundError(slug);
   return category;
+}
+
+/**
+ * Never anything, here: the fixtures run the same strip and one of them is
+ * written specifically to be caught by it, so a survivor would mean the strip
+ * regressed rather than that the CMS moved. Present for source parity — the
+ * service asserts both modules satisfy the same contract at compile time.
+ */
+export function magInjectedTocSurvivors(): string[] {
+  return [];
 }
 
 export async function getMarkets(): Promise<Market[]> {

@@ -139,6 +139,108 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
+## Content model
+
+**CMS-injected navigation chrome is stripped at the mapping layer.** Decided
+2026-09-08.
+
+`easy-table-of-contents` hooks `the_content`, WPGraphQL runs `the_content`
+filters, and the plugin's list therefore arrives inside the article body. A
+headless frontend owns its own layout: a plugin that decides where navigation
+goes is data the mapper drops, the same way it drops `text-align: justify`.
+
+The general rule: **the body is content, not chrome.** Anything a CMS plugin
+injects around the content — contents lists, share bars, related-post blocks,
+author boxes — is stripped on the way in and rendered by the frontend or not at
+all. Two systems both deciding where a table of contents goes is how an article
+gets two of them.
+
+Deactivating the plugin is cleaner and remains the recommended follow-up. It was
+not done because it would break any article using `[ez-toc]` explicitly and
+that could not be audited. **When it is done, the strip stays** — as a guard,
+not as the fix.
+
+**The table of contents is H2 only.** Both `extractHeadings()` and the
+mu-plugin's `outlineHeadings` collect h2 and nothing else. A three-level list on
+a 41-minute read is a wall, and the panel is already height-capped with internal
+scrolling because 24 entries fill it. A nested ToC is a design change with a
+scroll and a density problem attached, not a regex edit.
+
+---
+
+## Pagination
+
+**A page number belongs in the path; `?page=N` is a compatibility surface.**
+Decided 2026-09-08; extends the URL-shape rule below.
+
+`?page=N` used to return 200 with the content of page one, because Next ignores
+a parameter no route reads — an unbounded set of distinct URLs serving identical
+content, which is worse than a 404 because Google indexes it. It now 301s to the
+path route, in middleware, so the rule lives in one place rather than in four
+route files.
+
+`/search` is the exception and must stay one: it paginates by query string on
+purpose, because a search URL is already query-shaped and noindex either way.
+
+**Middleware does not fetch data to decide a redirect.** A page number past the
+last one redirects and then 404s at the destination. Knowing the last page at
+the network boundary would mean querying the CMS on every request, which is
+exactly what that layer must not do — its worst failure has to stay "a wrong
+destination".
+
+---
+
+## Navigation
+
+**One control, one taxonomy.** Decided 2026-09-09.
+
+Content types are flat links in the header; markets are behind a disclosure
+labelled «بازارها». Mixing them in one row — which is what shipped — gives a
+reader two axes with nothing to say they are different, and it is the same
+defect the filter chips had. The fix in both places is to NAME the axis, never
+to merge them: `decisions.md` chose two axes over six because taxonomy bloat is
+this category's documented failure, and a nav that blurs them undoes that
+quietly.
+
+**The masthead links to the magazine.** Every publication's masthead links to
+that publication's home. The route back to the main site is a separate, quieter
+link at the end of the row — an exit, not a destination the magazine promotes,
+and exactly one of them, because InChart, Academy and Paradigm live in the
+footer and a header full of products is not the magazine's navigation.
+
+**A thin section shows its count; an empty one is suppressed.** Four of six
+markets hold fewer than three articles. Showing «طلا و دلار ۱» sets an honest
+expectation before the click; hiding the thin ones would make the menu change
+shape as articles are tagged, which is confusing in a worse way. Zero is
+different — a link to nothing is not a promise worth making, and it returns on
+its own when the term has an article.
+
+**The nav is hand-picked, and this is why.** It is not derived from what the CMS
+returns. A route is not a nav slot: «مقالات» has 39 posts and stays out because
+it is a catch-all tag nobody chose as a section, and «گزارش» stays out because
+the category does not exist yet.
+
+---
+
+## Missing media
+
+**A missing image leaves no trace.** Decided 2026-09-09.
+
+No placeholder, no icon, no alt text sitting alone. A reader who sees a broken
+image learns the site is broken; a reader who sees clean text learns nothing,
+which is correct, because the missing image was never load-bearing.
+
+The one exception is a CARD THUMBNAIL, which keeps its reserved box: its
+neighbours in the grid have images, and a card that loses its box makes the row
+reflow. Everything else — hero, in-body figure — is removed entirely, so a dead
+image and an absent one look identical to a reader.
+
+**Never substitute.** No category cover, no gradient, no generated art. An
+invented image is worse than none: it tells the reader something about the
+article that nobody wrote.
+
+---
+
 ## Brand assets
 
 **The logo is inline SVG with `currentColor` ink, not two theme files.**

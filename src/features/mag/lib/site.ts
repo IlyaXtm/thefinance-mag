@@ -41,17 +41,60 @@ export const MAG_DESCRIPTION = 'تحلیل، گزارش و آموزش برای �
  * `sameAs` is how Google links this publisher to its known profiles. Each
  * entry strengthens the entity signal; add new official profiles here rather
  * than anywhere else.
+ *
+ * ── A WRONG URL HERE IS WORSE THAN A MISSING ONE ───────────────────────
+ *
+ * `sameAs` is an assertion to Google that this organisation IS the account at
+ * that address. A guessed handle either points at nobody — a dead entity claim
+ * — or at somebody else, which attaches another party's profile to this
+ * publisher. So entries are added only from a URL somebody has confirmed, and
+ * `SOCIAL_CHANNELS` below carries empty slots rather than plausible guesses.
  */
+export const SOCIAL_CHANNELS: Array<{ label: string; url: string }> = [
+  { label: 'اینستاگرام', url: 'https://www.instagram.com/thefinance.ir/' },
+  /*
+    ASKED FOR AND NOT YET SUPPLIED. The SEO review asked for the other channels
+    to be added and named Telegram and LinkedIn; the URLs were not given, and
+    both have several plausible shapes for a brand called «فایننس»
+    (t.me/thefinance, t.me/thefinance_ir, linkedin.com/company/thefinance…).
+
+    Paste the real address between the quotes and it appears in the footer and
+    in the JSON-LD `sameAs` at once. Empty entries render nothing, so this
+    costs nothing while it waits.
+  */
+  { label: 'تلگرام', url: '' },
+  { label: 'لینکدین', url: '' },
+];
+
 export const ORGANIZATION = {
   name: 'فایننس',
   legalName: 'TheFinance',
   url: SITE_ORIGIN,
   logo: `${SITE_ORIGIN}/logo.png`,
   aboutPage: `${SITE_ORIGIN}/about-us`,
-  sameAs: [
-    'https://www.instagram.com/thefinance.ir/',
-  ] as string[],
+  /* Only channels with a confirmed address reach structured data. */
+  sameAs: SOCIAL_CHANNELS.filter((c) => c.url).map((c) => c.url) as string[],
 } as const;
+
+/**
+ * What فایننس is, in the footer's brand column.
+ *
+ * NOT `MAG_DESCRIPTION`, and the split is the point. `MAG_DESCRIPTION` is the
+ * MAGAZINE's meta description — it is the `<meta name="description">` on
+ * `/mag`, the `<description>` in the RSS feed, and the `description` on the
+ * Blog in JSON-LD. Replacing it with this would swap a 45-character summary of
+ * an editorial section for a 250-character description of the whole platform,
+ * in three places where the shorter one is correct and where Google truncates
+ * at roughly 160 characters anyway.
+ *
+ * This one describes the ORGANISATION, and the footer's brand column is the
+ * one place on the page that is about the organisation rather than the
+ * magazine. Supplied by the SEO review verbatim.
+ */
+export const ORGANIZATION_DESCRIPTION =
+  'فایننس پلتفرمی جامع در حوزه بازارهای مالی است که با ارائه آموزش، تحلیل ' +
+  'اختصاصی، اخبار روز و ابزارهای حرفه‌ای، به سرمایه‌گذاران مبتدی و حرفه‌ای در ' +
+  'بازارهای بورس ایران، فارکس، رمزارز و سهام جهانی خدمات ارائه می‌دهد.';
 
 /**
  * Href for a plain HTML form `action` or a raw `<a>`.

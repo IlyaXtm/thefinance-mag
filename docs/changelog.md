@@ -8,6 +8,374 @@ why it was made.
 
 ---
 
+## 2026-09-09 — Header navigation, and images that are not there
+
+### 1 🔴 A missing image now leaves no trace
+
+**The null hero was already correct**, and establishing that is what pointed at
+the real cause. Measured on both null-image fixtures: zero `<figure>` elements,
+no hero markup at all, the body starting where the hero would have been.
+`featuredImage: null` has never rendered anything.
+
+**The empty dark rectangle is a 404, not a null** — and the mechanism is that
+the hero renders through `CardImage`, so it carries `data-card-image` and took
+the CARD branch of the new guard: kept its box, painted the placeholder,
+full-bleed and empty. Measured with the branches in the wrong order: hero figure
+still on the page, full height, nothing in it. The hero is checked first now. A
+card must keep its box because its neighbours in the grid have images; a hero
+has no neighbours, so there is nothing to hold the row for.
+
+Client-side, and it cannot be anything else — in-body HTML is
+`dangerouslySetInnerHTML` from the CMS, so the server never fetches those URLs.
+
+Two things about the implementation are load-bearing and both look like details:
+
+- **`error` does not bubble.** A listener on a container never sees an image
+  fail inside it. Capture phase is the only one that reaches it, which is why
+  the naive version of this component does nothing while looking correct.
+- **The sweep on mount is not optional.** Images usually fail BEFORE hydration,
+  so a guard that only listens catches almost nothing on a cold load — the load
+  that matters. `complete && naturalWidth === 0` catches the finished ones.
+
+Three responses, because the right answer differs by context: body → remove the
+figure, caption and all; hero → remove the figure; card → the reserved
+placeholder, never removal, because the v4 review settled that box and the grid
+must not reflow.
+
+**On `cta_inchart`: the investigation the brief asked for could not be run.**
+This environment cannot reach `thefinance.ir` (`curl` returns `000` in ~0.2s —
+refused by the proxy allow-list, not a timeout). Two hypotheses, one of which is
+now handled and counted:
+
+1. **A wrong path.** A body image whose src is `/wp-content/uploads/…` resolves
+   against the main site's root under `basePath: '/mag'` and is a certain 404 —
+   and that is exactly what pre-cutover content carries, because WordPress was
+   the site root then. Now rewritten to `/mag/wp-content/uploads/…`, src and
+   srcset both, and COUNTED on `/mag/health` as `rewrittenBodyImages`.
+2. **A missing upload.** Then this changes nothing, the counter stays at zero,
+   and it is a content problem to hand back rather than a rendering one.
+
+Only that one URL shape is touched. Absolute URLs are left alone in both
+directions — the public host works and so does the CMS host, since the reader's
+browser is outside the container and the optimizer's hairpin problem does not
+apply to markup the browser fetches for itself. Anything broader would be
+guessing at a fix that could break images that currently work.
+
+### 2–4 🔴🟠 The header: masthead, taxonomies, exit
+
+**These are one change, not three.** The logo could only stop pointing at the
+main site once the main site had its own entry, and that entry could only be
+added once the row was not already carrying two taxonomies' worth of links.
+
+**The masthead goes to `/mag`.** It pointed at thefinance.ir on the reasoning
+that a reader from search needs a route back — true, and now the exit link's
+job. A reader three articles deep could reach the main site and could not reach
+the magazine's own front page except through a breadcrumb.
+
+**Content types are flat links, markets are behind a labelled disclosure.** The
+row read «طلا و ارز · بورس ایران · کریپتو · آموزش · اخبار»: three markets then
+two types, with nothing to say they are different axes. Same defect the review
+found on the filter chips; same fix — name the axis rather than blur it.
+
+«تحلیل» joins «اخبار» and «آموزش». «گزارش» does not: a content type with no
+category behind it, so the link would point at an archive that does not exist.
+«مقالات» does not either, for the opposite reason — 39 posts, but a catch-all
+tag nobody chose as a section. Both are the rule from the category routes: **a
+route is not a nav slot.** Still hand-picked.
+
+**The counts are the point, not decoration.** کریپتو ۵ · فارکس ۳ · اقتصاد جهانی
+۳ · بورس ایران ۲ · طلا و دلار ۱ · مسکن ۰ — four of six under three articles. A
+menu where half the entries lead to a one-article page teaches a reader the menu
+is not worth using, so «طلا و دلار ۱» sets its own expectation before the click.
+
+Hiding the thin ones is worse and was rejected for a specific reason: the menu
+would change shape as articles are tagged, so a reader who found فارکس last week
+finds it missing this week with nothing to explain why. A stable menu with
+honest numbers beats a shifting one with flattering ones. **Empty is different**
+and is suppressed — «مسکن ۰» is a promise of nothing — and it returns on its own
+because the counts come from the live query the sitemap floor already uses.
+
+**Mobile is a labelled section of the strip, not a nested menu.** A dropdown
+anchored inside a horizontal scroller either clips at the container's edge or
+scrolls away from its own trigger, and at 390px it covers the row it belongs to.
+Three labelled `<nav>` groups instead, which announces the axis the same way the
+desktop button does.
+
+**Two bugs found by measuring rather than reasoning.** The strip's
+`overflow-x-auto` sat on the sections `<nav>`, so the two new groups fell
+outside the scrolling area entirely. And the exit rendered TWICE between 640 and
+1023px — the desktop copy was `sm:inline-flex` while the strip carrying its own
+copy is `lg:hidden`; both are `lg` now.
+
+**The exit is the quietest thing in the row**, by design. It leaves the magazine
+rather than moving within it: muted, hairline-separated, arrow pointing out. One
+link — InChart, Academy and Paradigm stay in the footer, and repeating them here
+would trade the magazine's navigation for a product menu.
+
+### 5 🟡 «دسته‌بندی‌ها» named the wrong taxonomy
+
+The home sidebar was headed «دسته‌بندی‌ها» and listed markets. Renamed to
+«بازارها» rather than switching the list: the counts, the links and the
+`activeSlug` a market archive passes in are all market data, so changing the
+list would change the component's job rather than fix its label.
+
+**The footer had the same bug and is not in the review's list.** Its
+«دسته‌بندی‌ها» column also lists markets. Fixed anyway, for the reason the
+review gave for the sidebar: the header now draws the two axes apart explicitly,
+so a footer still calling markets «categories» contradicts what the header just
+taught. That column's title follows its content, because its fallback is a
+different axis.
+
+### What the nav does at each breakpoint
+
+| width | masthead | sections | markets | exit |
+|---|---|---|---|---|
+| <1024 | `/mag` | strip, group 1 | strip, group 2, with counts | strip, group 3 |
+| ≥1024 | `/mag` | flat links in the row | «بازارها ▾» disclosure | end of the row |
+
+Verified at 320 · 360 · 390 · 480 · 639 · 640 · 767 · 768 · 1023 · 1024 · 1100 ·
+1279 · 1280 · 1440 · 1920 across twelve routes: no horizontal overflow anywhere,
+exactly one exit at every width.
+
+---
+
+## 2026-09-08 — The SEO team's article-page review, nine items
+
+Their PDF was marked up on the live site. **Three of the nine were already fixed
+in `f25a0f4` and their PDF predates that deploy** — recorded as confirmed rather
+than skipped, because "we already did that" is only useful with the measurement
+attached.
+
+### 1 🔴 Two tables of contents on every article
+
+`easy-table-of-contents` hooks `the_content`, and WPGraphQL's `content` field
+runs `the_content` filters — so the plugin's list arrives INSIDE the body and
+renders a few hundred pixels below the sidebar ToC the design specifies.
+
+That is also the answer to the reviewer's question. They marked the sidebar list
+and asked "does this only pick up h2?"; they were comparing two lists built by
+two systems that have never agreed about anything.
+
+**H2 only, and now written down**, which is what the brief actually asked for:
+
+| source | scope | feeds |
+|---|---|---|
+| `extractHeadings()` | h2 only, uncapped | the article ToC |
+| `outlineHeadings` (mu-plugin) | h2 only, **capped at 8** | card dek, RSS description |
+
+The cap is on the wrong field to matter — the article page derives its contents
+from the body it already has, so the 24-heading article gets all 24 (verified:
+24 `<h2 id="s…">`, 24 links). **H2 stays the granularity.** The panel is
+height-capped with internal scrolling precisely because 24 entries already fill
+it; h3s would triple that to navigate a document the reader has not started.
+
+**Stripped at the mapping layer, not by deactivating the plugin** — the brief
+asked for a decision. Deactivating is cleaner and is the recommended follow-up,
+but it cannot be taken from here: it would break any article that places
+`[ez-toc]` explicitly, and this environment cannot reach the CMS to audit for
+that shortcode. **Be honest about what the strip does not deliver:** it removes
+the shortcode's output too, because the plugin emits identical markup either way.
+So "keeps the plugin available for authors who want an inline list" is not what
+shipped. An author who wants one needs a Gutenberg block — B7.
+
+**A regex cannot do this and the first version tried.** The container holds a
+title `<div>` and then the list, so a non-greedy `<div…>[\s\S]*?</div>` stops
+at the title's closing tag: it deletes «فهرست مطالب», keeps the entire list, and
+leaves an orphaned `</div>` in the body. That looks like a fix in a diff and is
+worse than none on the page. Replaced with a depth-counting scanner; malformed
+input comes back untouched rather than truncated.
+
+Two things exist because the markup could not be checked against the live CMS:
+`npm run check:toc` (seven shapes) and `injectedTocSurvivors` on `/mag/health`.
+A regex that stops matching does not fail — it silently ships the duplicate.
+
+### 2 🔴 The h1 broke mid-phrase
+
+`text-wrap: balance` replaces `pretty`. `pretty` protects only the LAST line;
+this headline goes wrong in the earlier breaks. Measured with the longhand
+toggled at runtime:
+
+```
+1440  off  778px «…ایران؛ آموزش کامل خرید،» / 396px «انتقال و نگهداری BTC»
+      on   569px «…ایران؛ آموزش»            / 605px «کامل خرید، انتقال و نگهداری BTC»
+ 390  off  «…در ایران؛» / «آموزش کامل خرید، انتقال و» / «نگهداری BTC»
+      on   «…در ایران؛» / «آموزش کامل خرید،» / «انتقال و نگهداری BTC»
+```
+
+**Three attempts at the control were wrong before one worked**, and each printed
+identical numbers that read as "balance does nothing":
+`style.textWrap = 'normal'` is the camelCase alias of a shorthand and is
+ignored; `setProperty('text-wrap','normal')` is ignored too because `normal` is
+not a value of that shorthand; `setProperty('text-wrap-style','auto')` works. An
+A/B in which both arms are A very nearly shipped as evidence the fix was inert.
+
+**It does not fight `bidiTitle`** — verified at 390px on «تحلیل فاندامنتال
+(Fundamental Analysis) چیست؟». Balancing *does* move that title's breaks:
+unbalanced it kept the parenthesised run whole and left «چیست؟» alone on a 104px
+line; balanced it splits the run and removes the orphan. **That split is safe
+only because of the isolate**, so `balance` and `bidiTitle` are now a pair and
+removing either alone reintroduces the mirrored bracket.
+
+### 3 🔴 The share row — ALREADY FIXED, nothing to do
+
+Confirmed on the served HTML: exactly one `ShareRow` in the whole repo, one
+`aria-label="اشتراک‌گذاری در تلگرام"` on the rendered page, below the body. The
+header copy was removed in `87658fb` — the reviewer's PDF predates that deploy.
+
+Their second ask, "move the bottom one above «ادامه‌ی مسیر»", is already the
+case: the share row is the first item in the post-body stack, and
+«ادامه‌ی مسیر» is in the sidebar column, which follows the body column in DOM
+order and sits beside it at desktop.
+
+### 4 🟠 «ادامه‌ی مسیر» was just the latest four
+
+The question — «بر چه اساسی کار می‌کند، یا فقط تیتره؟» — had the answer "just
+the heading". `getArticles({ perPage: 4 })`, no filter: a panel promising to
+continue the reader's path, showing whatever was newest.
+
+Now same content type, newest first. **Market-based relatedness is not an
+option and is not being pretended into one** — 39 of 53 articles carry no
+market. That is B17, a tagging problem.
+
+**The heading is computed.** «مطالب مرتبط» already renders three of the same
+content type on the same page, so those three are excluded here — two panels a
+screen apart showing the same titles is the duplicate this round just removed
+from the ToC. When enough survives, the panel is «بیشتر در آموزش». When the type
+is too small for both panels («تحلیل» has two articles in the archive), it falls
+back to recency **and says so**: «تازه‌ترین مطالب». Renaming it only when it is
+telling the truth is the point of computing the name.
+
+### 5 🟠 The progress bar was invisible
+
+It was a 1px accent line at the FOOT of the panel, under a `border-t`, below the
+list. The cause is placement, not colour: a hairline at the bottom of a bordered
+card reads as the card's bottom edge, and raising its contrast would have made a
+more visible divider.
+
+Moved to the panel header beside «در این مطلب می‌خوانید», where it is a stat
+about the document the list describes. The bar now sits under that heading row,
+so its horizontal line does structural work instead of imitating a rule. 3px
+rather than 1px, track on `border-strong` rather than `surface-hover` — at 1px
+on `surface-hover` the empty portion was indistinguishable from the card, so the
+filled portion read as a rule rather than as a meter.
+
+**Not a full-width bar across the top of the viewport.** Ruled out explicitly,
+and it would compete with the header.
+
+### 6 🟠 Sidebar alignment and the InChart CTA
+
+**The newsletter card is NOT centred — deliberately not fixed, because there is
+nothing to fix.** Measured with the flag temporarily flipped on, at 1440:
+
+```
+element   text-align   inline-start gap
+h2        start        23px
+p         start        23px
+form      start        23px
+input     start        23px
+p         start        23px
+button    center       23px   ← the only centred thing
+```
+
+Every piece of content already starts at the reading edge; the 23px is the
+card's symmetric padding, not an indent. The one centred element is the submit
+button's own label, which is a control convention rather than body copy — the
+reading-edge argument in the brief is about prose. `text-center` appears nowhere
+in `src/`. If the reviewer circled the button label specifically, say so and it
+can change, but nothing else in that card is centred.
+
+**The InChart CTA is new and it is built inside all four constraints.** The
+brief was right that this is one step from a pattern the brand rules out, so:
+it is a card in normal flow at the end of the rail (`position: static`, box
+never intersects the article column); it is the LAST child, so appearing extends
+the column downward and nothing on screen moves; the animation is opacity only
+and `prefers-reduced-motion` removes it entirely; and dismissal persists to
+localStorage so it never returns for that reader on any article.
+
+Revealed at 50% of `[data-article-body]` — the same hook the progress bar uses,
+so "half way" means the same thing in both. Absent at 30%, present at 50% and
+60%; rail grows 446 → 672px, inside a 900px viewport. A scroll listener rather
+than an observer, because "the reader has passed the midpoint" is a scroll
+position and not an intersection; it removes itself once it fires.
+
+### 7 🟡 Footer
+
+**The year was already fixed.** `«۱۴۰۵»` ungrouped in the served HTML, from
+`6a1cbf8`; their PDF predates the deploy. **The InChart link was already there**,
+first in the فایننس column. Both confirmed rather than skipped.
+
+The platform description replaces the tagline in the brand column. It is a NEW
+constant, not a change to `MAG_DESCRIPTION` — that one is the magazine's meta
+description, used on `/mag`, in the RSS `<description>` and in the Blog JSON-LD,
+where a 45-character summary is correct and Google truncates at ~160 anyway. At
+13px `text-muted` and 52ch: it is five times longer than what it replaces, and
+at the tagline's size and measure it set seven lines and became the loudest
+thing in the footer.
+
+«خبرخوان (RSS)» replaces «خوراک RSS» — «خوراک» is correct and is what publishing
+uses, but a finance reader is not a publishing reader. The bracketed Latin run is
+isolated, same as article titles.
+
+**The other social channels are asked for and not yet added.** Telegram and
+LinkedIn were named; the URLs were not supplied, and a guessed handle is worse
+than a missing one — `sameAs` asserts to Google that this organisation IS the
+account at that address, so a wrong one either makes a dead entity claim or
+attaches somebody else's profile to this publisher. Both sit in
+`SOCIAL_CHANNELS` with empty URLs; pasting the address in makes them appear in
+the footer and the JSON-LD at once.
+
+The list also stopped labelling every entry «اینستاگرام», which was correct only
+while there was one. Two entries would have produced two chips with the same
+accessible name.
+
+### 8 🟡 `?page=N` was serving page one at unbounded URLs
+
+`/mag/archive?page=2` returned 200 with the content of page one, and so did
+`?page=3` and `?page=99`. Next ignores a parameter no route reads. That is worse
+than a 404 — Google indexes a 200 — and it is a duplicate on an unbounded set.
+
+Handled in middleware rather than four route files. Every case verified,
+including chains terminating in one hop with no loops. `?page=99` redirects and
+then 404s, which is the correct end state: middleware cannot know the last page
+without a data fetch at the network boundary, which is exactly what that layer
+must not do.
+
+**Two bugs in the first version, both found by testing rather than reasoning.**
+`/search?q=…&page=2` was being redirected — search paginates by query string on
+purpose and had fallen through the "not a path-paginated route" branch, so its
+page 2 was 301'd to its own page one. And `/mag?page=3` answered 200 while
+`/mag/archive?page=3` redirected correctly: Next prefixes matchers with the
+basePath, so `'/((?!…).*)'` becomes `/mag/(…)`, which requires the slash and
+never matches `/mag` itself.
+
+**Search Console was not checked** and the brief asked for it — this environment
+cannot reach it or the CMS. The brief also says the fix ships either way,
+because the duplicate-content problem exists regardless; only the urgency
+depends on the impression count.
+
+### 9 🟡 «عکس‌های شاخص را خراب کرده» — needs the reviewer, not a change
+
+Feedback on `9b86b3f`, which draws each hero at its own aspect ratio instead of
+a fixed 3.24 band. "Broke" could mean cropped, stretched, too tall or too small,
+and each has a different fix — so nothing is changed until they say which.
+
+What that commit measured, and the trade-off they are probably reacting to:
+
+| source ratio | old hero | new hero |
+|---|---|---|
+| 680×272 (2.50) | 23% cropped | 0% — renders as a 544px band |
+| 1200×630 (1.90) | 41% cropped | 0% — 714px tall, pushes the body down |
+| 1200×800 (1.50) | 54% cropped | 21% |
+
+Both plausible complaints are the same change seen from opposite ends: a wide
+image is now a thin strip, a tall one now pushes the article a long way down.
+The old band cropped everything equally instead, which is why it was changed.
+**The measurement the brief asks for still cannot be taken here** — the CMS is
+unreachable (`curl` returns `000` in ~0.3s, refused by the proxy allow-list, not
+a timeout). The query is in `backlog.md` B14.
+
+---
+
 ## 2026-09-07 (later) — The ToC follows the reader, the newsletter stops lying, the official lockup lands
 
 ### The sticky class had been there all along and had never done anything

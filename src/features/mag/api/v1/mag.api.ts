@@ -28,7 +28,14 @@ import {
 import type { MagSeo } from '../../types/mag-seo.types';
 import { resolveContentType } from '../../lib/content-types';
 import { isExcludedCategory } from '../../lib/taxonomy';
-import { addHeadingIds, extractHeadings, sanitizeArticleHtml } from '../../lib/sanitize';
+import {
+  addHeadingIds,
+  articleHasInjectedToc,
+  extractHeadings,
+  fixBodyImageUrls,
+  sanitizeArticleHtml,
+  stripInjectedToc,
+} from '../../lib/sanitize';
 import { SITE_ORIGIN } from '../../lib/site';
 
 const ENDPOINT =
@@ -546,6 +553,50 @@ async function countArticles(filters: {
   return total;
 }
 
+/**
+ * Slugs whose body still contained an injected table of contents AFTER the
+ * strip ran. Surfaced on /mag/health — see `articleHasInjectedToc`.
+ *
+ * A Set rather than a counter so the report names the articles: "3 articles"
+ * is a number to argue about, three slugs is something to open.
+ *
+ * Module scope, so it accumulates across the ISR regenerations in one process
+ * and is not reset by a request. It is a diagnostic, not state anything reads.
+ */
+const injectedTocSurvivors = new Set<string>();
+
+export function magInjectedTocSurvivors(): string[] {
+  return [...injectedTocSurvivors];
+}
+
+/**
+ * The article body pipeline, in the one order that works.
+ *
+ *   strip the injected ToC → repair image URLs → strip banned inline styles
+ *   → stamp heading ids
+ *
+ * Image URLs are repaired AFTER the ToC strip, so the plugin's own list — which
+ * contains no images — is not scanned, and BEFORE the style strip, which is a
+ * different attribute and cannot interact with either.
+ *
+ * The ToC goes FIRST because the plugin's list contains anchors to the body's
+ * headings; stripping it afterwards would be stripping markup that heading-id
+ * stamping had already walked over. Ids go LAST because they must survive
+ * every earlier transform — that ordering is why sanitising and stamping were
+ * split in the first place.
+ */
+function prepareBody(html: string, slug: string): string {
+  const stripped = fixBodyImageUrls(stripInjectedToc(html));
+
+  /* Recorded, not thrown. A survivor means the plugin's markup has moved and
+     the strip silently did nothing — the exact failure this project keeps
+     hitting — but an article that renders a duplicate list is still better
+     than an article that 500s. */
+  if (articleHasInjectedToc(stripped)) injectedTocSurvivors.add(slug);
+
+  return addHeadingIds(sanitizeArticleHtml(stripped));
+}
+
 export async function getArticle(slug: string): Promise<Article> {
   const data = await gql<{
     post: (WpSummary & { content: string | null; seo: unknown }) | null;
@@ -567,7 +618,7 @@ export async function getArticle(slug: string): Promise<Article> {
      produces rivers of whitespace without kashida support. */
   /* Sanitise first, then stamp heading ids — the ids must survive, so they
      go on after the style stripping. */
-  const content = addHeadingIds(sanitizeArticleHtml(data.post.content ?? ''));
+  const content = prepareBody(data.post.content ?? '', data.post.slug);
   const markets = (data.post.markets?.nodes ?? []).map(mapMarket);
 
   return {
@@ -612,7 +663,7 @@ export async function getPreviewArticle(id: string, secret: string): Promise<Art
 
   if (!data.magPreview) throw new MagNotFoundError(id);
 
-  const content = addHeadingIds(sanitizeArticleHtml(data.magPreview.content ?? ''));
+  const content = prepareBody(data.magPreview.content ?? '', data.magPreview.slug);
   const markets = (data.magPreview.markets?.nodes ?? []).map(mapMarket);
 
   return {

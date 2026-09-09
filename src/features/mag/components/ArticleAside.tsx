@@ -242,9 +242,48 @@ export function ArticleAside({ headings }: { headings: string[] }) {
         aria-label="در این مطلب می‌خوانید"
         className="hidden rounded-card border border-border-subtle bg-surface-raised p-5 xl:block"
       >
-        <p className="mb-3.5 text-[14px] font-semibold text-text-primary">
-          در این مطلب می‌خوانید
-        </p>
+        {/*
+          THE PROGRESS READOUT MOVED UP HERE, AND THE BAR WITH IT.
+
+          It used to sit below the list, behind a `border-t`: a 1px accent line
+          under a divider, at the bottom of a panel. The review marked it as
+          invisible, and the reason is placement rather than colour — anything
+          drawn as a hairline at the foot of a bordered card reads as the card's
+          bottom edge, not as data. Nobody looks for a number there.
+
+          Beside the title it is a stat about the document the list describes,
+          which is what it is. The bar sits directly under the heading row for
+          the same reason: it now separates the header from the list, so its
+          horizontal line is doing structural work instead of imitating one.
+
+          NOT A FULL-WIDTH BAR PINNED ACROSS THE TOP OF THE VIEWPORT. That is
+          the blog-template default, it competes with the header, and it is
+          ruled out explicitly.
+
+          The percentage is text and the bar is `aria-hidden`, so a screen
+          reader gets the number once, not twice. Persian digits: it is a
+          quantity, so `toPersianDigits` and its grouping are correct here —
+          see lib/format.
+        */}
+        <div className="mb-2.5 flex items-baseline justify-between gap-3">
+          <p className="text-[14px] font-semibold text-text-primary">در این مطلب می‌خوانید</p>
+          <p className="shrink-0 text-[12px] font-medium tabular-nums text-text-secondary">
+            {toPersianDigits(progress)}٪
+          </p>
+        </div>
+
+        <div
+          aria-hidden="true"
+          /* 3px, not 1px, and `border-strong` for the track: at 1px on
+             `surface-hover` the empty portion was indistinguishable from the
+             card and the filled portion read as a rule. */
+          className="mb-3.5 h-[3px] overflow-hidden rounded-full bg-border-strong"
+        >
+          <div
+            className="h-full rounded-full bg-accent transition-[width] duration-150 motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
         {/*
           Capped with internal scroll, and now that the panel actually sticks
@@ -263,21 +302,6 @@ export function ArticleAside({ headings }: { headings: string[] }) {
         <ul ref={listRef} className="max-h-[calc(100vh-16rem)] space-y-0.5 overflow-y-auto">
           {links}
         </ul>
-
-        <div className="mt-4 border-t border-border-subtle pt-4">
-          <p className="text-[12.5px] leading-[1.7] text-text-muted">
-            پیشرفت مطالعه {toPersianDigits(progress)}٪
-          </p>
-          <div
-            aria-hidden="true"
-            className="mt-2 h-1 overflow-hidden rounded-full bg-surface-hover"
-          >
-            <div
-              className="h-full rounded-full bg-accent transition-[width] duration-150 motion-reduce:transition-none"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
       </nav>
 
       {/* Mobile: native disclosure, closed by default, no custom JS. */}
