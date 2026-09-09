@@ -92,3 +92,14 @@ add_filter("wp_get_attachment_image_src", function ($image) {
     $image[0] = str_replace("https://thefinance.ir/mag/wp-content/", TF_ADMIN_HOST . "/wp-content/", $image[0]);
     return $image;
 }, 10, 1);
+
+/* wp.ajax.settings.url is printed as the relative path /mag/wp-admin/
+   admin-ajax.php — relative, so no PHP filter can match it, and the /mag
+   prefix belongs to the frontend. The media library posts there and 400s,
+   which is why it never showed a single thumbnail. Corrected after
+   wp-util defines the object. */
+function tf_fix_ajax_settings() {
+    if (!is_admin()) return;
+    wp_add_inline_script("wp-util", "if(window.wp&&wp.ajax&&wp.ajax.settings){wp.ajax.settings.url=" . json_encode(TF_ADMIN_HOST . "/wp-admin/admin-ajax.php") . ";}window.ajaxurl=" . json_encode(TF_ADMIN_HOST . "/wp-admin/admin-ajax.php") . ";", "after");
+}
+add_action("admin_enqueue_scripts", "tf_fix_ajax_settings", 99);
