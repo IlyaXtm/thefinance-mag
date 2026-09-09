@@ -45,6 +45,17 @@ const ROUTES = [
   /* Real-shaped article bodies. See the overflow note below. */
   '/mag/stress-wide-content',
   '/mag/stress-long-technical-analysis',
+  /*
+    The rich article template with every slot filled — dek, two-chip kicker,
+    both callout variants, a five-column comparison table, a pull quote with
+    its attribution, and an FAQ. Nothing else in the fixture set has any of
+    them, so without this route the whole template is unmeasured.
+
+    Its opposite is already here: `stress-wide-content` fills none of these
+    slots, which is what all 54 migrated articles look like. Both matter, and
+    the empty one is the one in production.
+  */
+  '/mag/stress-rich-article',
 ];
 
 /* News rows carry 78px thumbnails that are below the fold on every viewport

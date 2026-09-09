@@ -819,6 +819,97 @@ const STRESS: Article[] = [
   },
   {
     /*
+      THE RICH ARTICLE TEMPLATE, WITH EVERY SLOT FILLED.
+
+      The counterpart to the 54 real articles, which fill none of them. Both
+      have to be looked at, and the empty one is the one that ships: a template
+      is judged by what it does when the fields are absent, not by the
+      screenshot where they are all present.
+
+      What this exercises, and nothing else in the mock does:
+
+        excerpt                the dek under the h1
+        market + contentType   the two-chip kicker. Most fixtures have no
+                               market, so they render one chip and never
+                               show the pair.
+        callout, note          the default variant
+        callout, warn          the tint, the stripe and the caution mark
+        core/table             five columns — the comparison table, and the
+                               reason `wrapBodyTables` exists
+        core/pullquote + cite  the attribution, and the synthesised-italic
+                               reset that goes with it
+        thefinance/faq         four <details>, closed by default
+        thefinance/disclaimer  the in-article compliance text
+
+      The copy is anti-hype on purpose. It compares tools on capability and
+      says plainly that none of them carries official intraday Tehran-exchange
+      data — which is what the warn variant is FOR, and it is the one thing in
+      the design's export that could not be replaced by an ordinary aside. No
+      price, no forecast, no outcome claim: this fixture is also the reference
+      for what a callout may say.
+    */
+    id: 'x9',
+    slug: 'stress-rich-article',
+    title: 'چهار ابزار رسم نمودار برای بازار ایران؛ بدون داده‌ی ناقص',
+    featuredImage: img('chart', 'میز کار یک تحلیل‌گر با چند نمودار باز'),
+    market: MARKETS.tse,
+    contentType: TYPES.education,
+    readingTime: 14,
+    publishedAt: '2026-08-19T10:00:00+03:30',
+    modifiedAt: '2026-09-02T09:00:00+03:30',
+    author: AUTHOR,
+    excerpt:
+      'انتخاب پلتفرم نمودار به سه چیز برمی‌گردد: پوشش داده‌ی بورس تهران، هزینه‌ی واقعی اشتراک، و اینکه قالب‌هایتان روی موبایل باز شود. هر چهار ابزار را روی یک وظیفه‌ی مشخص آزمودیم.',
+    outline: [],
+    secondaryMarkets: [MARKETS.crypto],
+    content:
+      '<h2>پیش از انتخاب، سه پرسش</h2>' +
+      '<p>ترتیب این فهرست بر اساس تناسب با بازار ایران است، نه محبوبیت جهانی. ' +
+      'هر ابزار را روی یک وظیفه‌ی مشخص سنجیدیم: رسم یک خط روند روی نمودار روزانه‌ی یک نماد بورسی و بازکردن همان قالب روی موبایل.</p>' +
+      '<div data-block="thefinance/callout"><strong>«داده‌ی بورس تهران» یعنی چه؟</strong>' +
+      '<p>در این مقاله منظور از پوشش داده، دسترسی به قیمت پایان‌بازار نمادهای بورس تهران است؛ ' +
+      'نه تابلوی معاملات لحظه‌ای. این دو در عمل دو چیز متفاوت‌اند.</p></div>' +
+      '<div data-block="thefinance/callout" data-variant="warn"><strong>قبل از پرداخت اشتراک بخوانید</strong>' +
+      '<p>هیچ‌کدام از این چهار پلتفرم داده‌ی <strong>تابلوی معاملات لحظه‌ای</strong> بورس تهران را رسمی ارائه نمی‌کنند؛ ' +
+      'فقط داده‌ی پایان‌بازار در دسترس است. اگر معامله‌ی روزانه می‌کنید، این تفاوت تعیین‌کننده است ' +
+      'و پیش از خرید اشتراک سالانه باید بدانید.</p></div>' +
+      '<h2>جدول مقایسه‌ی نهایی</h2>' +
+      '<p>اگر حوصله‌ی خواندن همه‌ی بخش‌ها را نداشتید، همین جدول کافی است.</p>' +
+      '<table><thead><tr><th>ابزار</th><th>داده‌ی بورس تهران</th><th>نسخه‌ی رایگان</th>' +
+      '<th>موبایل</th><th>مناسب برای</th></tr></thead><tbody>' +
+      '<tr><th scope="row"><span dir="ltr">TradingView</span></th><td>نمادهای اصلی</td><td>محدود</td>' +
+      '<td>اپ و وب</td><td>تحلیل جدی و روزمره</td></tr>' +
+      '<tr><th scope="row"><span dir="ltr">Investing.com</span></th><td>نمادهای اصلی</td><td>کامل</td>' +
+      '<td>اپ و وب</td><td>شروع و پیگیری سبک</td></tr>' +
+      '<tr><th scope="row"><span dir="ltr">MetaTrader 5</span></th><td>وابسته به کارگزار</td><td>کامل</td>' +
+      '<td>فقط اپ</td><td>خودکارسازی و بک‌تست</td></tr>' +
+      '<tr><th scope="row"><span dir="ltr">TSETMC + Excel</span></th><td>کامل و رسمی</td><td>کامل</td>' +
+      '<td>ندارد</td><td>داده‌ی دقیق بازار داخلی</td></tr>' +
+      '</tbody></table>' +
+      '<p>ارقام شهریور ۱۴۰۵ و بر اساس صورت‌حساب سالانه‌اند.</p>' +
+      '<figure class="wp-block-pullquote"><blockquote>' +
+      '<p>ابزار گران‌تر تحلیل بهتری نمی‌سازد. ابزاری که هر روز بازش می‌کنید، می‌سازد.</p>' +
+      '<cite>جمع‌بندی تحریریه</cite></blockquote></figure>' +
+      '<h2>پرسش‌های پرتکرار</h2>' +
+      '<div data-block="thefinance/faq">' +
+      '<details><summary>برای شروع کدام را برداریم؟</summary>' +
+      '<p>نسخه‌ی رایگان هرکدام که با آن راحت‌ترید. تا وقتی نمی‌دانید کدام محدودیت واقعاً آزارتان می‌دهد، ' +
+      'اشتراک خریدن حدس زدن است.</p></details>' +
+      '<details><summary>داده‌ی بورس تهران روی این ابزارها کامل است؟</summary>' +
+      '<p>خیر. پوشش به نمادهای اصلی محدود است و داده‌ی لحظه‌ای رسمی ارائه نمی‌شود.</p></details>' +
+      '<details><summary>قالب‌هایم روی موبایل باز می‌شوند؟</summary>' +
+      '<p>در سه مورد از چهار مورد بله. در موردی که فقط اپ دارد، قالب دسکتاپ کامل منتقل نمی‌شود.</p></details>' +
+      '<details><summary>می‌شود بدون اشتراک کار جدی کرد؟</summary>' +
+      '<p>بله، تا جایی که به تعداد اندیکاتور و دسترسی به داده‌ی قدیمی نخورید. همان سقف به شما می‌گوید کِی وقتش است.</p>' +
+      '</details></div>' +
+      '<h2>سخن آخر</h2>' +
+      '<p>اگر تازه شروع کرده‌اید، سه ماه با نسخه‌ی رایگان کار کنید. وقتی به یک سقف مشخص خوردید — ' +
+      'تعداد اندیکاتور، داده‌ی قدیمی، یا هم‌زمانی چند دستگاه — همان سقف تعیین می‌کند کدام را بخرید.</p>' +
+      `<div data-block="thefinance/disclaimer"><p>${DISCLAIMER_TEXT}</p></div>`,
+    seo: stressSeo('stress-rich-article', 'چهار ابزار رسم نمودار برای بازار ایران'),
+  },
+  {
+    /*
       A percent-encoded Persian slug — the form most of the archive uses.
       The route param arrives decoded, so this fixture proves the decode and
       the lookup line up. The RE-encode that production needs on the way to

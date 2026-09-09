@@ -526,6 +526,20 @@
    * The chevron, drawn from two borders so no font is involved. It sits at the
    * inline end via `margin-inline-start: auto`, which puts it on the left in
    * RTL without a single physical property.
+   *
+   * `border-inline-end` + `border-block-end` makes an L whose base direction
+   * DIFFERS BY DIRECTION — south-east in LTR, south-west in RTL — so the two
+   * rotations have to be reasoned about per direction, not copied from an LTR
+   * component:
+   *
+   *   closed  rotate(45deg)    LTR → east (right) · RTL → west (left)
+   *   open    rotate(-45deg)   south (down) in both
+   *
+   * Closed pointing at the inline end is CLAUDE.md's chevron rule — in RTL
+   * "forward" is left. Open must point down, and the first version of this
+   * rule used -135deg, which is east in LTR and WEST-flipped-to-east in RTL:
+   * an open panel whose chevron pointed sideways. Caught in a screenshot, not
+   * by a test, because nothing here asserts a rotation.
    */
   .article-body [data-block='thefinance/faq'] summary::after {
     content: '';
@@ -540,7 +554,7 @@
   }
 
   .article-body [data-block='thefinance/faq'] details[open] summary::after {
-    transform: rotate(-135deg);
+    transform: rotate(-45deg);
   }
 
   .article-body [data-block='thefinance/faq'] summary:hover {
