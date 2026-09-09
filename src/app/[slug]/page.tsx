@@ -2,7 +2,12 @@ import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getArticle, getArticles, getPreviewArticle } from '@/features/mag/api/v1/mag.service';
+import {
+  getArticle,
+  getArticles,
+  getCategories,
+  getPreviewArticle,
+} from '@/features/mag/api/v1/mag.service';
 import { hasPreviewSecret, previewSecret } from '@/features/mag/lib/preview-secret';
 import { getComments } from '@/features/mag/api/v1/mag.comments.service';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
@@ -10,7 +15,7 @@ import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { bidiTitle } from '@/features/mag/lib/bidi-title';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { authorInitial, cardCategory } from '@/features/mag/lib/card';
+import { articleKicker, authorInitial, cardCategory } from '@/features/mag/lib/card';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import { heroAspectRatios } from '@/features/mag/lib/hero-ratio';
 import Link from 'next/link';
@@ -196,7 +201,7 @@ export default async function ArticlePage({
     supplementary, the article is the point. It degrades to an empty thread,
     which the list already handles by rendering nothing.
   */
-  const [related, onward, latest, comments] = await Promise.all([
+  const [related, onward, latest, comments, categories] = await Promise.all([
     getArticles({
       page: 1,
       perPage: 3,
@@ -237,9 +242,17 @@ export default async function ArticlePage({
        articles is not worth the latency, and this query is already cached. */
     getArticles({ page: 1, perPage: 5, excludeSlug: article.slug }),
     getComments(article.slug).catch(() => ({ items: [], total: 0 })),
+    /* For the kicker's href only: which content types have a real category
+       archive, so the chip links to it instead of spending a 301 on the query
+       form. Same question FilterBar asks, and the same cached query. */
+    getCategories(),
   ]);
 
   const category = cardCategory(article);
+  const kicker = articleKicker(
+    article,
+    categories.map((c) => c.slug),
+  );
   const heroRatios = article.featuredImage
     ? heroAspectRatios(article.featuredImage)
     : null;
@@ -289,7 +302,27 @@ export default async function ArticlePage({
 
       {/* Title block, capped at 820 — the design's measure for a 44px h1. */}
       <div className="mt-5 max-w-[820px]">
-        <CategoryChip name={category.name} href={category.href} />
+        {/*
+          THE KICKER — one chip or two, and the design's third is missing on
+          purpose.
+
+          The design draws «آموزش · تحلیل تکنیکال · راهنمای ابزار». The third
+          segment matches no taxonomy that exists and roadmap.md files it under
+          "still needs a decision"; inventing one to fill a chip is how a
+          content model grows a sixth axis. The design's own export renders
+          two.
+
+          The two here are the axes the model already has — market, then
+          content type. A card shows one because a card has room for one; the
+          header has room for both. Roughly 60% of the archive carries no
+          market, so ONE chip is the common case, and the row simply holds
+          fewer items: nothing is reserved and nothing shifts.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          {kicker.map((chip) => (
+            <CategoryChip key={chip.href} name={chip.name} href={chip.href} />
+          ))}
+        </div>
 
         {/*
           `text-wrap: balance`, not `pretty`.
