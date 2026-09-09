@@ -252,15 +252,44 @@ submit handler restores exactly the defect it was added to remove.
 
 ---
 
-## B7 — Gutenberg blocks beyond the first three
+## B7 — Gutenberg blocks beyond the first four
 
-**Status:** deferred by design
+**Status:** deferred by design. **Four now, not three** — updated 2026-09-09.
 
-Callout, Disclaimer, and CTA only. Chart embeds and product cards are built
-when an editor actually asks for them.
+Callout, Disclaimer, CTA and **FAQ**. Chart embeds and product cards are still
+built when an editor actually asks for them.
 
-The five-block list in the design docs is a ceiling, not a starting point. A
-block library grows on demand; it doesn't get pre-built.
+The FAQ block arrived with the rich article template, and it earned its place
+the way this list requires: the design needed a structured question/answer
+list, and the alternative was an editor formatting one by hand out of headings
+and paragraphs — which puts five questions into the table of contents and makes
+the answers uncollapsible. It renders as `<details>`/`<summary>` with no
+JavaScript.
+
+**The callout gained a `warn` variant in the same pass, and it is still one
+block.** The original note ruled out an info/warning/success/error SET, on the
+grounds that four options means an editor chooses correctly once and wrongly
+three times. Two is a question with a right answer — does skipping this cost
+the reader money? — and `note` remains the default, so an editor who chooses
+nothing still gets the correct block. **A third variant needs a new argument,
+not a new colour.**
+
+Three things the rich template asked for are deliberately NOT blocks, because
+WordPress core already ships them and a house block that duplicates a core one
+is a block editors have to be told to prefer:
+
+- the pull quote is `core/pullquote`, now styled
+- the comparison table is `core/table`, wrapped for overflow in the body
+  pipeline
+- the tag row is the post's own taxonomy, not in-body content — see B27
+
+**The WordPress half of all four blocks is still unwritten.** What exists in
+this repo is the contract: `mag-blocks.types.ts` types them and `globals.css`
+styles them by `[data-block]` attribute. Nothing registers them in Gutenberg
+yet, so no editor can insert one. That is the next piece of work on this item,
+and `roadmap.md` wave 2 puts it ahead of the custom fields for a reason — an
+author can use a block the day it ships, where a field waits on somebody
+committing to fill it.
 
 ---
 
@@ -878,3 +907,50 @@ nobody has looked at which. `handover-main-site-dev.md` covers it.
 
 Removing Jannah before that call is repointed would turn a slow response into a
 failed one, on the main site's home page.
+
+---
+
+## B27 — 🟠 Do any of the 54 articles have tags?
+
+**Status:** open. One query, and the answer decides a route.
+
+The rich article template ends the article with a tag row and puts a tag in the
+kicker. Neither was built, because **nobody has counted**. WordPress's tag
+taxonomy is in every WPGraphQL schema, so a component built against it compiles
+and renders — and would render nothing, on all 54 articles, indefinitely. The
+standing rule is that a component is never built against a field without
+verifying it first, and this archive has already produced `market` at 14 of 54
+and `dek` at 0 of 54.
+
+```bash
+curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:100){ nodes { slug tags { nodes { slug name } } } } }"}' \
+  | python3 -c "import sys,json,collections
+n=json.load(sys.stdin)['data']['posts']['nodes']
+c=collections.Counter(t['name'] for p in n for t in (p['tags']['nodes'] or []))
+tagged=sum(1 for p in n if p['tags']['nodes'])
+print(f'{tagged} of {len(n)} tagged, {len(c)} distinct')
+print(c.most_common(20))"
+```
+
+**Then the routing decision, which does not have an obvious answer.** A tag
+chip needs a destination, and the three candidates are not equal:
+
+- **A tag archive at `/mag/tag/<slug>`.** The category route's machinery
+  already covers it — the thin-archive floor would `noindex` anything under
+  eight posts on its own. The problem is the tags that clear the floor: on a
+  54-article magazine a tag with eight-plus posts is a near-duplicate of a
+  category archive, and two indexable pages listing mostly the same articles is
+  the duplicate-content shape this whole project was set up to avoid. Viable if
+  tag archives are `noindex` unconditionally and stay out of the sitemap — a
+  reader feature, not an index surface.
+- **Into search**, `/mag/search?q=<name>`. No new route, no index surface,
+  never 404s, and approximately right. It is not the same set as "posts tagged
+  X", and a chip that promises one and delivers the other is the kind of small
+  dishonesty «ادامه‌ی مسیر» was rewritten to remove.
+- **Not at all.** Correct if the count comes back near zero, and it costs
+  nothing to wait for the number.
+
+Do not build the row before the query. A tag row over an untagged archive is a
+heading with nothing under it, which is the one thing the rich template's own
+governing rule forbids.

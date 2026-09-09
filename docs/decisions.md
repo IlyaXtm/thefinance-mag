@@ -238,6 +238,63 @@ a 41-minute read is a wall, and the panel is already height-capped with internal
 scrolling because 24 entries fill it. A nested ToC is a design change with a
 scroll and a density problem attached, not a regex edit.
 
+**The dek is the excerpt. There is no second summary field.** Decided
+2026-09-09, when the rich article template asked for one.
+
+Earlier this document rejected excerpts as a dek source because the live site's
+are truncated mid-sentence. That objection is about `excerpt(format: RENDERED)`
+— WordPress's generated summary. `RAW` returns only the hand-written field, and
+an empty string when nobody wrote one, so the truncation cannot reach the page.
+`card.ts` has treated it as the editor's own sentence since the listing was
+built; the article header now does the same.
+
+A separate `dek` custom field was the obvious alternative and is worse.
+WordPress already shows an author one box for exactly this; a second beside it
+is two summary boxes with no rule for which is which, and the wrong one gets
+filled about half the time. `roadmap.md` wave 2 reaches the same place from the
+other direction — build what an author can use tomorrow, and let custom fields
+arrive with the editorial commitment to fill them.
+
+It renders for nothing today: 0 of 54 articles carry a hand-written excerpt.
+That is the correct behaviour and not a gap. **The governing rule for the whole
+rich template: a field that is empty renders no element — no placeholder, no
+heading with nothing under it, no reserved space that collapses to a gap.**
+
+**`reviewed_at` is NOT added, because `modifiedAt` already is it.** The design
+draws «بازبینی شهریور ۱۴۰۵» with a check mark. The date is already rendered,
+from the revision timestamp, and already shown only when it differs from the
+publish date.
+
+What a `reviewed_at` field would add over that is the CLAIM: that a person
+checked this article on that date. `reviewedBy` and `factCheckedBy` are
+excluded from this model for one stated reason — **no review process exists** —
+and a review DATE asserts the same thing a review BYLINE does, with less to
+check it against. The tick mark is dropped for the same reason: a green check
+beside a date is a verification badge, and an automatic `post_modified` is not
+a verification.
+
+When a review process exists, this becomes a real field and the badge becomes
+honest. Until then the revision date is the honest version and it already
+ships.
+
+**Tags are not rendered, pending one query.** The design ends the article with
+a tag row and puts a tag in the kicker. WordPress's tag taxonomy exists in
+every WPGraphQL schema, so a component built against it would compile and
+render — and might render nothing, on all 54 articles, forever.
+
+Nobody has looked. `market` is 14 of 54 and `dek` is 0 of 54; a taxonomy nobody
+has counted is not a foundation, and the standing rule is that a component is
+never built against a field without verifying it in GraphiQL first. There is a
+second cost behind it: a tag needs a destination, and a tag archive on a
+54-article magazine is a near-duplicate of a category archive whenever it holds
+enough posts to be worth indexing. Backlog B27 carries the query and the
+routing decision that follows from its answer.
+
+**Comment counts stay off the page.** The design's meta row carries «۷ دیدگاه»
+next to the date and reading time. Comment counts are on the never-build list
+with view counts and reaction counts, and that list survived Blog v4 intact.
+The count is not rendered; the comments themselves still are.
+
 ---
 
 ## Pagination
@@ -313,6 +370,35 @@ fixture body was written against this design and real ones are not. When a
 check covers content, it has to run against content shaped like the real thing —
 `check-invariants.mjs` carries fixtures built from migrated markup for exactly
 this reason, and names the offending element rather than reporting a number.
+
+**Scrolling belongs to a container, not to the element.** Amended 2026-09-09,
+after the comparison table.
+
+The first version of the rule put `display: block; overflow-x: auto` on the
+`<table>` itself. It satisfies the rule above and costs the table its layout: a
+`display: block` table is a block container whose rows generate an anonymous
+table box, so `width: 100%` sizes the block and the real table shrink-to-fits
+inside it. Every table in the archive had stopped filling its column, at every
+width, and no styling of the `<table>` could put it back — 698px inside a 700px
+column after the fix, against a shrink-to-fit before it.
+
+So the body pipeline wraps each table in a `<div data-table-scroll>`: the
+container scrolls, the table is a table. It is a transform and not a stylesheet
+rule because **there is no CSS that adds an element**, and the markup that needs
+one is markup we do not author. `core/table` supplies a `<figure>` that could
+have carried it; the classic editor and all 54 migrated bodies do not.
+
+The container is focusable, with a role and a name. A region that scrolls but
+cannot be reached from the keyboard fails SC 2.1.1 — a mouse can drag it and a
+keyboard has no way in.
+
+**And the check asserts the structure, not the symptom.** The overflow sweep
+deliberately exempts anything under an `overflow-x` ancestor, so it can never
+catch a table that loses its wrapper until that table breaks the page — which
+at 1440px it never would. `check-invariants.mjs` now asserts that every
+`.article-body table` has a `[data-table-scroll]` ancestor. That is the third
+check in this project rewritten because it was passing for a reason unrelated to
+the thing it was supposed to prove.
 
 ---
 
@@ -423,6 +509,20 @@ suffices, hence a third token.
 
 **`--danger`** for form validation. All proposed values clear 4.5:1
 comfortably.
+
+**`--warn` and `--warn-soft`**, added 2026-09-09 for the callout's warn
+variant. A different role from `--danger`, not a shade of it: `--danger` is
+form validation — "you have done something wrong" — and `--warn` is editorial,
+"this costs you something if you skip it". Measured: `#FFB44D` gives 11.03 on
+v1 and 11.21 on v2 dark; v2 light takes `#8a5200` (6.39 / 5.80), because the
+design's amber measures **1.72 against white** and is invisible as text.
+
+**`--good` was proposed by the same design and NOT added.** Green appears in
+three places there and none of them survived: the review badge (dropped — see
+Content model), the comparison table's status dots (row data an editor writes,
+not something the template colours), and pro/con chips inside body prose. A
+token with no consumer is a value nobody maintains and nobody re-measures when
+a theme moves, so it arrives with its first real use or not at all.
 
 ---
 

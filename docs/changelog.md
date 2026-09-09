@@ -8,6 +8,110 @@ why it was made.
 
 ---
 
+## 2026-09-09 — The richer article template, and what it turned out not to need
+
+The Claude Design export for a long-form article adds a kicker, a dek, a
+review date, a warn callout, a comparison table, a pull quote, an FAQ, a tag
+row and an author bio. Governing rule for all of it, and the reason most of
+this entry is about restraint: **a field that is empty renders no element — no
+placeholder, no heading with nothing under it, no reserved space that
+collapses to a gap.** All 54 migrated articles have none of these fields, so
+the template has to be correct when everything is missing before it is
+interesting when everything is present.
+
+**The dek is the excerpt, and there is no new field.** `excerpt(format: RAW)`
+returns only what an author typed. The old objection to excerpts was about
+`RENDERED`, WordPress's mid-sentence auto-summary, which `RAW` cannot return —
+and `card.ts` has preferred this field over derived text since the listing was
+built. A separate `dek` custom field would put two summary boxes on the editor
+screen with no rule for which is which. It renders for 0 of 54 today, which is
+the behaviour and not a gap. `roadmap.md` wave 0 holds the editorial decision
+it waits on.
+
+**A two-part kicker, from the two axes that exist.** The design draws three
+segments; the third matches no taxonomy, and `roadmap.md` files it under
+"still needs a decision" in as many words. Market then content type — the pair
+`cardCategory` collapses into one label because a card has room for one. One
+chip is the common case: roughly 60% of the archive has no market.
+
+**`reviewed_at` was not added, because `modifiedAt` already is it.** What the
+field would add over the date already rendered is the CLAIM that a person
+checked the article. `reviewedBy` and `factCheckedBy` are excluded from this
+model because no review process exists, and a review DATE asserts the same
+thing with less to check it against. The design's green tick goes with it: a
+check mark beside an automatic `post_modified` is a verification badge over
+something nobody verified.
+
+**One callout, two variants.** The block's own note ruled out an
+info/warning/success/error set — four options means an editor chooses correctly
+once and wrongly three times. That argument is about four. Two is a question
+with a right answer, `note` stays the default, and warn moves the stripe, the
+tint and the title colour and nothing else. It also carries a caution mark, as
+a mask-image on `::before`, because a tinted panel alone is nothing to a reader
+who cannot separate amber from blue.
+
+**A defect found on the way past.** `<cite>` is italic in every browser's
+default stylesheet. The blockquote rule sets `font-style: normal`, but that
+reaches a `<cite>` only by inheritance and the UA's own rule is on the element,
+which wins. Persian has no true italic, so every quoted attribution already in
+the archive has been rendering a synthesised slant with the ZWNJ joins dragged
+along. Nobody reported it; it was found by reading the default stylesheet while
+styling the pull quote.
+
+**The comparison table exposed a bigger one.** `.article-body table` carried
+`display: block; overflow-x: auto` — which satisfies "nothing wider than the
+body" and quietly costs every table its layout, because a `display: block`
+table sizes the block and lets the real table shrink-to-fit inside it. Tables
+had stopped filling their column at every width. Now `wrapBodyTables` puts a
+focusable scroll container around each one and the table is a table again: 698px
+in a 700px column at 1440, 620px scrolling inside a 320px box at 360, page
+overflow zero at both.
+
+**And the check that could not have caught it now can.** The overflow sweep
+exempts anything under an `overflow-x` ancestor — correct, and it means an
+unwrapped table has to break the page before the sweep sees it, which at 1440
+it never would. The invariant now asserts the STRUCTURE: every
+`.article-body table` has a `[data-table-scroll]` ancestor. Third check in this
+project rewritten because it was passing for a reason unrelated to what it was
+meant to prove.
+
+**Tags were not built.** WordPress's tag taxonomy is in every WPGraphQL schema,
+so the component would compile and render — possibly nothing, on all 54
+articles, forever. Nobody has counted, this archive has already produced
+`market` at 14 of 54 and `dek` at 0 of 54, and a tag chip needs a destination
+that is a real routing decision on a magazine this size. B27 carries the query
+and the three candidate answers.
+
+**Comment counts were not built.** The design's meta row carries «۷ دیدگاه».
+Comment counts are on the never-build list beside view counts and reaction
+counts, and that list survived Blog v4 intact.
+
+**`--warn` and `--warn-soft` added; `--good` refused.** Amber measures 11.03
+and 11.21 on the dark themes; the light theme takes `#8a5200` (6.39 / 5.80),
+because the design's `#FFB44D` measures **1.72 against white**. `--good` has no
+consumer once the review badge is dropped — the table's status dots are row
+data an editor writes, not something the template colours — and a token nobody
+uses is a value nobody re-measures when a theme moves.
+
+**Not taken from the export:** Vazirmatn, and the Google Fonts link that loads
+it. The face is IRANYekanX, it belongs to the design system rather than to Mag,
+and Blog v4 already shipped and reverted this exact swap.
+
+**The author bio needed no change.** It already renders the role only when
+there is a role and the bio only when there is a bio, and the article count the
+design shows already lives on `/author/<slug>`, where the count is fetched.
+Adding it to the in-article box would mean a count query on the highest-traffic
+route for a decorative fact. Today, on all 54 articles, the box is a name and a
+role — which is correct.
+
+**What is still WordPress-side.** All four blocks exist here as a contract —
+typed in `mag-blocks.types.ts`, styled by `[data-block]` attribute — and none
+is registered in Gutenberg, so no editor can insert one yet. `roadmap.md` wave
+2 puts that ahead of the custom fields deliberately: an author can use a block
+the day it ships, where a field waits on somebody committing to fill it.
+
+---
+
 ## 2026-09-09 (servers) — A day of infrastructure work, none of it in the repo
 
 Recorded after the fact from a session log. Nothing here is a frontend change;
