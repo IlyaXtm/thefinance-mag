@@ -28,6 +28,7 @@ import {
   addHeadingIds,
   extractHeadings,
   fixBodyImageUrls,
+  lazyLoadBodyImages,
   sanitizeArticleHtml,
   stripInjectedToc,
 } from '../../lib/sanitize';
@@ -45,7 +46,9 @@ import {
  * different component.
  */
 function prepareContent(html: string): string {
-  return addHeadingIds(sanitizeArticleHtml(fixBodyImageUrls(stripInjectedToc(html))));
+  return addHeadingIds(
+    sanitizeArticleHtml(lazyLoadBodyImages(fixBodyImageUrls(stripInjectedToc(html)))),
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -589,6 +592,68 @@ function stressSeo(slug: string, title: string): MagSeo {
 }
 
 const STRESS: Article[] = [
+  {
+    /*
+      THE MARKUP MIGRATED CONTENT CARRIES AND THE DESIGN NEVER ANTICIPATED.
+
+      A reviewer reported the page scrolling sideways on mobile, and the last
+      sweep — twelve routes, fifteen widths — found nothing, because it measured
+      FIXTURES. Every fixture body was written against the design. Real bodies
+      come out of a WordPress that has been edited since 2019 by people pasting
+      embeds and setting pixel widths, and none of that is in the mock.
+
+      So each element here is one thing the stylesheet did not cover, at a width
+      that breaks a 320px viewport:
+
+        <iframe width="560">        a YouTube/Aparat embed. THE LIKELY CULPRIT:
+                                    globals.css has no iframe rule at all, and
+                                    an explicit width attribute is not capped by
+                                    anything.
+        <video width="640">         same class of element, same gap
+        <div style="width:900px">   the classic editor's column trick. The
+                                    sanitizer strips justify/italic/ltr and
+                                    leaves width alone, so it reaches the page.
+        <img style="width:1200px">  an inline width beating `max-width:100%`
+        a 300-character URL         no break opportunity anywhere in it
+        <table>, <pre>              ALREADY handled — here so a regression in
+                                    the rules that cover them is caught too
+    */
+    id: 'o1',
+    slug: 'stress-wide-content',
+    title: 'محتوای پهن — بررسی سرریز افقی',
+    featuredImage: img('chart', 'نمودار'),
+    market: null,
+    contentType: TYPES.education,
+    readingTime: 5,
+    publishedAt: '2026-08-06T10:00:00+03:30',
+    modifiedAt: null,
+    author: AUTHOR,
+    excerpt: null,
+    outline: [],
+    secondaryMarkets: [],
+    content:
+      '<h2>ویدیوی جاسازی‌شده</h2>' +
+      '<figure class="wp-block-embed"><div class="wp-block-embed__wrapper">' +
+      '<iframe width="560" height="315" src="about:blank" title="ویدیوی نمونه" ' +
+      'frameborder="0" allowfullscreen></iframe></div></figure>' +
+      '<h2>ویدیوی محلی</h2>' +
+      '<video width="640" height="360" controls></video>' +
+      '<h2>ستون با عرض ثابت</h2>' +
+      '<div style="width:900px">این بلوک عرض ثابت دارد و ستون را می‌شکند.</div>' +
+      '<h2>تصویر با عرض درون‌خطی</h2>' +
+      '<img src="/mag/mock/covers/chart.jpg" alt="نمودار" style="width:1200px" />' +
+      '<h2>نشانی بسیار طولانی</h2>' +
+      '<p>منبع: <a href="#">https://example.com/' + 'a'.repeat(280) + '</a></p>' +
+      '<h2>جدول</h2>' +
+      '<table><thead><tr><th>ستون یک</th><th>ستون دو</th><th>ستون سه</th>' +
+      '<th>ستون چهار</th><th>ستون پنج</th><th>ستون شش</th></tr></thead>' +
+      '<tbody><tr><td>مقدار طولانی برای پهن کردن</td><td>مقدار طولانی برای پهن کردن</td>' +
+      '<td>مقدار طولانی برای پهن کردن</td><td>مقدار طولانی برای پهن کردن</td>' +
+      '<td>مقدار طولانی برای پهن کردن</td><td>مقدار طولانی برای پهن کردن</td></tr></tbody></table>' +
+      '<h2>کد</h2>' +
+      '<pre><code>' + 'x'.repeat(200) + '</code></pre>',
+    seo: stressSeo('stress-wide-content', 'محتوای پهن'),
+  },
   {
     /*
       IMAGES THAT 404, WHICH THE MOCK HAD NO WAY TO PRODUCE.

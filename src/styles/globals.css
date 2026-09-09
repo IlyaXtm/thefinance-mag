@@ -127,6 +127,58 @@
     text-underline-offset: 3px;
   }
 
+  /*
+   * NOTHING IN THE BODY MAY BE WIDER THAN THE BODY.
+   *
+   * A reviewer reported the page scrolling sideways on mobile, and a sweep of
+   * twelve routes at fifteen widths had found nothing — because it measured
+   * FIXTURES, and every fixture body was written against this design. Real
+   * bodies come out of a WordPress edited since 2019 by people pasting embeds
+   * and setting pixel widths. Measured on a fixture built from that markup:
+   * +600px of horizontal scroll at 320px, from two elements.
+   *
+   * `> *` and not `*`: a direct-child cap leaves the insides of a table alone.
+   * `td { max-width: 100% }` would squash the columns of a table that is
+   * already scrolling correctly inside its own box.
+   *
+   * This catches the classic editor's `<div style="width:900px">`, which the
+   * sanitizer does not touch — it strips justify, italic and ltr, and stripping
+   * every width would also break an author's deliberate `width: 60%`. Clamping
+   * in CSS keeps the intent and removes the overflow.
+   */
+  .article-body > * {
+    max-width: 100%;
+  }
+
+  /*
+   * Embedded media: iframes, video, and the two legacy embed elements.
+   *
+   * THERE WAS NO RULE FOR ANY OF THESE. A YouTube or Aparat embed arrives as
+   * `<iframe width="560" height="315">`, and an explicit width attribute is not
+   * capped by anything — measured at 560px wide inside a 320px viewport, half
+   * of it off the edge of the page. It is the single most likely thing behind a
+   * sideways-scrolling article, because embeds are common in migrated content
+   * and absent from every fixture.
+   *
+   * `height: auto` with the width/height attributes present gives the browser
+   * an intrinsic aspect ratio to preserve, so a 16:9 embed scales instead of
+   * letterboxing. `aspect-ratio: 16 / 9` is the fallback for an embed that
+   * declares no dimensions at all — without it such an iframe collapses to the
+   * 150px default height, and a 16:9 guess is right far more often than 150px
+   * is for the video embeds this rule exists for.
+   */
+  .article-body :is(iframe, video, embed, object) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-card);
+  }
+
+  .article-body iframe:not([width]):not([height]) {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+  }
+
   .article-body img {
     max-width: 100%;
     height: auto;

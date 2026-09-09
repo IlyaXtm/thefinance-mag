@@ -33,6 +33,7 @@ import {
   articleHasInjectedToc,
   extractHeadings,
   fixBodyImageUrls,
+  lazyLoadBodyImages,
   sanitizeArticleHtml,
   stripInjectedToc,
 } from '../../lib/sanitize';
@@ -572,8 +573,8 @@ export function magInjectedTocSurvivors(): string[] {
 /**
  * The article body pipeline, in the one order that works.
  *
- *   strip the injected ToC → repair image URLs → strip banned inline styles
- *   → stamp heading ids
+ *   strip the injected ToC → repair image URLs → lazy-load them → strip
+ *   banned inline styles → stamp heading ids
  *
  * Image URLs are repaired AFTER the ToC strip, so the plugin's own list — which
  * contains no images — is not scanned, and BEFORE the style strip, which is a
@@ -586,7 +587,7 @@ export function magInjectedTocSurvivors(): string[] {
  * split in the first place.
  */
 function prepareBody(html: string, slug: string): string {
-  const stripped = fixBodyImageUrls(stripInjectedToc(html));
+  const stripped = lazyLoadBodyImages(fixBodyImageUrls(stripInjectedToc(html)));
 
   /* Recorded, not thrown. A survivor means the plugin's markup has moved and
      the strip silently did nothing — the exact failure this project keeps

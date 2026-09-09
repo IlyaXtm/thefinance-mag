@@ -222,6 +222,34 @@ export function magRewrittenBodyImages(): number {
   return rewrittenBodyImages;
 }
 
+/**
+ * In-body images load EAGERLY, because raw CMS markup carries no `loading`.
+ *
+ * Every `<img>` in an article body was a blocking image request competing with
+ * the hero — which is the LCP element, and LCP is this product's stated first
+ * priority. An article with ten figures fired eleven eager image requests on
+ * load, and nothing in the codebase said so because the rendering invariants
+ * had never been run against a route whose body contains images.
+ *
+ * `loading="lazy"` and `decoding="async"` are added only where the author has
+ * not set them: an editor who deliberately marked a lead image `eager` keeps
+ * that, and re-running this over already-processed HTML changes nothing.
+ *
+ * NOT `fetchpriority`. Raising one in-body image would need to know which one
+ * matters, and the answer is none of them — the hero is the LCP element on
+ * every article page and it already carries `priority`.
+ */
+const IMG_TAG = /<img\b([^>]*)>/gi;
+
+export function lazyLoadBodyImages(html: string): string {
+  return html.replace(IMG_TAG, (_whole, attrs: string) => {
+    let out = attrs;
+    if (!/\bloading\s*=/i.test(out)) out += ' loading="lazy"';
+    if (!/\bdecoding\s*=/i.test(out)) out += ' decoding="async"';
+    return `<img${out}>`;
+  });
+}
+
 export function fixBodyImageUrls(html: string): string {
   let count = 0;
 
