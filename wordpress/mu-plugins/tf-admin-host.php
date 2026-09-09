@@ -78,3 +78,17 @@ function tf_admin_ob_start() {
     });
 }
 add_action("admin_init", "tf_admin_ob_start", 1);
+
+/* The media library fetches attachments over AJAX, which returns JSON and
+   never passes through the output buffer above. Thumbnails therefore still
+   pointed at the public host and 502d. Admin only — the front end and
+   GraphQL must keep the public URL for canonical and og:image. */
+add_filter("wp_get_attachment_url", function ($url) {
+    if (!is_admin()) return $url;
+    return str_replace("https://thefinance.ir/mag/wp-content/", TF_ADMIN_HOST . "/wp-content/", $url);
+}, 10, 1);
+add_filter("wp_get_attachment_image_src", function ($image) {
+    if (!is_admin() || !is_array($image)) return $image;
+    $image[0] = str_replace("https://thefinance.ir/mag/wp-content/", TF_ADMIN_HOST . "/wp-content/", $image[0]);
+    return $image;
+}, 10, 1);

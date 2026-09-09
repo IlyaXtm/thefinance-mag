@@ -36,7 +36,10 @@ add_action('init', static function (): void {
             'menu_name'     => 'بازارها',
         ],
         'public'              => true,
-        'hierarchical'        => false,
+        /* Checkboxes, not a free-text tag box. The six markets are a fixed set;
+           a tag input invites typos and near-duplicates, and a market that is
+           misspelled is a market the archive cannot find. */
+        'hierarchical'        => true,
         'show_ui'             => true,
         'show_in_rest'        => true,
         'show_admin_column'   => true,
