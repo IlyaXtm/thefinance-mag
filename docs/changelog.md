@@ -8,6 +8,133 @@ why it was made.
 
 ---
 
+## 2026-09-09 (later) — Hero proportion, mobile progress, real overflow, hover
+
+### 3 🔴 The page scrolled sideways on mobile — REPRODUCED, and the previous clean sweep was the problem
+
+Twelve routes at fifteen widths had reported no overflow. It measured
+**fixtures**, and every fixture body was written against this design. Real
+bodies come out of a WordPress edited since 2019 by people pasting embeds and
+setting pixel widths.
+
+A fixture built from that markup scrolls **+600px at 320px**. Two culprits:
+
+| element | why it escaped |
+|---|---|
+| `<iframe width="560">` | **there was no iframe rule in the stylesheet at all** |
+| `<div style="width:900px">` | the sanitizer strips justify/italic/ltr and leaves width alone |
+
+An embed is the most common thing in migrated content and the least likely to
+be in a fixture, which is exactly why it survived.
+
+Fixed in CSS, not the sanitizer: clamping keeps an author's deliberate
+`width: 60%` working where stripping every width would not. `> *` and not `*`,
+so a table already scrolling inside its own box is untouched —
+`td { max-width: 100% }` would squash the thing that is working. Confirmed
+still handled: tables, `pre`, inline `code`, a 300-character URL, and
+`<img style="width:1200px">` — `max-width` clamps a declared width, so that one
+was never a defect.
+
+**Two more defects surfaced the moment the checker saw a real body**, and they
+are worth more than the overflow was. In-body images were **eager and unsized**,
+because raw CMS markup carries no `loading` attribute — an article with ten
+figures fired eleven blocking image requests competing with the hero, which is
+the LCP element on a product whose stated first priority is LCP. And the `sizes`
+invariant was over-broad: `sizes` means nothing without `srcset`, and a raw CMS
+`<img>` has one src and no candidate list. It had never met one.
+
+`check-invariants.mjs` now runs **320, 360, 390, 414 and 1024** over two
+article-body routes, and **names the offending element**.
+`scrollWidth > clientWidth` says the page scrolls and nothing about why — which
+is how a real overflow survived a clean report.
+
+### 1 🟠 The desktop hero — constrained in width, not capped in height
+
+The complaint is real: full-bleed at 1360px a 1.9 image stands 714px tall, so at
+1440×900 the reader gets a headline and a picture and scrolls to reach a
+sentence.
+
+The brief recommended a 420–480px height cap with a centred crop, and flagged
+the risk itself — several featured images have the headline baked into the
+artwork. Measured against the known ratios at 1360px:
+
+| source | cap 480, centre crop | width 820, same clamp |
+|---|---|---|
+| 1.90 — the majority | **33% cropped** (16% off each edge) | 430px tall, **0% cropped** |
+| 1.50 | 47% cropped (24% off each edge) | 432px tall, 21% — unchanged |
+| 2.50 | 12% cropped | 328px tall, 0% cropped |
+
+**The cap crops a third off the majority image**, which currently crops nothing.
+That is the cropping the natural-ratio change was made to remove, coming back on
+the most common case, to reach a height the other approach beats anyway.
+
+So the hero is constrained to the title block's 820px measure at desktop. It is
+**shorter than the cap would be** — 430px against 480 — with no new cropping at
+all, because the existing [1.9, 2.8] clamp already does the work at any width.
+A/B on the same page, toggling the constraint at runtime:
+
+```
+1440px   hero 745 → 462px   body starts 1267 → 984px   283px sooner
+1024px   hero 527 → 462px   body starts 1097 → 1032px   65px sooner
+ 390px   unchanged — the complaint was desktop-only
+```
+
+**So the changelog does not have to accept cropping**, and that is the point
+rather than a technicality: the brief asked for the trade-off to be stated, and
+it turned out to be avoidable. It also removes a risk that **could not be
+measured** — the CMS is unreachable, so where baked headlines sit in the frame
+is unknown, and a centre crop is only safe if they sit away from the vertical
+edges. Not cropping means not needing that answer. **This closes B19.**
+
+Not the side-by-side reference either, and the brief's own reasoning is why: that
+reference is a blog of short posts; this magazine has 41-minute reads where the
+hero is the only visual before a wall of text.
+
+### 2 🟠 Reading progress on mobile
+
+The readout lived in the ToC panel, which is `xl:block` — so below 1280 a reader
+had none, on 41-minute articles, for the majority of this audience. It matters
+**more** on a phone: the scrollbar is hidden, so there is no other cue.
+
+Rendered from `ArticleAside` rather than a new component, which meets the
+brief's requirement properly rather than nominally: one implementation **and**
+one listener, so the two readouts cannot drift. Verified — the hidden mobile bar
+and the visible panel report 15%, 66%, 100% at the same three positions.
+
+Not a bar under a sticky header (this header is not sticky), no track — an empty
+track would draw a permanent line across the top of every article. **It cannot
+show 2% while the hero is on screen and no threshold was needed**: progress is
+measured against `[data-article-body]`, so `> 0` already means "past the hero".
+Adding a threshold would have been a second definition of the same moment.
+
+### 4 🟠 The dropdown: hover, and finishing
+
+Hover was missing and the reasoning had been right about touch and wrong about
+desktop. Gated on `(hover: hover) and (pointer: fine)` — the actual capability,
+where a width breakpoint gets a touchscreen laptop wrong in both directions.
+
+The two details that make hover menus feel broken: a 180ms close delay so a
+pointer crossing the 8px gap does not watch the menu vanish, and the panel
+cancelling the pending close when the pointer enters it — without which the
+delay only moves the failure later.
+
+**And one the measurement found: hover-then-click closed it.** On a mouse,
+reaching the trigger fires `pointerenter` and opens the panel before the click
+lands, so a plain toggle shut it — the whole interaction inverted. The first
+click after a hover-open is absorbed now.
+
+**The shadow was not there at all.** `shadow-[0_12px_32px_-8px_rgba(…)]`
+compiled to `rgba(0, 0, 0, 0) 0px 0px 0px`, while looking correct in the class
+list. It is a `--shadow-panel` token now, because a shadow is a colour and one
+value cannot serve three themes — a tight black shadow is invisible against v1
+navy, where the page behind it is already darker than the shadow.
+
+Counts are visibly secondary and sit inside the row's padding rather than
+against the panel edge. «اقتصاد جهانی», the longest label, measures 222px in a
+240px panel with no truncation, and the panel stays inside the viewport at 1024.
+
+---
+
 ## 2026-09-09 — Header navigation, and images that are not there
 
 ### 1 🔴 A missing image now leaves no trace

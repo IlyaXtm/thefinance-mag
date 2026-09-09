@@ -467,6 +467,14 @@ c=collections.Counter(round((m['width'] or 1)/(m['height'] or 1),2) for _,m in d
 print('aspect ratios:', c.most_common())"
 ```
 
+**IT NOW BLOCKS A DESIGN OPTION, not just a count.** Any hero treatment that
+crops — a height cap, a fixed-ratio frame — is a guess until somebody knows
+whether baked-in headlines sit near the vertical edges of the frame. The hero
+was deliberately bounded by WIDTH rather than height (2026-09-09) partly so this
+answer was not needed to ship; the next person who proposes a crop needs it.
+Take it with the by-eye pass, not from the query — no query can tell you where
+text sits inside a JPEG.
+
 The reported shape of the answer, from the handoff: all 53 have a featured
 image, three are under 800px wide, and the ratios split across 1.90, 1.50 and
 2.50. Those three ratios are now what the article hero is drawn at — see
@@ -643,7 +651,7 @@ open. `npm run check:toc` covers the shapes we know of.
 
 ---
 
-## B19 — The other social channels, and the hero-image feedback
+## B19 — The other social channels ·  hero half ✅ CLOSED 2026-09-09
 
 Two items from the 2026-09-08 SEO review that need somebody outside this
 environment.
@@ -658,10 +666,15 @@ account at that address — a wrong one either makes a dead entity claim or
 attaches somebody else's profile to this publisher, and both are worse than the
 channel being absent.
 
-**«عکس‌های شاخص را خراب کرده».** Feedback on the per-image hero aspect ratio
-(`9b86b3f`). "Broke" could mean cropped, stretched, too tall or too small, and
-each has a different fix, so nothing was changed. The trade-off they are
-probably reacting to:
+**«عکس‌های شاخص را خراب کرده» — ANSWERED AND CLOSED.** The reviewer's verdict
+was that the hero is oversized, and the fix is in: it is constrained to the
+title block's 820px measure at desktop, which makes it shorter than the height
+cap that was proposed AND crops nothing. Body starts 283px sooner at 1440.
+Mobile unchanged. See the 2026-09-09 changelog entry.
+
+The height cap was rejected on measurement: it takes 33% off a 1200×630, the
+size most of the archive uses and which currently loses nothing. The table below
+is kept as the record of what the natural-ratio change was weighing:
 
 | source ratio | old fixed band | now |
 |---|---|---|
@@ -670,9 +683,9 @@ probably reacting to:
 | 1200×800 (1.50) | 54% cropped | 21% |
 
 A wide image is now a thin band; a tall one pushes the article down. The old
-band cropped everything equally instead, which is why it was replaced. Ask which
-they saw before changing it — and take the measurement in B14 at the same time,
-since it is the same query and the same session.
+band cropped everything equally instead, which is why it was replaced.
+
+**The social URLs are still open** — see above. That half of this item stands.
 
 ---
 
@@ -717,3 +730,38 @@ Also worth checking while there: whether the CTA is inserted as raw HTML into
 post bodies at all. A banner that appears in many articles by copy-paste is a
 Gutenberg block waiting to happen (B7) — one component, one source, and it
 cannot rot in fifty places independently.
+
+---
+
+## B21 — Audit what else migrated content carries
+
+**Status:** open. Cheap, and the last two rounds each found something.
+
+A sideways-scrolling article was traced to `<iframe width="560">` and
+`<div style="width:900px">` — two shapes that appear in real WordPress bodies
+and in none of the fixtures. The stylesheet now clamps both, and
+`check-invariants.mjs` carries a fixture built from that markup.
+
+**The lesson generalises and the audit has not been done.** Nobody has looked at
+what the 54 real bodies actually contain. Worth one pass once the CMS is
+reachable:
+
+```bash
+curl -s https://wp.thefinance.ir/mag/graphql -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:100){ nodes { slug content } } }"}' \
+  | python3 -c "import sys,json,re,collections
+n=json.load(sys.stdin)['data']['posts']['nodes']
+c=collections.Counter()
+for p in n:
+    h=p['content'] or ''
+    for tag in re.findall(r'<(\\w+)', h): c[tag.lower()] += 1
+    if re.search(r'style=\"[^\"]*width', h): c['[inline width]'] += 1
+    if 'wp-block-' in h: c['[gutenberg blocks]'] += 1
+print(c.most_common(30))"
+```
+
+Anything in that list without a rule in `globals.css` is the next
+`<iframe width>`. Known unknowns worth checking specifically: `<table>` with
+inline widths, `<blockquote class=\"twitter-tweet\">` (loads a third-party
+script, which CLAUDE.md forbids outright), `<script>` in body content, and
+Gutenberg block wrappers the article-body styles do not name.
