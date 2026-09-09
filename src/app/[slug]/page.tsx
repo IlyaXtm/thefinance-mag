@@ -327,22 +327,51 @@ export default async function ArticlePage({
         </h1>
 
         {/*
-          NO LEAD PARAGRAPH, and the omission is deliberate.
+          THE DEK — and it renders for nothing in the archive today.
 
-          The design draws a 20px standfirst here. There is no `dek` field to
-          fill it — `decisions.md` dropped the idea because the live site's
-          excerpts are auto-truncated mid-sentence, which is the evidence that
-          this team does not write summaries. On a CARD the fallback is the
-          article's own H2 headings, which works: the card has nothing else.
+          `decisions.md` dropped the idea of a standfirst because the live
+          site's excerpts are auto-truncated mid-sentence. That objection was
+          about `excerpt(format: RENDERED)`, WordPress's generated summary.
+          This reads RAW, which returns ONLY the hand-written field and an
+          empty string when nobody wrote one — so the mid-sentence truncation
+          cannot reach this element. `card.ts` already treats it as the
+          editor's sentence and prefers it over derived text for the same
+          reason.
 
-          Here it does not. The table of contents sits a few hundred pixels
-          below and lists those same headings, so a derived lead would print
-          the article's outline twice on one screen — and the body's first
-          paragraph, which follows immediately, is already the standfirst in
-          practice.
+          NO NEW `dek` CUSTOM FIELD, deliberately. WordPress already gives an
+          author one box for exactly this and the editor screen shows it. A
+          second field beside it means two summary boxes with no rule for
+          which is which — the failure the callout's one-variant note
+          describes, in a different place. `roadmap.md` wave 2 says the same
+          thing from the other end: build what an author can use tomorrow,
+          and let custom fields arrive with the commitment to fill them.
 
-          When a real dek field exists, it goes here.
+          AND NO FALLBACK TO HEADINGS, which is where this differs from a
+          card. `cardDek` falls back to the article's own H2s because a card
+          has nothing else to show. Here the table of contents sits a few
+          hundred pixels below and lists those same headings, so a derived
+          lead would print the outline twice on one screen — and the body's
+          first paragraph, immediately underneath, is already the standfirst
+          in practice.
+
+          So: 0 of 54 migrated articles have one, this renders nothing for
+          all 54, and that is the correct behaviour rather than a gap to fill
+          with a placeholder. `roadmap.md` wave 0 carries the editorial
+          decision this waits on — 54 deks written, or the dek accepted as
+          permanently derived. The template stops being the blocker either
+          way.
+
+          `text-wrap: pretty`, not `balance`. Balance evens every line and is
+          for a headline of three or four; on a 40-word paragraph browsers
+          stop balancing past their line cap anyway, and pretty does the one
+          thing that matters here — it prevents a single orphaned word on the
+          last line.
         */}
+        {article.excerpt && (
+          <p className="mt-5 text-[18px] leading-[1.9] text-text-secondary [text-wrap:pretty] md:text-[20px]">
+            {article.excerpt}
+          </p>
+        )}
 
         <div className="mt-6 flex flex-wrap items-center gap-4 border-b border-border-subtle pb-6">
           <span
