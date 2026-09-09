@@ -1,19 +1,29 @@
 /**
  * In-body Gutenberg block attributes.
  *
- * Exactly three blocks. Chart embeds and product cards are deferred until
- * editors actually ask for them — the block library is a ceiling, not a
- * starting point.
+ * Four blocks. Chart embeds and product cards are still deferred until editors
+ * actually ask for them — the block library is a ceiling, not a starting
+ * point, and B7 says so.
+ *
+ * THREE THINGS THE RICH ARTICLE TEMPLATE ASKED FOR ARE NOT HERE, because
+ * WordPress core already ships them and a house block that duplicates a core
+ * one is a block editors have to be told to prefer:
+ *
+ *   - the pull quote is `core/pullquote`, styled in globals.css
+ *   - the comparison table is `core/table`, wrapped for overflow in the body
+ *     pipeline rather than re-implemented as structured attributes
+ *   - the tags row is the post's own tag taxonomy, not in-body content at all
  *
  * IMPORTANT: none of these render their title as a heading element. As <h3>
  * they would pollute the article's table of contents and break its heading
- * outline.
+ * outline. That is why the FAQ's questions are <summary>, not headings.
  */
 
 export const MAG_BLOCK_NAMES = [
   'thefinance/callout',
   'thefinance/disclaimer',
   'thefinance/cta',
+  'thefinance/faq',
 ] as const;
 
 export type MagBlockName = (typeof MAG_BLOCK_NAMES)[number];
@@ -21,8 +31,23 @@ export type MagBlockName = (typeof MAG_BLOCK_NAMES)[number];
 /**
  * General editorial aside — a definition, a clarification, a worked example.
  *
- * Deliberately ONE variant. No info/warning/success/error severity set:
- * four options means an editor chooses correctly once and wrongly three times.
+ * TWO VARIANTS, and the original note said one. That note ruled out an
+ * info/warning/success/error severity SET, because four options means an
+ * editor chooses correctly once and wrongly three times. The argument is about
+ * four, and it holds: at four the choice is a taste test with no right answer.
+ *
+ * Two is a different question, and it has one: does skipping this cost the
+ * reader money? The rich-article design draws exactly that block — «قبل از
+ * پرداخت اشتراک بخوانید», a caution that the platforms compared in the article
+ * do not carry official Tehran-exchange intraday data. Rendering it as an
+ * ordinary aside is the failure the callout exists to prevent.
+ *
+ * `note` is the DEFAULT, so an editor who chooses nothing gets the right
+ * block, and the variant is a deliberate act rather than a field to fill in.
+ * The two share one component and one set of geometry — see globals.css, where
+ * warn moves the stripe, the tint, the title colour and nothing else.
+ *
+ * A third variant needs a new argument, not a new colour.
  */
 export interface CalloutBlock {
   name: 'thefinance/callout';
@@ -31,8 +56,24 @@ export interface CalloutBlock {
     title: string | null;
     /** Inner HTML — supports paragraphs and lists. */
     content: string;
+    /**
+     * `note` is the general aside. `warn` is for a consequence the reader
+     * pays for by skipping it — cost, data gaps, an irreversible step.
+     *
+     * NEVER a risk warning about an investment outcome. Compliance copy is
+     * the disclaimer block, whose text lives in code precisely so nobody
+     * writes their own version of it in a callout.
+     */
+    variant: CalloutVariant;
   };
 }
+
+export const CALLOUT_VARIANTS = ['note', 'warn'] as const;
+
+export type CalloutVariant = (typeof CALLOUT_VARIANTS)[number];
+
+/** Default when the attribute is absent — an old block predates the variant. */
+export const DEFAULT_CALLOUT_VARIANT: CalloutVariant = 'note';
 
 /**
  * Compliance block.
@@ -89,7 +130,37 @@ export interface CtaBlock {
   };
 }
 
-export type MagBlock = CalloutBlock | DisclaimerBlock | CtaBlock;
+/**
+ * Frequently-asked questions.
+ *
+ * ONE ENTRY PER QUESTION, structured — not a heading-and-paragraph run an
+ * editor formats by hand. The structure is what lets the frontend render it as
+ * <details>/<summary> without JavaScript, and what keeps the questions out of
+ * the article's heading outline.
+ *
+ * NO FAQPage JSON-LD IS EMITTED FROM THIS, and that is a decision rather than
+ * an omission — see decisions.md. Google restricted FAQ rich results to
+ * well-known government and health sites in August 2023, so the markup buys no
+ * result for a magazine and adds a surface that Search Console reports on.
+ * The block is a reader feature.
+ *
+ * An empty `items` array renders nothing at all: no heading, no empty panel.
+ */
+export interface FaqBlock {
+  name: 'thefinance/faq';
+  attributes: {
+    items: FaqItem[];
+  };
+}
+
+export interface FaqItem {
+  /** Plain text. Rendered in <summary>, never as a heading element. */
+  question: string;
+  /** Inner HTML — a paragraph, occasionally a short list. */
+  answer: string;
+}
+
+export type MagBlock = CalloutBlock | DisclaimerBlock | CtaBlock | FaqBlock;
 
 /** Narrowing helper for the block registry. */
 export function isMagBlockName(name: string): name is MagBlockName {

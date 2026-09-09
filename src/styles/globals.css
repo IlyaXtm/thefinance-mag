@@ -338,6 +338,183 @@
     font-weight: 600;
     text-decoration: none;
   }
+
+  /*
+   * Callout — WARN VARIANT.
+   *
+   * The block's own note says "deliberately ONE variant, no
+   * info/warning/success/error severity set: four options means an editor
+   * chooses correctly once and wrongly three times." That argument is about a
+   * FOUR-WAY set and it survives here: two is a question with a right answer
+   * — "does skipping this cost the reader money?" — where four is a taste
+   * test. The default stays the accent one, so an editor who picks nothing
+   * still gets the correct block.
+   *
+   * Same geometry as the default: same border, radius, padding and title
+   * treatment. Only the stripe, the tint and the title colour move, which is
+   * why this is a variant and not a second component.
+   *
+   * COLOUR IS NOT THE ONLY SIGNAL. A tinted panel is nothing to a reader who
+   * cannot separate amber from blue, so the variant also carries a caution
+   * mark. It is a mask-image on ::before rather than an <svg> in the markup:
+   * the markup comes from WordPress, a pseudo-element stays out of the
+   * accessibility tree, and a mask takes its colour from --warn so the icon
+   * cannot drift from the stripe when a theme changes it.
+   */
+  .article-body [data-block='thefinance/callout'][data-variant='warn'] {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    column-gap: 14px;
+    border-inline-start-color: var(--warn);
+    background: var(--warn-soft);
+  }
+
+  .article-body [data-block='thefinance/callout'][data-variant='warn']::before {
+    content: '';
+    grid-row: 1;
+    grid-column: 1;
+    width: 22px;
+    height: 22px;
+    margin-block-start: 0.15em;
+    background: var(--warn);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23000' d='M10 1.9 18.6 17H1.4L10 1.9Zm0 3.1L4.1 15.6h11.8L10 5Zm-.85 3.4h1.7v4.1h-1.7V8.4ZM10 13.05a.95.95 0 1 1 0 1.9.95.95 0 0 1 0-1.9Z'/%3E%3C/svg%3E");
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23000' d='M10 1.9 18.6 17H1.4L10 1.9Zm0 3.1L4.1 15.6h11.8L10 5Zm-.85 3.4h1.7v4.1h-1.7V8.4ZM10 13.05a.95.95 0 1 1 0 1.9.95.95 0 0 1 0-1.9Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+  }
+
+  /* Every child into the text column, whatever WordPress put inside. */
+  .article-body [data-block='thefinance/callout'][data-variant='warn'] > * {
+    grid-column: 2;
+  }
+
+  .article-body [data-block='thefinance/callout'][data-variant='warn'] > strong {
+    color: var(--warn);
+  }
+
+  /*
+   * Quote attribution.
+   *
+   * `core/quote` and `core/pullquote` both put it in a <cite>, and A <cite> IS
+   * ITALIC IN EVERY BROWSER'S DEFAULT STYLESHEET. Persian has no true italic,
+   * so the browser synthesises a slant and drags the ZWNJ joins with it. The
+   * blockquote rule above sets `font-style: normal`, but that reaches a <cite>
+   * only by inheritance, and the UA's own `cite { font-style: italic }` is a
+   * rule on the element itself — a rule always beats an inherited value. So
+   * this is not belt-and-braces: without it, every quoted attribution already
+   * in the archive renders slanted.
+   */
+  .article-body blockquote cite,
+  .article-body blockquote footer {
+    display: block;
+    margin-block-start: 0.6em;
+    color: var(--text-muted);
+    font-size: 13.5px;
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  /*
+   * The pull quote proper — larger than a block quote, and PRIMARY text rather
+   * than secondary. A block quote is someone else's words and sits back from
+   * the page; a pull quote is the article's own sentence, lifted, so it steps
+   * forward. Weight stays 400: emphasis is size and colour, because 22px is
+   * exactly where a synthesised bold shows worst.
+   */
+  .article-body figure[class~='wp-block-pullquote'] blockquote p,
+  .article-body blockquote[class~='wp-block-pullquote'] p {
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.85;
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 768px) {
+    .article-body figure[class~='wp-block-pullquote'] blockquote p,
+    .article-body blockquote[class~='wp-block-pullquote'] p {
+      font-size: 22px;
+    }
+  }
+
+  /*
+   * FAQ.
+   *
+   * <details>/<summary>, not a button with aria-expanded. The design draws a
+   * JS accordion; this needs none — the element is keyboard-operable, reports
+   * its own state to assistive technology, opens when find-in-page lands
+   * inside a closed answer, and prints expanded. A block whose entire content
+   * is invisible without hydration is the wrong shape for the page search
+   * traffic lands on.
+   *
+   * THE QUESTIONS ARE NOT HEADINGS, for the reason the other three blocks
+   * render no heading element: as <h3> they would enter the table of contents
+   * and put five questions into a list of five sections.
+   */
+  .article-body [data-block='thefinance/faq'] > details {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: var(--surface-raised);
+  }
+
+  .article-body [data-block='thefinance/faq'] > details + details {
+    margin-block-start: 10px;
+  }
+
+  .article-body [data-block='thefinance/faq'] summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 44px;
+    padding: 0.85em 1.1em;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.7;
+    text-align: start;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  /* Safari paints its own disclosure triangle without this. */
+  .article-body [data-block='thefinance/faq'] summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /*
+   * The chevron, drawn from two borders so no font is involved. It sits at the
+   * inline end via `margin-inline-start: auto`, which puts it on the left in
+   * RTL without a single physical property.
+   */
+  .article-body [data-block='thefinance/faq'] summary::after {
+    content: '';
+    flex: none;
+    width: 9px;
+    height: 9px;
+    margin-inline-start: auto;
+    border-inline-end: 2px solid var(--accent);
+    border-block-end: 2px solid var(--accent);
+    transform: rotate(45deg);
+    transition: transform 180ms ease;
+  }
+
+  .article-body [data-block='thefinance/faq'] details[open] summary::after {
+    transform: rotate(-135deg);
+  }
+
+  .article-body [data-block='thefinance/faq'] summary:hover {
+    color: var(--accent);
+  }
+
+  .article-body [data-block='thefinance/faq'] details > :not(summary) {
+    margin: 0;
+    padding: 0 1.1em 1.15em;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1.9;
+  }
 }
 
 /**

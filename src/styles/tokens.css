@@ -72,6 +72,23 @@
   --accent-wash-to: rgba(77, 154, 254, 0.02);
   --danger: #ff9e9e; /* 9.87 vs surface · 9.28 vs raised */
 
+  /*
+   * Caution, for the callout's warn variant. The ONLY new colour role Mag has
+   * added since --danger, and it is a different job: --danger is form
+   * validation, "you have done something wrong"; --warn is editorial, "this
+   * costs money if you skip it".
+   *
+   * --good WAS NOT ADDED alongside it. The design uses green in three places
+   * and none of them survived: the review badge (served by modifiedAt, which
+   * already renders and does not get a verification tick — see decisions.md),
+   * the comparison table's status dots (row data an editor writes, not
+   * something the template colours), and the pro/con chips inside body prose.
+   * A token with no consumer is a value nobody maintains and nobody can
+   * measure, so it arrives with its first real use or not at all.
+   */
+  --warn: #ffb44d; /* 11.03 vs surface · 10.37 vs raised */
+  --warn-soft: rgba(255, 180, 77, 0.1);
+
   --skeleton: rgba(255, 255, 255, 0.07);
   --skeleton-strong: rgba(255, 255, 255, 0.12);
 
@@ -101,6 +118,8 @@
   --accent-wash-from: rgba(77, 154, 254, 0.16);
   --accent-wash-to: rgba(77, 154, 254, 0.02);
   --danger: #fca5a5; /* 10.43 vs surface · 9.45 vs raised */
+  --warn: #ffb44d; /* 11.21 vs surface · 10.15 vs raised */
+  --warn-soft: rgba(255, 180, 77, 0.1);
 
   --skeleton: rgba(255, 255, 255, 0.06);
   --skeleton-strong: rgba(255, 255, 255, 0.11);
@@ -143,6 +162,11 @@
   --focus-ring: #1a5fbf;
 
   --danger: #a8180f; /* 7.49 vs surface · 6.80 vs raised */
+  /* NOT #FFB44D. The design's amber measures 1.72 against white — invisible
+     as text and useless as a stripe. Darkened to the profile --danger already
+     holds in this theme. */
+  --warn: #8a5200; /* 6.39 vs surface · 5.80 vs raised */
+  --warn-soft: rgba(138, 82, 0, 0.09);
 
   --skeleton: #e4e8ef;
   --skeleton-strong: #d5dae4;
