@@ -1020,3 +1020,36 @@ Not changed here because it is site-wide chrome and this round was the article
 page. Someone should decide which number is right and then make the two agree —
 a stated constraint that the code has never met is worse than either value,
 because the next person to read it will "fix" the code to match.
+
+---
+
+## B30 — 🟠 The build-match guard cannot see a rebuild within one commit
+
+**Status:** open, small, found while measuring something else.
+
+`check-invariants.mjs` refuses to run against a server whose `/mag/health`
+buildId differs from `.next/BUILD_ID`. That guard exists because this project
+has twice shipped numbers measured against a stale server, and it works for the
+case it was written for.
+
+It does not cover the case that actually happens during a working session.
+`BUILD_ID` is derived from the git commit, so **every rebuild of uncommitted
+work carries the same id**. On 2026-09-10 an incremental `next build` left a
+stale prerender of the home page in `.next/server/app/index.html` — the server
+chunk carried a new attribute and the prerendered HTML did not — and the guard
+reported MATCH, because by its own measure it was a match.
+
+`rm -rf .next` fixed it. The measurement that exposed it was a component
+attribute that simply was not in the served HTML.
+
+Two possible fixes, and the second is better:
+
+1. Mix the working tree into the id — a hash of `src/` alongside the commit.
+   Cheap, and it makes the id change whenever anything changes.
+2. Have the guard compare something the BUILD produces rather than something
+   the repo declares — the prerender manifest's mtime against the newest source
+   file, say. That catches a stale prerender inside a fresh build, which is the
+   actual failure mode here and which (1) would still miss.
+
+Worth doing: every measurement in this project rests on that guard being
+honest, and it has now been caught being honest about the wrong thing.

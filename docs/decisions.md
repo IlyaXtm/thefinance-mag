@@ -529,6 +529,43 @@ image and an absent one look identical to a reader.
 invented image is worse than none: it tells the reader something about the
 article that nobody wrote.
 
+**The lead card gets no overlay treatment when it has no artwork.** Amended
+2026-09-10, after a visual audit called the lead card "only a gradient" and
+proposed shrinking it.
+
+The gradient IS the no-image state, so the remedy was wrong — but the
+observation was right. Measured with every image 404ing, the card rendered an
+812×472 block of scrim over an empty placeholder panel. This rule says a
+missing image leaves NO trace, and 472px of gradient is a large one.
+
+**CardImage's own placeholder is unaffected and stays.** Its recorded reason is
+the grid: "its neighbours in the grid have images, and a card that loses its
+box makes the row reflow." The lead card has no such neighbour and the slot is
+the entire card, so that reason never reached it — the placeholder was arriving
+by default rather than by decision.
+
+With no image the card is a text card on the theme's own surface: no image
+layer, no scrim, and **no `data-on-media`**. The last is the part that would
+bite: the on-media tokens are white and deliberately do not flip with the
+theme, so dropping the scrim while keeping them puts white text on `#f2f4f7` at
+about 1.1:1 — the fix becoming a worse bug than the defect. The guard removes
+the attribute rather than the stylesheet restoring three token values per
+theme, which would be a second copy of the palette.
+
+Measured after, headline against its real background: 18.11:1 with an image in
+every theme; 18.32 / 17.18 / 16.98 without one, the light theme now painting
+near-black text on a light card.
+
+**The underlying cause is not design.** Articles are published without featured
+images — a content problem, in the backlog.
+
+**Spacing before the footer is one padding, not two.** The gap measured 160px
+at desktop and 128 at mobile, because every `<main>` carried a bottom padding
+AND the footer carried a top one. The page's own section rhythm is 96 / 60. The
+mains lost their bottom padding entirely and the footer's top padding is now
+the whole gap at the rhythm value — 97 / 61 measured. A gap that is the sum of
+two properties is a gap nobody can change correctly.
+
 ---
 
 ## Brand assets
@@ -631,6 +668,55 @@ measured 18px at 1440 — exactly `--fs-body` — while `--fs-h2` on `:root` rea
 that is right in the custom properties and wrong on every unclassed heading.**
 Inside `@layer base` it wins over preflight, and a component's own utility
 still wins over both, which is the order that lets components override.
+
+---
+
+## Contrast and focus
+
+**The contrast floor is 4.5:1 and every pair clears it.** Measured 2026-09-10,
+after a visual audit reported secondary text as faint and stated that it had
+computed no ratios.
+
+`npm run check:contrast` is the standing answer — it parses `tokens.css` rather
+than restating the palette, so it cannot keep passing while the real values
+drift, and a renamed token fails the parse rather than silently dropping out of
+the table. The lowest pair in the system is `--on-media-muted` over the scrim's
+thin end at 4.95; the lowest theme pair is v1 `--text-muted` on
+`--surface-hover` at 5.10.
+
+**Quiet is not the same as failing, and the fix is different.** Metadata is
+meant to sit below body copy — that is the hierarchy, not a defect. A pair that
+measures 5.1 and reads faint is a size or weight question; a pair that measures
+3.2 is a token question. Nothing here measured under 4.5, so nothing was
+raised, and raising `--text-muted` toward parity would have traded a legibility
+complaint for a hierarchy problem.
+
+**Measure the pixels, not the DOM.** The first pass at this walked ancestors
+for each element's background and reported four failures at ~1.07:1 in
+v2-light. The lead card's scrim is a SIBLING overlay, not an ancestor, so the
+walk measured white text against the card surface and never saw the near-black
+gradient actually behind it. The reliable method is to hide the element's own
+text and sample the rendered pixels.
+
+**And read names from the accessibility tree, not from `textContent`.** The
+theme toggle appeared to have both of its labels concatenated into one name.
+`textContent` includes `display: none` subtrees; the accessible name
+computation excludes them. From CDP's AX tree the name is correct in both
+themes.
+
+**Every interactive element has a visible focus ring**, from the global
+`:focus-visible` rule in `tokens.css` using `--focus-ring`. Verified across 30
+tab stops in all three themes — the dark themes are where a browser default
+disappears, and this does not rely on one.
+
+**A skip link is the first thing in the tab order.** Added 2026-09-10; there
+was none, so reaching content from the keyboard meant tabbing past eight header
+controls on every page and on every client-side navigation.
+
+It targets the `<main>` landmark rather than a wrapper, so the landmark is
+announced on arrival, and every `<main>` carries `tabIndex={-1}`. **The
+tabindex is not optional**: without it the link scrolls the page and leaves
+focus behind, which looks like it works and does not.
 
 ---
 

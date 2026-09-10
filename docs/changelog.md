@@ -8,6 +8,82 @@ why it was made.
 
 ---
 
+## 2026-09-10 — Contrast measured, the footer gap collapsed, a skip link added
+
+A screenshot-based visual audit of the homepage raised five items. Two
+misdiagnosed settled decisions, three were real, and one of the two
+misdiagnoses turned out to be describing a real bug with the wrong remedy.
+
+**Contrast was a lead, not a finding.** The audit reported faint secondary
+text and said plainly it had computed no ratios. Measured: every pair
+passes, lowest 4.86:1 on the page and 4.95 in the token set. Nothing was
+changed. `npm run check:contrast` makes it repeatable — it parses
+tokens.css rather than restating the palette, and its output reproduces
+the measured comments already written beside `--on-media-secondary` and
+`--on-media-muted`, which is the cross-check that the parse is right.
+
+Worth recording that metadata reading quieter than body text is the
+hierarchy working. A pair at 5.1 that looks faint is a size question; a
+pair at 3.2 is a token question. Raising `--text-muted` toward parity
+would have traded a legibility complaint for a hierarchy problem.
+
+**Two of my own measurements were wrong first, in opposite directions.**
+A DOM walk for each element's background reported four failures at
+~1.07:1 in v2-light — it walks ancestors, and the lead card's scrim is a
+sibling overlay, so it measured white text against the card surface and
+never saw the near-black gradient behind it. And the theme toggle's
+accessible name read as both labels concatenated, because `textContent`
+includes `display:none` subtrees and the accessible name computation does
+not. Re-measured from rendered pixels and from CDP's AX tree, both were
+clean. A false FAIL costs as much as a false PASS.
+
+**The footer gap was two paddings, and is now one.** 160px at desktop and
+128 at mobile against a section rhythm of 96 / 60. The four `<main>`
+elements lost their bottom padding and the footer's top padding is the
+whole gap at the rhythm value: 97 / 61 measured.
+
+**Keyboard and focus had never been checked, and mostly passed.** Thirty
+tab stops, three themes. A visible focus ring on every one. The markets
+disclosure opens on Enter, closes on Escape with focus returned to the
+trigger, and lets Tab out the end rather than trapping. 38 links, 0 with
+a generic accessible name — every card link is its article title. The
+search input is named by an sr-only `<label for>`, so the placeholder is
+not doing that work and the audit's proposed visible label is not the
+remedy for anything.
+
+The one gap: no skip link. Reaching content from the keyboard meant
+tabbing past eight header controls on every page and on every client-side
+navigation. Added, targeting the `<main>` landmark, with `tabIndex={-1}`
+on every `<main>` — without that the link scrolls the page and leaves
+focus behind, which looks like it works.
+
+**The lead card was the audit's best observation and its worst
+prescription.** "Only a gradient — give it a real image or shrink it."
+The gradient is the no-image state, so shrinking it is the wrong end. But
+measured with every image 404ing it was an 812×472 block of scrim over an
+empty placeholder, and `575f922` says a missing image leaves no trace.
+
+The card now drops the image layer, the scrim and `data-on-media`
+together. Dropping the scrim alone would have been the real disaster: the
+on-media tokens are white and deliberately do not flip with the theme, so
+the light theme would have gone to white-on-#f2f4f7 at about 1.1:1 — the
+exact failure my broken DOM walk had hallucinated an hour earlier, this
+time for real.
+
+**And a dependency nobody declared.** `check-invariants.mjs` has always
+imported `playwright-core`; nothing listed it. It was in node_modules by
+accident, an unrelated install pruned it, and the invariant sweep went
+with it. Now a devDependency.
+
+**One measurement hazard worth knowing.** An incremental `next build`
+served a stale prerender of the home page — the chunk carried the new
+attribute and `index.html` did not, while `/mag/health`'s buildId matched
+`.next/BUILD_ID` because both derive from the git commit and the work was
+uncommitted. The build-match guard cannot see a rebuild within one commit.
+`rm -rf .next` was needed.
+
+---
+
 ## 2026-09-09 (evening) — Title scale, a one-block header, and the mobile nav
 
 Four changes to the article page and the mobile header, plus a responsive
