@@ -527,11 +527,11 @@ still met a headline and an image before any prose. So the header became two
 columns — text and image side by side, the whole thing inside one screen, and
 the body beginning directly under it.
 
-Measured on the built page (updated 2026-09-10, after the gutter conformance):
+Measured on the built page (updated 2026-09-10, twice — see below):
 
-  1440+         text 700 · image 208   — the header row is the body's own tracks
-  1280          text 700 · image 240
-  1024          text 544 · image 240
+  1440+         text 700 · image 340   (31.5% of the pair)
+  1280          text 700 · image 300
+  1024          text 484 · image 300
   768           text 456 · image 240
   390 / 320     stacked, image first, full width
 
@@ -539,14 +539,32 @@ Measured on the built page (updated 2026-09-10, after the gutter conformance):
 IRANYekanX at 70–73 characters, so below xl the IMAGE gives way rather than the
 text column dropping under it.
 
-**The header row IS the body's grid, from 1440 up.** Amended 2026-09-10. The
-two were laid out independently — the header `[320px 700px]` gap 56, the body
-`[260px 704px 300px]` gap 48 — so the headline began 68px inside its own
-article's first paragraph at every desktop width. They now share one set of
-numbers: 208 + 32 + 700, which is the body's row minus its end rail. Below 1440
-they do not align and that is deliberate: the body has no inline-start rail
-there, so the offset is the full width of the hero image, which reads as a
-two-column header rather than as a near miss. The no-cropping rule above is untouched and now
+**The header does NOT align with the body grid, and the image is sized against
+the reference.** Amended twice on 2026-09-10; this supersedes the alignment
+attempt between them.
+
+The first amendment made the header row `[208px 700px]` — the body grid's own
+inline-start track — to close a 68px offset between the h1 and the first
+paragraph. It closed it, and it cost the image a third of its width: 208
+against a pair of 940 is **22%**, where the entry above and the reference both
+say 31%.
+
+Measured off the reference at MacBook "More Space" widths, its hero is
+**348–398 CSS px against a pair of roughly 1100–1265 — 31.5%** — and its header
+text does not line up with its body text either. The offset there is about
+350px, and it reads as a two-column band rather than as a mistake precisely
+BECAUSE it is large. **68px was the bad middle**: too big to look intentional,
+too small to look structural. Given the choice, the image wins and the offset
+is allowed to be obvious.
+
+At `wide`: 340 + 40 + 700 = 1080, headline starting 380px in from the
+inline-start edge against the body's 240.
+
+**The page container was checked at the same time and is not the difference.**
+`.mag-gutter` gives 1240px of content; the reference's 65.6% works out to 1171
+at a 14" More Space window, 1250 at a 15" Air, 1339 at a 16". We are within 10
+to 99px of it at every one, so the container was already right and the hero was
+what had shrunk. The no-cropping rule above is untouched and now
 does even less work: at 320px wide, no clamp is being asked for much.
 
 **The image takes the inline-start column; the text sits beside it.** Amended

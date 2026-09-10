@@ -8,6 +8,52 @@ why it was made.
 
 ---
 
+## 2026-09-10 (night, fourth pass) — The hero image, measured against the reference
+
+A reference screenshot came back with a selection frame drawn on it: "i wanna
+this size … compare with our website". Two things were measured, and only one
+of them was wrong.
+
+**The page container is not the difference.** Reading the frame handles against
+the screenshot's 2000px width, the reference's container is 65.6% of the window
+with 17% gutters. The capture turned out to be a MacBook in "More Space" mode,
+which puts the window at 1785, 1905 or 2041 logical px depending on the machine:
+
+```
+machine                window   ours   reference 65.6%   diff
+MBP 14" More Space      1785    1240        1171         +69
+Air 15" More Space      1905    1240        1250         −10
+MBP 16" More Space      2041    1240        1339         −99
+```
+
+Within 10 to 99px at every one. `.mag-gutter` was already right.
+
+**The hero image was.** Ours measured 208px against a pair of 940 — **22%** —
+where the reference is 348–398 against a pair of 1100–1265, **31.5%**. This
+project's own record said 31% too, until earlier the same day.
+
+The cause is in the last-but-one commit: the header row was re-cut to
+`[208px 700px]`, the body grid's inline-start track, to close a 68px offset
+between the h1 and the first paragraph. It closed the offset and took a third
+off the image.
+
+**The reference does not align those two either** — its header text sits about
+350px inside its body text — and it reads as a two-column band rather than as a
+mistake precisely because the offset is large. 68px was the bad middle: too big
+to look intentional, too small to look structural. So the image wins and the
+offset is allowed to be obvious. At `wide`: 340 + 40 + 700 = 1080, image 31.5%
+of the pair, headline starting 380px in against the body's 240.
+
+The 700px measure is untouched at every width, and the image gives way below
+`wide` rather than the text — 300 at `lg`, 240 at `md`.
+
+Worth naming as a pattern: this is the second time in two passes that closing a
+small misalignment cost something larger. A near-miss is worth fixing when the
+fix is free; when it is not, the honest move is to make the offset unambiguous
+rather than to shrink the thing next to it.
+
+---
+
 ## 2026-09-10 (night, third pass) — The markets menu opened under the wrong item
 
 Reported from a screenshot: the «بازارها» panel looked detached from its

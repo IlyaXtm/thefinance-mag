@@ -325,23 +325,29 @@ export default async function ArticlePage({
         being second in the DOM, so a screen reader still meets the h1 before
         the figure.
 
-        AT `wide` THE TWO TRACKS ARE THE BODY GRID'S TRACKS, and that is a fix
-        rather than a coincidence. They were `[320px 700px]` with a 56px gap
-        while the body below was `[260px 704px 300px]` with a 48px gap — so the
-        headline began 68px inside its own article's text at every width from
-        1280 up. Matching the body's own numbers puts both at the same
-        inline-start and both at the 700px measure. When the gutter became
-        100px and the body's three-column row was re-cut to
-        `208 + 32 + 700 + 32 + 268`, this row followed it to `208 + 32 + 700`:
-        940px, and the h1 starts where the first paragraph starts.
+        THE IMAGE IS SIZED AGAINST THE REFERENCE, AND THE HEADER DOES NOT TRY
+        TO ALIGN WITH THE BODY GRID. Both halves of that are a correction.
 
-        BELOW `wide` THEY DO NOT ALIGN, deliberately. There the body has no
-        inline-start rail to sit beside, so the offset is the full width of the
-        hero image — large enough to read as a two-column header rather than as
-        a near miss. Closing it would mean giving up the side-by-side header at
-        those widths, which is the arrangement that was asked for. The text
-        column still caps at 700 from `lg` up, so the headline is never wider
-        than the paragraph it introduces.
+        This row was briefly `[208px 700px]` — the body grid's own inline-start
+        track — to close a 68px offset between the h1 and the first paragraph.
+        It closed it, and it cost the image a third of its width: 208 against a
+        pair of 940 is 22%, where the reference and this project's own record
+        both say 31%.
+
+        Measured off the reference at MacBook "More Space" widths, its hero is
+        348–398 CSS px against a pair of roughly 1100–1265 — 31.5% — and its
+        header text does NOT line up with its body text either. The offset
+        there is about 350px, and it reads as a two-column band rather than as
+        a mistake precisely BECAUSE it is large. 68px was the bad middle: too
+        big to look intentional, too small to look structural.
+
+        So the image wins and the offset is allowed to be obvious. At `wide`:
+        340 + 40 + 700 = 1080, image 31.5% of the pair, headline starting 380px
+        in from the inline-start edge against the body's 240.
+
+        The text column still caps at 700 from `md` up, so the headline is
+        never wider than the paragraph it introduces, and the image gives way
+        below `wide` rather than the measure — 300 at `lg`, 240 at `md`.
 
         MOBILE STACKS WITH THE IMAGE FIRST, via `order`, and that is a choice
         rather than a fallback — on a phone the picture establishes the subject
@@ -374,7 +380,7 @@ export default async function ArticlePage({
         data-hero-grid=""
         className={
           hasHero
-            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,700px)] md:items-center md:gap-8 lg:gap-10 wide:max-w-[940px] wide:grid-cols-[208px_minmax(0,700px)] wide:gap-8'
+            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,700px)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,700px)] lg:gap-10 wide:max-w-[1080px] wide:grid-cols-[340px_minmax(0,700px)]'
             : 'mt-5 max-w-[700px]'
         }
       >
