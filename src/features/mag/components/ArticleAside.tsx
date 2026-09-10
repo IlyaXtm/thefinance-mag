@@ -349,8 +349,25 @@ export function ArticleAside({ headings }: { headings: string[] }) {
         {/* `min-h-11`: the disclosure is the ONLY route to the table of
             contents below xl, and it measured 21px — under half the 44px floor
             and the smallest control on the article page. */}
-        <summary className="flex min-h-11 cursor-pointer list-none items-center text-[14px] font-semibold text-text-primary">
-          در این مطلب می‌خوانید
+        {/*
+          THE CHEVRON IS THE AFFORDANCE, and it was missing.
+
+          Reported from a device: nothing on this row says it opens. It is a
+          <details>, so the browser normally draws its own marker — and
+          `list-none` removes it, which was correct for the styling and left
+          nothing in its place. A heading-looking row in a bordered box that
+          silently happens to be a button is the whole of the complaint.
+
+          Drawn from two borders, same as the FAQ block's, so the two
+          disclosures on an article page behave identically and neither needs a
+          font. `rotate(45deg)` closed points at the inline end — left in RTL,
+          which is forward — and `-45deg` open points down. Those two values
+          are direction-independent for "down" and direction-correct for
+          "forward"; see the note in globals.css, where getting this wrong
+          shipped a sideways chevron once already.
+        */}
+        <summary className="mag-toc-summary flex min-h-11 cursor-pointer list-none items-center gap-3 text-[14px] font-semibold text-text-primary">
+          <span className="flex-1">در این مطلب می‌خوانید</span>
         </summary>
         <ul className="mt-3 max-h-[50vh] space-y-0.5 overflow-y-auto">{links}</ul>
       </details>

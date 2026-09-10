@@ -126,6 +126,33 @@
  */
 @layer components {
   /*
+   * The mobile table-of-contents disclosure marker.
+   *
+   * `list-none` on the <summary> removes the browser's own triangle, which the
+   * styling needed and which left the row with no affordance at all — it read
+   * as a heading in a box. Same two-border chevron the FAQ block uses, so both
+   * disclosures on an article page work the same way.
+   */
+  .mag-toc-summary::after {
+    content: '';
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-inline-end: 2px solid var(--accent);
+    border-block-end: 2px solid var(--accent);
+    transform: rotate(45deg);
+    transition: transform 180ms ease;
+  }
+
+  details[open] > .mag-toc-summary::after {
+    transform: rotate(-45deg);
+  }
+
+  .mag-toc-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /*
    * The condensed mobile header.
    *
    * 64px at the top of the page, 52px once the reader is past it. The header
@@ -289,7 +316,17 @@
     display: block;
     height: 100%;
     width: var(--reading-progress, 0%);
-    background: var(--accent);
+    /*
+     * The mark's own gradient, once per article, on the one element that is
+     * pure decoration — accent at the start of the run, the logo's cyan at the
+     * leading edge. `to left` is the fill direction in RTL, so the cyan sits
+     * where the bar is currently growing.
+     *
+     * This is the only place `--accent-2` is used and it is meant to stay that
+     * way: a second accent available everywhere is a second decision every
+     * time something needs emphasis.
+     */
+    background: linear-gradient(to left, var(--accent), var(--accent-2));
     /* Nothing animates per frame: the custom property updates on a
        rAF-throttled scroll and CSS interpolates between values. The global
        reduced-motion rule removes this, giving a bar that steps. */

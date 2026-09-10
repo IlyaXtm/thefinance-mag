@@ -753,6 +753,25 @@ still wins over both, which is the order that lets components override.
 
 ## Justified prose
 
+**`text-wrap: balance` on the h1 is desktop-only.** Decided 2026-09-10, from a
+device report that the title was not using the width it had.
+
+Balancing evens the lines by making them all SHORTER. At 1440 that is the whole
+value — it is what stops «…ایران؛ آموزش کامل خرید،» stranding a clause on its
+own line. At 350px there is no clause to rescue, so it just indents the
+headline. Measured across four titles at 390 and 320, widest line as a share of
+the column, and **the line count was identical in every single case**:
+
+  stress-rich-article       390    69% → 98%
+  headline-clause-break     390    79% → 87%
+  notcoin-guide             320    79% → 87%
+  fundamental-analysis      390    77% → 77%   (word lengths, not wrapping)
+
+`pretty` below `md`, `balance` at and above it. Same shape as the justify
+finding below: a property that is right at the wide measure and wrong at 350.
+
+---
+
 **Justify at the desktop measure, `start` below it.** Decided 2026-09-10,
 amending a rule that said never.
 
@@ -791,6 +810,26 @@ is all cost and no benefit.
 **The sanitizer still strips authors' inline `text-align: justify`, and that is
 not a contradiction.** It exists so the CMS cannot decide alignment on
 arbitrary elements. The stylesheet decides, at the one measure it can defend.
+
+---
+
+## Disclosure affordances
+
+**Every `<details>` in the product draws its own marker.** Decided 2026-09-10,
+after the mobile table of contents was reported as having no affordance.
+
+`list-none` on a `<summary>` removes the browser's own triangle. That is
+necessary for the styling and it leaves NOTHING in its place, so the row reads
+as a heading in a bordered box that silently happens to be a button. The FAQ
+block had a chevron from the start; the ToC did not, and nobody noticed because
+everyone who looked at it already knew it opened.
+
+Both now use the same two-border chevron: `rotate(45deg)` closed, pointing at
+the inline end — left in RTL, which is forward — and `-45deg` open, pointing
+down. Those two values are direction-independent for "down" and
+direction-correct for "forward". Drawn from borders rather than a glyph so no
+font is involved, and a shipped bug already proved the rotations cannot be
+copied from an LTR component.
 
 ---
 
@@ -891,6 +930,36 @@ suffices, hence a third token.
 
 **`--danger`** for form validation. All proposed values clear 4.5:1
 comfortably.
+
+**The accent IS the logo's blue.** Changed 2026-09-10, and it is the largest
+part of "use the logo's colours" because the accent is the one colour on every
+page — chips, links, the focus ring, the progress bar, the single button.
+
+`#10A5F5` is lifted from the mark rather than approximated near it, and it is
+better than the `#4D9AFE` it replaces on every measure, so this is not a trade:
+
+               surface  raised  hover   under --accent-contrast
+  #4D9AFE        6.84    6.00   5.41    6.67
+  #10A5F5        7.17    6.29   5.67    6.99
+
+The light theme takes the mark's OTHER end, `#0163E1` (5.42 on white), because
+`#10A5F5` measures 2.72 there and is unusable as text. Both are the logo's own
+colours rather than darkened guesses.
+
+**`--accent-2` is the logo's cyan and has exactly one consumer** — the
+reading-progress bar fades from the accent to it along its length, so the
+mark's own gradient appears once per article on an element that is pure
+decoration. It is deliberately not offered as a general second accent: two
+accents means two decisions every time something needs emphasis, and this
+product does not spend colour on attention.
+
+**`--surface-hover` took the step that was refused last round.** #14275a was
+rejected at 2.90 on `--border-interactive`, under the 3:1 SC 1.4.11 requires of
+a control boundary. That token was lightened to #6b7fa3 in the same round, and
+against #14275a it now measures **3.54** — the step became affordable because
+of a change made beside it. The constraint moved, not the judgement. Card
+separation 1.26 → 1.36; the cost is muted text on that surface dropping 4.87 →
+4.66, which is over the floor and is stated here rather than discovered later.
 
 **v1's raised surfaces carry the brand blue.** Changed 2026-09-10, from
 "very dark bg is good but add some colour like the logo colour for better

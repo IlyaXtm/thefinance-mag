@@ -400,6 +400,24 @@ export default async function ArticlePage({
           balancing at a handful of lines, which is the shape of an h1, and it
           degrades to normal wrapping where unsupported.
 
+          BUT `balance` IS DESKTOP-ONLY NOW, because on a phone it costs width
+          and buys nothing. Reported from a device as the title not using the
+          space it has, and measured across four headlines at 390 and 320 —
+          widest line as a share of the column, balance against pretty, with
+          the LINE COUNT IDENTICAL in every single case:
+
+            stress-rich-article       390    69%  →  97%
+            headline-clause-break     390    79%  →  87%
+            notcoin-guide             320    79%  →  87%
+            fundamental-analysis      390    77%  →  77%
+
+          Balancing evens the lines by making them all shorter. At 1440 that is
+          the point — it is what stops «…ایران؛ آموزش کامل خرید،» stranding a
+          clause. At 350px there is no clause to rescue: the same two lines come
+          out up to 28% narrower and the headline just looks indented. Same
+          shape of finding as the justify measurement — a property that is
+          right at the 700px measure and wrong at 350.
+
           IT DOES NOT FIGHT `bidiTitle`, verified at 390px on «تحلیل فاندامنتال
           (Fundamental Analysis) چیست؟» — the title that exposed the mirrored
           bracket. The pair still resolves inside its isolate. Balancing DOES
@@ -410,7 +428,7 @@ export default async function ArticlePage({
           `bidi-title.tsx` this change would reintroduce the mirrored bracket,
           so the two are a pair and neither should be removed alone.
         */}
-        <h1 className="mt-4 text-h1 text-text-primary [text-wrap:balance]">
+        <h1 className="mt-4 text-h1 text-text-primary [text-wrap:pretty] md:[text-wrap:balance]">
           {bidiTitle(article.title)}
         </h1>
 

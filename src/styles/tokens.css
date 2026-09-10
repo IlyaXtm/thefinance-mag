@@ -51,17 +51,25 @@
    * Every step lighter costs the text on top of it. Measured, over the hover
    * surface:
    *
-   *   #111c39 (was)   muted 5.10   separation 1.16   interactive 3.41
-   *   #12224d (now)   muted 4.87   separation 1.26   interactive 3.13
-   *   #14275a         muted 4.66   separation 1.36   interactive 2.90  ✗
+   *   #111c39 (first)  muted 5.10   separation 1.16
+   *   #12224d          muted 4.87   separation 1.26
+   *   #14275a (now)    muted 4.66   separation 1.36
    *
-   * The last one is where it stops: `--border-interactive` falls under the
-   * 3:1 that WCAG 2.2 SC 1.4.11 requires of a control boundary, and it is the
-   * token that exists precisely because the other two borders could not clear
-   * it. So the surfaces stop one step short of that, and
-   * `--border-interactive` is lightened to keep real headroom rather than
-   * sitting on the floor: #6b7fa3 measures 4.82 / 4.23 / 3.81 across the three
-   * surfaces where #63718a gave 3.95 / 3.47 / 3.13.
+   * #14275a WAS REFUSED ONE ROUND AGO and is taken now, and the reason is
+   * worth keeping: the blocker was `--border-interactive`, which fell to 2.90
+   * against it — under the 3:1 that WCAG 2.2 SC 1.4.11 requires of a control
+   * boundary, on the very token that exists because the other two borders
+   * could not clear it.
+   *
+   * That token was lightened in the same round, from #63718a to #6b7fa3, to
+   * stop it sitting on the floor. Against #14275a it now measures 3.54. So the
+   * step that was unaffordable became affordable because of a change made
+   * beside it — the constraint moved, not the judgement.
+   *
+   * WHAT IT COSTS, stated rather than found later: muted text on the hover
+   * surface drops 4.87 → 4.66. Still over the floor, and this surface is
+   * mostly a hover fill and the empty-image placeholder rather than a place
+   * long text sits. `check:contrast` holds the line.
    *
    * ── The borders carry the hue too ───────────────────────────────────
    *
@@ -76,7 +84,7 @@
    */
   --surface: #040c1f;
   --surface-raised: #0a1a3d; /* 1.14 vs surface — was #071331 at 1.06 */
-  --surface-hover: #12224d; /* 1.26 vs surface — was #111c39 at 1.16 */
+  --surface-hover: #14275a; /* 1.36 vs surface — see the note below */
 
   --border-subtle: rgba(125, 170, 255, 0.16);
   --border-strong: rgba(125, 170, 255, 0.3);
@@ -103,18 +111,43 @@
   --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 8.82 vs raised */
   --text-muted: rgba(255, 255, 255, 0.5); /* 5.31 vs surface · 5.10 vs raised */
 
-  --accent: #4d9afe;
-  --accent-contrast: #041024; /* 6.67 on accent */
+  /*
+   * THE ACCENT IS THE LOGO'S MID BLUE, exactly — #10A5F5 is lifted from the
+   * mark rather than approximated near it.
+   *
+   * It is also better on every measure than the #4D9AFE it replaces, which is
+   * why this is not a trade:
+   *
+   *              surface  raised  hover   under --accent-contrast
+   *   #4D9AFE      6.84    6.00   5.41    6.67
+   *   #10A5F5      7.17    6.29   5.67    6.99
+   *
+   * The accent is the one colour that appears on every page — chips, links,
+   * the focus ring, the progress bar, the one button — so pointing it at the
+   * mark does more for "this looks like the brand" than any surface tint can.
+   */
+  --accent: #10a5f5;
+  --accent-contrast: #041024; /* 6.99 on accent */
   /* Category chip fill. Decorative only — the accent TEXT on top carries the
-     contrast (6.84), so this never has to clear a ratio on its own. */
-  --accent-soft: rgba(77, 154, 254, 0.14);
-  --focus-ring: #4d9afe; /* 6.84 vs surface · 6.43 vs raised */
+     contrast (7.17), so this never has to clear a ratio on its own. */
+  --accent-soft: rgba(16, 165, 245, 0.14);
+  --focus-ring: #10a5f5; /* 7.17 vs surface · 6.29 vs raised */
   /* The newsletter surface — the one gradient in the system. A token per
      theme rather than a literal, because the accent itself changes: v2-light
      uses the darker #1a5fbf, and a 16% wash of the dark-theme blue over a
      white card reads as a different brand. */
-  --accent-wash-from: rgba(77, 154, 254, 0.16);
-  --accent-wash-to: rgba(77, 154, 254, 0.02);
+  --accent-wash-from: rgba(16, 165, 245, 0.16);
+  --accent-wash-to: rgba(16, 165, 245, 0.02);
+  /*
+   * The logo's cyan. ONE consumer — the reading-progress bar, which fades from
+   * the accent to this along its length, so the mark's own gradient appears
+   * once per article on the element that is already pure decoration.
+   *
+   * It is deliberately not offered as a second accent. Two accents is two
+   * decisions every time something needs emphasis, and the never-build list
+   * exists because this product does not spend colour on attention.
+   */
+  --accent-2: #00dbff;
   --danger: #ff9e9e; /* 9.87 vs surface · 9.28 vs raised */
 
   /*
@@ -156,12 +189,13 @@
   --text-secondary: #d4d4d4;
   --text-muted: #a3a3a3;
 
-  --accent: #4d9afe;
-  --accent-contrast: #06121f; /* 6.61 on accent */
-  --accent-soft: rgba(77, 154, 254, 0.14);
-  --focus-ring: #4d9afe; /* 6.95 vs surface · 6.29 vs raised */
-  --accent-wash-from: rgba(77, 154, 254, 0.16);
-  --accent-wash-to: rgba(77, 154, 254, 0.02);
+  --accent: #10a5f5;
+  --accent-contrast: #06121f; /* 6.93 on accent */
+  --accent-soft: rgba(16, 165, 245, 0.14);
+  --focus-ring: #10a5f5; /* 7.52 vs surface · 6.81 vs raised */
+  --accent-wash-from: rgba(16, 165, 245, 0.16);
+  --accent-wash-to: rgba(16, 165, 245, 0.02);
+  --accent-2: #00dbff;
   --danger: #fca5a5; /* 10.43 vs surface · 9.45 vs raised */
   --warn: #ffb44d; /* 11.21 vs surface · 10.15 vs raised */
   --warn-soft: rgba(255, 180, 77, 0.1);
@@ -185,13 +219,19 @@
   --text-secondary: #3a4359;
   --text-muted: #4d5874; /* 6.43 on raised */
 
-  --accent: #1a5fbf;
-  --accent-contrast: #ffffff; /* 6.12 on accent */
-  --accent-soft: rgba(26, 95, 191, 0.1);
+  /* The logo's deep blue — the other end of the same ramp. #10A5F5 measures
+     2.72 on white and is unusable as text here; #0163E1 measures 5.42 and is
+     the mark's own colour rather than a darkened guess. */
+  --accent: #0163e1;
+  --accent-contrast: #ffffff; /* 5.42 on accent */
+  --accent-soft: rgba(1, 99, 225, 0.1);
   /* Lighter than the dark themes on purpose: the same 16% over white is a
      heavy blue panel, not a wash. */
-  --accent-wash-from: rgba(26, 95, 191, 0.09);
-  --accent-wash-to: rgba(26, 95, 191, 0.02);
+  --accent-wash-from: rgba(1, 99, 225, 0.09);
+  --accent-wash-to: rgba(1, 99, 225, 0.02);
+  /* Darkened from #00DBFF, which measures 1.67 on white — a bar nobody can
+     see is not a brand moment. */
+  --accent-2: #0090c4;
 
   /*
    * NOT the dark-theme blue.
@@ -204,7 +244,7 @@
    * light theme site-wide has it. Fixed here so Mag is correct; the redesign
    * token layer needs the same fix.
    */
-  --focus-ring: #1a5fbf;
+  --focus-ring: #0163e1;
 
   --danger: #a8180f; /* 7.49 vs surface · 6.80 vs raised */
   /* NOT #FFB44D. The design's amber measures 1.72 against white — invisible

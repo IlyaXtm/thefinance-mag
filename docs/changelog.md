@@ -8,6 +8,48 @@ why it was made.
 
 ---
 
+## 2026-09-10 (night) — Title width, a missing affordance, and the logo's blue
+
+Four things from one mobile screenshot.
+
+**The title was not using its width, and `text-wrap: balance` was why.**
+Balancing evens lines by making them all shorter; at 1440 that is the
+point, and at 350px there is no clause to rescue so it just indents the
+headline. Measured on four titles at 390 and 320 — widest line as a share
+of the column — with the LINE COUNT IDENTICAL in every case: 69% → 98%,
+79% → 87%, 79% → 87%, 77% → 77%. `pretty` below md, `balance` above.
+
+Same shape as the justify finding earlier the same day: a typographic
+property that is right at the 700px measure and wrong at 350. Two of those
+in one day is a pattern worth naming — anything tuned at 1440 needs
+re-measuring at 350 before it is called a rule.
+
+**The mobile table of contents had no affordance.** `list-none` on the
+<summary> removes the browser's own triangle — necessary for the styling,
+and it left nothing in its place. The FAQ block had a chevron from the
+start and the ToC did not, which nobody caught because everyone looking at
+it already knew it opened. Both use the same two-border chevron now.
+
+**The accent is the logo's blue.** #10A5F5, lifted from the mark rather
+than approximated near it, and better than the #4D9AFE it replaces on
+every measure — 7.17/6.29/5.67 against 6.84/6.00/5.41, and 6.99 under its
+own contrast colour against 6.67. The light theme takes the mark's other
+end, #0163E1, because #10A5F5 measures 2.72 on white.
+
+That is the biggest available "use the logo's colours" move, because the
+accent is the one colour on every page. The cyan gets exactly one job —
+the reading-progress bar fades accent → cyan, so the mark's gradient
+appears once per article on the one element that is pure decoration.
+
+**And the surface step refused yesterday became affordable today.**
+#14275a was rejected at 2.90 on --border-interactive; that token was
+lightened to #6b7fa3 in the same commit, and against #14275a it now
+measures 3.54. The constraint moved, not the judgement. Card separation
+1.26 → 1.36, at the cost of muted-on-hover going 4.87 → 4.66 — over the
+floor, and the lowest pair in the system now.
+
+---
+
 ## 2026-09-10 (late) — The footer gap, corrected in the other direction
 
 Reported from a screenshot: content running straight into the footer. It
