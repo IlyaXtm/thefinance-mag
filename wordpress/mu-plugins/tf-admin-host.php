@@ -62,10 +62,13 @@ add_filter("script_loader_src", "tf_admin_asset_host", 10, 1);
    cookie against siteurl, which is thefinance.ir — so the browser never
    sends it back and login fails with "cookies are blocked". Defined here
    rather than in wp-config so it stays next to the reason. */
-if (!defined("COOKIE_DOMAIN")) define("COOKIE_DOMAIN", "wp.thefinance.ir");
-if (!defined("COOKIEPATH")) define("COOKIEPATH", "/");
-if (!defined("SITECOOKIEPATH")) define("SITECOOKIEPATH", "/");
-if (!defined("ADMIN_COOKIE_PATH")) define("ADMIN_COOKIE_PATH", "/wp-admin");
+/* All four cookie constants live in wp-config.php, not here. A mu-plugin runs
+   after core has already read them, so defining them at this point works only
+   by accident of when cookies happen to be set — and a stale duplicate here
+   silently wins if the wp-config line is ever removed. ADMIN_COOKIE_PATH was
+   the one that mattered: at /wp-admin the cookie never reached the panel when
+   it was opened via thefinance.ir/mag/wp-admin/, so uploads failed mid-request
+   and sessions appeared to expire within a minute. See docs/infra/cms.md. */
 
 /* Per-source filters miss anything not registered with an absolute URL —
    jQuery among them, which takes every admin script down with it. Rewrite
@@ -103,3 +106,5 @@ function tf_fix_ajax_settings() {
     wp_add_inline_script("wp-util", "if(window.wp&&wp.ajax&&wp.ajax.settings){wp.ajax.settings.url=" . json_encode(TF_ADMIN_HOST . "/wp-admin/admin-ajax.php") . ";}window.ajaxurl=" . json_encode(TF_ADMIN_HOST . "/wp-admin/admin-ajax.php") . ";", "after");
 }
 add_action("admin_enqueue_scripts", "tf_fix_ajax_settings", 99);
+
+add_filter("auth_cookie_expiration", function(){ return 14 * DAY_IN_SECONDS; }, 10, 0);
