@@ -23,6 +23,35 @@
  * considered value instead of a browser default.
  */
 @layer base {
+  /*
+   * THE GAP BETWEEN PAGE CONTENT AND THE FOOTER.
+   *
+   * On `main` as an element, not as a class on each page, and that is the
+   * whole point: there are nine `<main>` elements in this app and only four of
+   * them carried the container class this used to live on. The other five —
+   * search, authors, the author archive, paged listings and 404 — render a
+   * bare `<main>`, so they had NO gap at all while the four looked correct.
+   * Measured before this rule: 80px on `/mag`, 0px on `/mag/search`.
+   *
+   * A rule about "main content, before the footer" belongs to the element that
+   * means that. A page that wants a different bottom still sets one; a utility
+   * beats an element selector.
+   *
+   * 56 / 80 rather than the section rhythm's 60 / 96 because the footer has its
+   * OWN surface and a top border — a colour change does the separating work
+   * that whitespace has to do between two sections sharing a surface. The
+   * footer's own `py` is separate and internal; see MagFooter.
+   */
+  main {
+    padding-block-end: 56px;
+  }
+
+  @media (min-width: 1024px) {
+    main {
+      padding-block-end: 80px;
+    }
+  }
+
   h1 {
     font-size: var(--fs-h1);
     font-weight: 700;

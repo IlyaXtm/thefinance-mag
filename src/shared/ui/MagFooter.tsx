@@ -39,26 +39,41 @@ export function MagFooter({ markets }: { markets: Market[] }) {
   return (
     <footer className="mt-auto border-t border-border-subtle bg-surface-raised">
       {/*
-        THE GAP BEFORE THE FOOTER LIVES HERE, AND ONLY HERE.
+        THE GAP ABOVE THE FOOTER IS ON `<main>`; THIS PADDING IS INTERNAL.
 
-        It used to be the sum of two paddings: every page's <main> carried
-        `pb-20 lg:pb-24` and this carried `py-12 lg:py-16`, so the void between
-        the last content row and the footer's first line measured 96 + 64 = 160
-        at desktop and 80 + 48 = 128 at mobile. The page's own section rhythm is
-        96 / 60 (CLAUDE.md), and the sections on the home page measure 112, 64
-        and 88, 56 — so the run-out to the footer was between 1.4× and 2.5× any
-        real gap on the page, which is why it reads as the page having ended.
+        Those are two different things and conflating them is how this got
+        broken twice in a row, in opposite directions.
 
-        Collapsed rather than trimmed: the four `<main>` elements lost their
-        bottom padding entirely and this top padding is now the whole gap, set
-        to the section rhythm. Subtracting a number from one side would have
-        left two paddings that only add up correctly by coincidence, and the
-        next person to change either one would not know that.
+        FIRST it was the sum of both: every page's <main> carried
+        `pb-20 lg:pb-24` and this carried `py-12 lg:py-16`, so 96 + 64 = 160px
+        of empty ran between the last content row and the footer's first line.
+        Reported as the page feeling finished before it was.
 
-        The BOTTOM padding is unchanged — that one is the footer's own internal
-        breathing room above the page edge, not a gap between two things.
+        THEN it was collapsed the wrong way round — <main> lost its bottom
+        padding entirely and this took the whole gap. That measured "97px to
+        the footer's first child" and looked correct, and it was measuring the
+        FOOTER'S OWN PADDING as if it were the gap. The real distance from the
+        last content to the footer's top edge was **zero** on every route, so
+        the page ran straight into the border. Reported, correctly, as needing
+        more space.
+
+        Now they are separate and each does one job:
+
+          <main> pb-14 lg:pb-20     56 / 80   the gap, on the page's surface
+          this   pt-10 lg:pt-16     40 / 64   the footer's own breathing room
+
+        80 rather than the section rhythm's 96, and the reason is that this
+        footer has its OWN surface and a top border. A colour change already
+        does the separating work that whitespace has to do between two sections
+        on the same surface, so the gap can be a step under the rhythm without
+        reading as tight. Total empty run is 144 / 96 against the original
+        160 / 128 — a real gap, and still less than the one that was too long.
+
+        The top and bottom paddings match each other on purpose. Internal
+        padding that is symmetric is internal padding nobody has to think
+        about.
       */}
-      <div className="mx-auto max-w-[1440px] px-5 pb-10 pt-[60px] lg:px-10 lg:pb-16 lg:pt-24">
+      <div className="mx-auto max-w-[1440px] px-5 py-10 lg:px-10 lg:py-16">
         {/*
           TWO COLUMNS ON A PHONE, NOT ONE.
 

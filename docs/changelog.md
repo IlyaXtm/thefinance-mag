@@ -8,6 +8,50 @@ why it was made.
 
 ---
 
+## 2026-09-10 (late) — The footer gap, corrected in the other direction
+
+Reported from a screenshot: content running straight into the footer. It
+was, and it was my doing.
+
+**The measurement was wrong, not the intent.** Yesterday's entry claims
+the gap went from 160px to 97. The 97 was measured to the footer's FIRST
+CHILD — which is inside the footer's own top padding. The actual distance
+from the last content to the footer's top edge was **zero on every
+route**. I collapsed the two paddings by removing the one that was doing
+the visible work and keeping the one that was internal.
+
+They are separate things and are separate now:
+
+  main padding-block-end   56 / 80   the gap, on the page's surface
+  footer py                40 / 64   the footer's own breathing room
+
+80 rather than the section rhythm's 96, because this footer has its own
+surface and a top border — a colour change does the separating work
+whitespace has to do between two sections sharing a surface. Total empty
+run 144 / 96, against the 160 / 128 that was called too long and the
+96 / 60 that had no gap at all.
+
+**A second bug fell out of fixing it.** The padding went back onto the
+container class the four main page files share — and there are NINE
+`<main>` elements. Search, authors, the author archive, paged listings and
+404 render a bare `<main>` and still had zero. It is on `main` as an
+element now: a rule about "main content, before the footer" belongs to the
+element that means that. Verified across all ten route shapes at both
+widths.
+
+**The check I added to stop this recurring was itself vacuous first.** It
+asserted the gap only in the 1440 pass, so a deliberately broken mobile
+value passed clean — the desktop media query was still supplying 80. It
+runs in both loops now, and a 4px value fails 9 routes at 768 as it
+should. It measures to the footer's TOP EDGE and from the lowest painted
+element in `<main>`, because measuring inside the footer is what produced
+the 97 and measuring `lastElementChild` misses a sticky rail.
+
+Third time this gap has been touched, second time a measurement of it was
+confidently wrong. The check is the part that matters.
+
+---
+
 ## 2026-09-10 (evening) — Three device reports: the header, the footer, the navy
 
 All three came from screenshots taken on an actual phone, and the first

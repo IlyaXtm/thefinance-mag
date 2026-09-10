@@ -606,12 +606,45 @@ near-black text on a light card.
 **The underlying cause is not design.** Articles are published without featured
 images — a content problem, in the backlog.
 
-**Spacing before the footer is one padding, not two.** The gap measured 160px
-at desktop and 128 at mobile, because every `<main>` carried a bottom padding
-AND the footer carried a top one. The page's own section rhythm is 96 / 60. The
-mains lost their bottom padding entirely and the footer's top padding is now
-the whole gap at the rhythm value — 97 / 61 measured. A gap that is the sum of
-two properties is a gap nobody can change correctly.
+**Spacing before the footer: the gap is on `main`, the padding is the
+footer's.** Corrected 2026-09-10, having been wrong twice in opposite
+directions.
+
+**First** it was the SUM of both — every `<main>` carried `pb-20 lg:pb-24` and
+the footer carried `py-12 lg:py-16`, so 160px of empty ran before the footer's
+first line. Reported as the page feeling finished before it was.
+
+**Then it was collapsed the wrong way round.** The mains lost their bottom
+padding entirely and the footer took the whole gap. That measured "97px to the
+footer's first child" and looked right — and it was **measuring the footer's own
+padding as if it were the gap**. The real distance from the last content to the
+footer's top edge was ZERO on every route. Reported, correctly, as needing more
+space.
+
+They are two different things and conflating them is what broke it both times:
+
+  `main` padding-block-end   56 / 80   the gap, on the page's surface
+  footer `py`                40 / 64   the footer's own breathing room
+
+80 rather than the section rhythm's 96 because **this footer has its own
+surface and a top border**. A colour change does the separating work that
+whitespace has to do between two sections sharing a surface, so the gap can sit
+a step under the rhythm without reading as tight. Total empty run 144 / 96,
+against the 160 / 128 that was too long and the 96 / 60 that had no gap at all.
+
+**On `main` as an ELEMENT, not as a class on each page.** There are nine
+`<main>` elements and only four used the container class the padding had been
+living on — search, authors, the author archive, paged listings and 404
+rendered a bare `<main>` and had no gap whatever while the four that were
+looked at measured 80. A rule about "main content, before the footer" belongs
+to the element that means that.
+
+**And the sweep asserts it now**, at every width, against the footer's TOP EDGE
+and the lowest painted element in `<main>`. Both halves of that are the lesson:
+measuring to anything inside the footer counts its padding as the gap, and
+measuring `lastElementChild` misses a sticky rail that extends past it. The
+first version of the check ran only at 1440 and passed a deliberately broken
+mobile value cleanly — it runs in both loops now.
 
 ---
 

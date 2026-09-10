@@ -63,6 +63,28 @@ const ROUTES = [
    there would preload something no reader sees first. */
 const NO_EAGER_IMAGE = new Set(['/mag/news']);
 
+/**
+ * Distance from the lowest painted thing in <main> to the footer's TOP EDGE.
+ *
+ * Both halves of that sentence are the lesson. Measuring to anything INSIDE
+ * the footer counts the footer's own padding as the gap, which is how a 0px
+ * gap was once reported as 97px. And measuring `main.lastElementChild` misses
+ * a sticky rail or an absolutely positioned child that extends past it.
+ */
+const FOOTER_GAP_PROBE = () => {
+  const main = document.querySelector('main');
+  const footer = document.querySelector('footer');
+  if (!main || !footer) return null;
+  let lowest = -1;
+  for (const el of main.querySelectorAll('*')) {
+    const b = el.getBoundingClientRect();
+    if (b.height < 2 || b.width < 2) continue;
+    lowest = Math.max(lowest, b.bottom + window.scrollY);
+  }
+  if (lowest < 0) lowest = main.getBoundingClientRect().top + window.scrollY;
+  return Math.round(footer.getBoundingClientRect().top + window.scrollY - lowest);
+};
+
 const failures = [];
 const rows = [];
 
@@ -175,6 +197,41 @@ for (const route of ROUTES) {
       groupedYear: (document.body.innerText.match(/۱٬[۳-۵][۰-۹][۰-۹]/g) ?? [])[0] ?? null,
     };
   });
+
+  /*
+    THERE IS A REAL GAP BETWEEN PAGE CONTENT AND THE FOOTER.
+
+    This has now been wrong twice, in opposite directions, and both times it
+    looked right in whatever was being measured:
+
+      - as the SUM of `<main>`'s bottom padding and the footer's top padding,
+        160px of empty before the footer's first line, reported as the page
+        feeling finished before it was;
+      - then collapsed onto the footer alone, which measured "97px to the
+        footer's first child" — the footer's OWN padding counted as the gap —
+        while the true distance from the last content to the footer's top edge
+        was ZERO on every route.
+
+    So the assertion is deliberately made against the footer's TOP EDGE, not
+    against anything inside it, and against the lowest painted element in
+    <main> rather than `main.lastElementChild` — a sticky rail or an absolutely
+    positioned child can extend past the last child's box.
+
+    It also catches the shape the second fix missed: the padding lived on a
+    container class that only four of the nine `<main>` elements used, so
+    search, authors, the author archive, paged listings and 404 had no gap at
+    all while the four that were looked at were fine.
+  */
+  const footerGap = await page.evaluate(FOOTER_GAP_PROBE);
+
+  if (footerGap !== null) {
+    check(
+      route,
+      'a real gap above the footer',
+      footerGap >= 48,
+      `${footerGap}px from the lowest content to the footer's top edge`,
+    );
+  }
 
   const wantEager = NO_EAGER_IMAGE.has(route) ? 0 : 1;
   const third = [...hosts].filter((h) => !BASE.includes(h));
@@ -349,6 +406,22 @@ for (const width of SWEEP_WIDTHS) {
         `breadcrumb ${wantsScroll ? 'scrolls' : 'wraps'} at ${width}px`,
         wantsScroll ? crumbs.scrolls : crumbs.wraps,
         `overflowX scrolls=${crumbs.scrolls} flexWrap=${crumbs.wraps} list=${crumbs.listWidth} nav=${crumbs.navWidth}`,
+      );
+    }
+
+    /*
+      THE GAP AGAIN, AT EVERY WIDTH. It is set per breakpoint (56 mobile / 80
+      desktop), and the 1440 pass above cannot see a mobile regression. A
+      deliberately broken mobile value passed the 1440 check cleanly, which is
+      how this ended up in both loops.
+    */
+    const gap = await page.evaluate(FOOTER_GAP_PROBE);
+    if (gap !== null) {
+      check(
+        route,
+        `a real gap above the footer at ${width}px`,
+        gap >= 40,
+        `${gap}px from the lowest content to the footer's top edge`,
       );
     }
 
