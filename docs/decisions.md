@@ -369,8 +369,37 @@ change is the source: one `SECTION_NAV`, one `markets` prop, one `SITE_EXIT`,
 and the same axis-naming the desktop disclosure does. A forked mobile nav is
 how a section gets added in one place and not the other.
 
-**The header is sticky on mobile and hides on scroll down.** Amended
-2026-09-09; the previous entry said NOT STICKY.
+**The header is sticky on mobile and STAYS VISIBLE.** Amended 2026-09-10,
+reversing the hide-on-scroll-down behaviour added the day before.
+
+Hide-on-scroll was asked for and built, and the mechanism was correct —
+verified under iPhone emulation with no blocking ancestor, leaving at -65 going
+down and returning to 0 going up. It was still wrong. Reported from a device as
+"nav not sticky", and that report is right about what matters: a reader
+scrolling an article sees no navigation, and "it comes back if you scroll the
+other way" is a rule they have to learn rather than a header they can reach.
+
+**A device beats a spec.** The behaviour was specified, implemented to spec,
+and the spec was wrong once someone held it.
+
+The objection hide-on-scroll was answering — 64px of permanent cost on a
+41-minute read — is real, and is paid rather than argued with: past 64px the
+bar condenses to 52 and the lockup shrinks 28 → 24. 24 is the brand floor for
+the full lockup, so it sits ON that floor; anything smaller drops to the mark
+alone.
+
+The state machine got SIMPLER. Hide-on-scroll needed the previous scroll
+position, a direction, and an 8px dead zone to stop iOS momentum toggling it
+several times a second. "Am I past 64px" needs none of that and cannot
+flicker, because there is no direction to disagree about.
+
+**The header's height is a custom property**, because the nav panel hangs off
+its bottom edge. The panel hardcoded `top-16`, which was correct until the bar
+learned to be 52 and then left a 12px slot of page showing between the two.
+Neither element owns that number alone, so neither hardcodes it.
+
+**The superseded entry:** the header was sticky on mobile and hid on scroll
+down. Amended 2026-09-09; the entry before THAT said NOT STICKY.
 
 That entry gave two grounds. The first — a fixed bar costs vertical space on
 mobile — is what hide-on-scroll-down answers: the header costs its height on
@@ -720,6 +749,38 @@ focus behind, which looks like it works and does not.
 
 ---
 
+## Mobile footer
+
+**Two columns, and one paragraph fewer.** Decided 2026-09-10, after the footer
+was reported from a device as too long.
+
+It measured 1046px at 390 and 1127 at 320 — a screen and a quarter under every
+article. Now 803 and 859.
+
+The height was never spacing. Fifteen links at a 44px touch target is 660px in
+one column no matter what, so the fix had to be structural:
+
+- the three link groups go two-up. The third has no partner, so instead of
+  landing alone with ~500px of blank beside four links, it spans both columns
+  and lays its own links out two-up.
+- **`ORGANIZATION_DESCRIPTION` is hidden below `md`.** It is the only thing in
+  the footer that is not load-bearing on a phone, and it is the second long
+  boilerplate paragraph there — the other is the site disclaimer, which is
+  compliance copy under Iranian securities law. If one of the two goes, it is
+  not that one. It returns at `md`, where there is a column to put it in.
+
+**An accordion was the alternative and is worse.** Collapsing each group behind
+a `<details>` hides four links behind a tap in the one part of the page a
+reader reaches deliberately, and adds three disclosures to a page that already
+has one.
+
+**What is left is not compressible without a decision.** The remaining height
+is fifteen links at 44px plus one required paragraph. Going below it means
+cutting links or cutting targets, and both are the user's call rather than a
+layout change.
+
+---
+
 ## Design system additions
 
 Three items surfaced during Mag that are **system-level**, not Mag-local. Left
@@ -736,6 +797,40 @@ suffices, hence a third token.
 
 **`--danger`** for form validation. All proposed values clear 4.5:1
 comfortably.
+
+**v1's raised surfaces carry the brand blue.** Changed 2026-09-10, from
+"very dark bg is good but add some colour like the logo colour for better
+contrast" — two instructions that pull opposite ways, so only one thing moved.
+
+`--surface` is untouched: it is the half that was praised, and it is the page.
+The raised surfaces moved toward the logo's blue, because their problem was
+never brightness — a card separated from the page by **1.06:1**, a difference
+you can measure and cannot see.
+
+  --surface-raised  #071331 → #0a1a3d   separation 1.06 → 1.14
+  --surface-hover   #111c39 → #12224d   separation 1.16 → 1.26
+  --border-subtle   white .10 → blue .16
+  --border-strong   white .18 → blue .30
+
+A white hairline over navy reads grey and flattens everything it outlines. The
+same line in the logo's blue belongs to the palette. Contrast is unaffected —
+those two are decorative and nothing reads text against them.
+
+**Where it stops, and it stops one step short of the obvious place.** Every
+step lighter costs the text on top of it:
+
+  #111c39 (was)   muted 5.10   separation 1.16   interactive 3.41
+  #12224d (now)   muted 4.87   separation 1.26   interactive 3.13
+  #14275a         muted 4.66   separation 1.36   interactive 2.90  ✗
+
+The last one fails the 3:1 that WCAG 2.2 SC 1.4.11 requires of a control
+boundary — on `--border-interactive`, the token that exists precisely because
+the other two borders could not clear it. So the surfaces stop before it, and
+that token is lightened to `#6b7fa3` to keep real headroom (4.82 / 4.23 / 3.81)
+rather than sitting on the floor at 3.95 / 3.47 / 3.13.
+
+**v2-dark is deliberately not changed.** Being the neutral-black variant is its
+entire purpose, and it is not reachable from the toggle.
 
 **`--warn` and `--warn-soft`**, added 2026-09-09 for the callout's warn
 variant. A different role from `--danger`, not a shade of it: `--danger` is

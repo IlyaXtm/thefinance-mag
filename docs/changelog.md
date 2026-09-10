@@ -8,6 +8,66 @@ why it was made.
 
 ---
 
+## 2026-09-10 (evening) — Three device reports: the header, the footer, the navy
+
+All three came from screenshots taken on an actual phone, and the first
+one reverses a decision from the day before.
+
+**The header stays put now.** Reported as "mobile nav not sticky in
+scroll". The mechanism was working — verified under iPhone emulation, no
+blocking ancestor, leaving at -65 going down and returning to 0 going up,
+exactly as specified. Hide-on-scroll-down was asked for and built to spec.
+
+The report is still right about the thing that matters: a reader scrolling
+an article sees no navigation, and "it comes back if you scroll the other
+way" is a rule they have to learn rather than a header they can reach. A
+device beats a spec, including a spec that was followed correctly.
+
+The 64px objection gets paid rather than argued with — past the fold the
+bar condenses to 52 and the lockup shrinks 28 → 24, which is the brand
+floor for the full lockup. And the state machine got simpler in the
+process: hide-on-scroll needed a previous position, a direction and an 8px
+dead zone to stop iOS momentum toggling it; "am I past 64px" needs none of
+that and cannot flicker.
+
+One thing that broke on the way and was caught by measuring: the nav panel
+hangs off the header's bottom edge and hardcoded `top-16`, which was
+correct until the bar learned to be 52 and then left a 12px slot of page
+showing between them. The height is a custom property now — neither
+element owns that number alone, so neither hardcodes it.
+
+**The footer is 23% shorter on a phone.** 1046 → 803 at 390, 1127 → 859 at
+320. The height was never spacing: fifteen links at a 44px touch target is
+660px in one column no matter what. So the groups go two-up, the third
+group — which used to land alone with 500px of blank beside four links —
+spans both columns and lays its own links out two-up, and
+`ORGANIZATION_DESCRIPTION` is hidden below md.
+
+That last one is the only responsive content hiding in the product and it
+is worth naming: it is the second long boilerplate paragraph in one
+footer, and the other is compliance copy under Iranian securities law. If
+one of the two goes on a phone, it is not that one.
+
+**The navy got its blue back.** "Very dark bg is good but add some colour
+like the logo colour for better contrast" — two instructions pulling
+opposite ways, so `--surface` did not move and everything sitting ON it
+did. A card was separating from the page by 1.06:1, which is a difference
+you can measure and cannot see; it is 1.14 now, and the hairlines are the
+logo's blue rather than white-over-navy grey.
+
+It stops one step short of where it looks like it should. #14275a would
+have given the best separation and takes `--border-interactive` to 2.90 —
+under the 3:1 WCAG requires of a control boundary, on the token that
+exists precisely because the other two borders could not clear it. So the
+surfaces stop before it and that token is lightened to keep headroom
+instead of sitting on the floor.
+
+`check:contrast` still passes all 21 pairs. The lowest in the system moved
+from 4.95 to 4.87, which is the cost of the change and is stated rather
+than discovered later.
+
+---
+
 ## 2026-09-10 — Contrast measured, the footer gap collapsed, a skip link added
 
 A screenshot-based visual audit of the homepage raised five items. Two
