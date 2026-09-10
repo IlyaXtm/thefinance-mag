@@ -38,7 +38,27 @@ export function MagFooter({ markets }: { markets: Market[] }) {
 
   return (
     <footer className="mt-auto border-t border-border-subtle bg-surface-raised">
-      <div className="mx-auto max-w-[1440px] px-5 py-12 lg:px-10 lg:py-16">
+      {/*
+        THE GAP BEFORE THE FOOTER LIVES HERE, AND ONLY HERE.
+
+        It used to be the sum of two paddings: every page's <main> carried
+        `pb-20 lg:pb-24` and this carried `py-12 lg:py-16`, so the void between
+        the last content row and the footer's first line measured 96 + 64 = 160
+        at desktop and 80 + 48 = 128 at mobile. The page's own section rhythm is
+        96 / 60 (CLAUDE.md), and the sections on the home page measure 112, 64
+        and 88, 56 — so the run-out to the footer was between 1.4× and 2.5× any
+        real gap on the page, which is why it reads as the page having ended.
+
+        Collapsed rather than trimmed: the four `<main>` elements lost their
+        bottom padding entirely and this top padding is now the whole gap, set
+        to the section rhythm. Subtracting a number from one side would have
+        left two paddings that only add up correctly by coincidence, and the
+        next person to change either one would not know that.
+
+        The BOTTOM padding is unchanged — that one is the footer's own internal
+        breathing room above the page edge, not a gap between two things.
+      */}
+      <div className="mx-auto max-w-[1440px] px-5 pb-12 pt-[60px] lg:px-10 lg:pb-16 lg:pt-24">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <div className="flex items-center text-text-primary">

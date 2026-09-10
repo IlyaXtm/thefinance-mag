@@ -53,7 +53,7 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <Section>
         {/* max-w-prose: the 700px reading column, the same measure the article
             body uses. `Section` has no `prose` width of its own because every

@@ -48,7 +48,7 @@ export default async function SearchPage({
   ]);
 
   return (
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <Section className="!pb-0">
         <PageHeader title="نتایج جستجو" showSearch={false} />
 

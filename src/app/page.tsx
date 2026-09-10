@@ -61,7 +61,7 @@ export default async function MagIndexPage() {
   const grid = rest.slice(2, 8);
 
   return (
-    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
       <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 8))]} />
 
       <h1 className="sr-only">{MAG_NAME}</h1>

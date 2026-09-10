@@ -109,6 +109,28 @@ function handleFailure(img: HTMLImageElement) {
     return;
   }
 
+  /*
+    THE LEAD CARD, BEFORE THE GENERIC CARD BRANCH — same precedence problem
+    the hero had, in a second place.
+
+    HeroFeature renders through CardImage, so without this it takes the card
+    branch below: the image is hidden and the wrapper paints the empty-slot
+    panel across the whole 812×472 card, under a scrim. That is a very large
+    trace for "no image", and `575f922` says a missing image leaves none.
+
+    Server-side the no-image case already renders as a plain text card. This
+    makes the RUNTIME failure land in the same state: mark the card, and drop
+    `data-on-media` so the white-on-media tokens go with the scrim. Leaving
+    them would put white text on a light card surface at about 1.1:1 — the
+    fix turning into a worse bug than the defect.
+  */
+  const heroCard = img.closest('[data-hero-card]');
+  if (heroCard) {
+    heroCard.setAttribute('data-media-missing', '');
+    heroCard.querySelector('[data-on-media]')?.removeAttribute('data-on-media');
+    return;
+  }
+
   const card = img.closest('[data-card-image]');
   if (card) {
     img.style.display = 'none';

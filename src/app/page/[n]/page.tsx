@@ -55,7 +55,7 @@ export default async function PaginatedListingPage({
   if (articles.items.length === 0) notFound();
 
   return (
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <Section className="!pb-0">
         <PageHeader title={MAG_NAME} subtitle="تحلیل، گزارش و آموزش برای بازارهای مالی" />
       </Section>

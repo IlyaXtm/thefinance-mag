@@ -67,7 +67,7 @@ export function ArchiveShell({
   markets: Market[];
 }) {
   return (
-    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
       <JsonLdScript
         data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
       />

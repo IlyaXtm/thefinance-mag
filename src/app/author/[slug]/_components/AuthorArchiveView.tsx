@@ -37,7 +37,7 @@ export async function AuthorArchiveView({ author, page }: { author: Author; page
   ];
 
   return (
-    <main>
+    <main id="main-content" tabIndex={-1}>
       <JsonLdScript
         data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.name, url: magUrl(c.href) })))}
       />

@@ -97,6 +97,24 @@
  */
 @layer components {
   /*
+   * The lead card once its image has failed at runtime.
+   *
+   * The server-rendered no-image branch drops the image layer and the scrim
+   * from the markup; this does the same for the case where the markup was
+   * right and the network was not. Both end at the same place — a text card on
+   * the theme's own surface — so an article whose artwork 404s is
+   * indistinguishable from one that never had any.
+   *
+   * `data-on-media` is removed by the guard rather than overridden here: the
+   * alternative is restating three token values per theme inside this rule,
+   * which is two copies of the palette waiting to disagree.
+   */
+  [data-hero-card][data-media-missing] [data-hero-media],
+  [data-hero-card][data-media-missing] [data-hero-scrim] {
+    display: none;
+  }
+
+  /*
    * The breadcrumb scroller — mobile only.
    *
    * The trail keeps every level, so on a phone it is wider than the viewport

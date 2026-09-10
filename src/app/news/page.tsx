@@ -51,7 +51,7 @@ export default async function NewsPage() {
   const days = groupByDay(news.items);
 
   return (
-    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
       {/* «اخبار» is a top-level indexable section and had no breadcrumb of any
           kind, structured or visible, while every other archive had both. Only
           the markup is added here — the page's own header already names the

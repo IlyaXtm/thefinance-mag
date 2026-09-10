@@ -115,6 +115,31 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             page, because `error` does not bubble — one capture listener at the
             document reaches every image on the site. See MediaErrorGuard. */}
         <MediaErrorGuard />
+        {/*
+          SKIP LINK — the first thing in the tab order, and it was missing.
+          Measured before this: the first stop was the masthead, and reaching
+          the article body from the keyboard meant tabbing past eight header
+          controls on every page, on every navigation.
+
+          `sr-only` until focused, then it takes a real position and paints
+          itself — a skip link that is permanently invisible is one nobody can
+          confirm works, and a permanently visible one is chrome for a control
+          most readers never use.
+
+          It targets the `<main>` landmark rather than a wrapper div, so a
+          screen reader announces the landmark on arrival. Every `<main>` in
+          the app carries `id="main-content"` and `tabIndex={-1}` — the
+          tabindex is what lets the target actually take focus rather than
+          only scrolling the page, which is the difference between a skip link
+          that works and one that appears to.
+        */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-50 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-full focus:bg-accent focus:px-5 focus:text-[14px] focus:font-medium focus:text-accent-contrast"
+        >
+          پرش به محتوای اصلی
+        </a>
+
         <MagHeader markets={markets} />
         <div className="flex-1">{children}</div>
         <MagFooter markets={markets} />

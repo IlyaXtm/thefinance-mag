@@ -291,7 +291,7 @@ export default async function ArticlePage({
   ];
 
   return (
-    <main className="mx-auto max-w-[1440px] px-5 pb-20 lg:px-10 lg:pb-24">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
       {isPreview && <PreviewBanner />}
 
       <JsonLdScript
