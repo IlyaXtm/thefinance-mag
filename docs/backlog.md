@@ -1276,3 +1276,64 @@ Everything else the manifest needs is already committed: real Persian
 the dark theme colour, and both `any` and `maskable` icons. Adding
 `display: standalone` later is a one-line change to a file that is otherwise
 finished.
+
+---
+
+## B36 — 🔴 A 404 from an on-demand route serves an empty document
+
+**Status:** open, found 2026-09-10 while measuring mobile geometry. Not fixed in
+that pass because the fix is a routing decision, not a layout one.
+
+Measured on the built app, counting the `<body>` with `<script>` tags removed —
+i.e. what paints before any JavaScript runs:
+
+```
+/mag                     200    62,552 bytes
+/mag/archive             200    74,516
+/mag/notcoin-guide       200    59,022
+/mag/search              200    36,355
+/mag/category/nope       404    37,860   ← full page: header, content, footer
+/mag/nope                404        58   ← <body><div hidden></div></body>
+/mag/market/nope         404        58
+/mag/author/nope         404        58
+/mag/archive/page/999    404       722
+```
+
+**The whole document is `<body><div hidden=""><!--$--><!--/$--></div></body>`.**
+No header, no footer, no «این صفحه پیدا نشد», no search box. Everything is in
+the RSC flight payload and appears only after React hydrates. With JavaScript
+off or slow, a dead link is a blank white page.
+
+**`/mag/nope` is the 404 that actually happens** — a stale link to an article
+that was unpublished or renamed. It is the one that is blank.
+
+**The split is exact and it points at the cause.** `category/[slug]` is the only
+one of the four dynamic segments that sets `dynamicParams = false`, and it is
+the only one that renders. The other three keep the default `true`, so an
+unknown slug reaches the component, the component calls `notFound()` at request
+time, and the response is an empty shell.
+
+Reproduced on both `next start` and the standalone server (`/mag/market/nope`
+returns the same 58 bytes on both, so it is not an artifact of the
+`output: standalone` mismatch that `next start` warns about).
+
+**The obvious fix is the wrong one.** Setting `dynamicParams = false` on
+`[slug]` would make these 404s prerender — and would also mean an article
+published in WordPress after the last build 404s until the next one. The
+comment on `generateStaticParams` in `[slug]/page.tsx` records that as a
+deliberate trade: "anything published after the build is still generated on
+demand and then ISR-cached." Do not undo it to fix a 404.
+
+What to look at instead:
+
+1. Whether `notFound()` thrown from an async server component in this Next
+   version can render its boundary into the initial HTML at all, or whether it
+   always defers — and if the latter, whether a `not-found.tsx` inside each
+   dynamic segment changes it.
+2. Whether the miss can be caught before the component: resolve the slug in
+   middleware or a route-level check and rewrite to a static 404 path, which
+   keeps `dynamicParams: true` for real articles.
+
+Worth doing properly: SEO aside — a 404 is not indexed — a reader who follows
+an old link on a phone currently gets a white screen until the bundle lands,
+which on the 1.6 Mbps profile this project measures against is over a second.
