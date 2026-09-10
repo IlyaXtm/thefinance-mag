@@ -8,6 +8,56 @@ why it was made.
 
 ---
 
+## 2026-09-10 (later) — The favicon pack, wired up
+
+A generated favicon pack arrived: the Finance mark in its LIGHT colourway —
+`#071331` triangle, the same three logo blues (`#0163E1` · `#10A5F5` ·
+`#00DBFF`) — on transparency, with a «FINANCE PULSE» wordmark bar, plus
+Android 192/512, an apple-touch icon, three `.ico`s and a `site.webmanifest`.
+
+**The mark is now the pack's colourway, as vector.** `icon.svg` keeps the paths
+it already had — they are the same artwork — and takes the pack's colours:
+white plate, `#071331` triangle. 2.2 KB, sharp at every size a browser asks
+for, instead of a 33 KB raster exported at three.
+
+**It needed a plate, and that is measured, not taste.** The pack's PNGs put a
+`#071331` triangle on transparency, which is about 1.1:1 against Chrome's dark
+tab strip (`#202124`). Rendered at 16 and 32 the triangle and its baseline
+vanish and three blue bars float with no shape around them. An icon has no
+control over what is behind it, so the ground is part of the icon. White,
+because that is the ground this colourway was drawn for.
+
+**The wordmark is dropped below the launcher sizes.** It is illegible under
+about 48px — grey speckle at 32, gone at 16 — while costing a tenth of the
+icon's height. Independently: the magazine is «مجله فایننس» / TheFinance and
+"Pulse" appears nowhere in this product, so a tab is the wrong place to
+introduce a name the site does not use. Flagged rather than resolved — if the
+lockup is right, it is right on the site too, not only in a launcher.
+
+**`apple-icon.png` is opaque now.** iOS composites a transparent apple-touch
+icon onto BLACK, which would have put the navy triangle on black — the same
+disappearance, on a home screen.
+
+**The pack's `site.webmanifest` was not committed; `manifest.ts` replaces it.**
+Its `name` and `short_name` were empty strings (Android would have labelled the
+home screen with whatever page the reader happened to add), its icon `src`
+values were absolute `/favicon/…` paths that 404 under basePath `/mag`, and its
+theme and background colours were `#ffffff` on a magazine whose default theme
+is dark. The real values come from the same constants the rest of the site
+uses.
+
+**`display: standalone` is deliberately NOT carried over.** It is what makes
+Chrome treat the magazine as an installable app and offer an install prompt — a
+new product surface with its own launch behaviour, which nobody asked for.
+Omitting it defaults to `browser`: the icons are correct if a reader adds the
+site to their home screen, and nothing prompts them to. Turning the magazine
+into an installable app is a product decision; this was a favicon.
+
+Also noted: the pack's `favicon-48x48.ico` is a 32×32 image under a 48 name.
+The committed `favicon.ico` is a real 16/32/48 multi-size at 4.6 KB.
+
+---
+
 ## 2026-09-10 (late) — Full UI/UX review with a performance pass
 
 A sweep rather than a request: every route at eight widths, every text token
