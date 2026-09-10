@@ -51,7 +51,7 @@ export default async function NewsPage() {
   const days = groupByDay(news.items);
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="mag-gutter">
       {/* «اخبار» is a top-level indexable section and had no breadcrumb of any
           kind, structured or visible, while every other archive had both. Only
           the markup is added here — the page's own header already names the
@@ -66,7 +66,7 @@ export default async function NewsPage() {
 
       <div className="flex flex-col gap-6 border-b-2 border-border-strong pb-7 pt-6 md:flex-row md:items-end md:justify-between lg:pt-8">
         <div>
-          <h1 className="text-[26px] font-bold tracking-[-0.3px] text-text-primary md:text-[32px]">
+          <h1 className="text-h1 font-bold tracking-[-0.3px] text-text-primary">
             اخبار
           </h1>
           <p className="mt-2.5 max-w-[64ch] text-[15px] font-light leading-[1.85] text-text-muted">

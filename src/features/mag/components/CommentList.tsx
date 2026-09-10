@@ -72,7 +72,7 @@ export function CommentList({ thread }: { thread: CommentThread }) {
 
   return (
     <section aria-labelledby="comments-heading">
-      <h2 id="comments-heading" className="mb-5 text-[22px] font-bold text-text-primary">
+      <h2 id="comments-heading" className="mb-5 text-h2 font-bold text-text-primary">
         دیدگاه‌ها
         <span className="ms-2 text-[15px] font-normal text-text-muted">
           {toPersianDigits(thread.total)}

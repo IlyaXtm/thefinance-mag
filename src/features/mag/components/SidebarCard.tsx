@@ -25,7 +25,7 @@ export function SidebarCard({
     <section
       className={`rounded-card border border-border-subtle bg-surface-raised p-[22px] ${className}`}
     >
-      <Heading className="mb-4 text-[15px] font-semibold text-text-primary">{title}</Heading>
+      <Heading className="mb-4 text-h5 font-semibold text-text-primary">{title}</Heading>
       {children}
     </section>
   );

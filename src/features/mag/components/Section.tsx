@@ -1,9 +1,12 @@
 /**
  * Section wrapper.
  *
- * Owns the global spacing baseline so no component has to know it:
- *   horizontal padding  20px mobile / 100px desktop
- *   vertical spacing    60px mobile / 96px desktop
+ * Owns the global VERTICAL spacing baseline — 60px mobile / 96px desktop — and
+ * takes the horizontal gutter from `.mag-gutter`, which is now the single
+ * definition of 20/100 and of the 1440px cap. Section used to carry the
+ * horizontal numbers itself AND no max-width, which is how it ended up
+ * disagreeing with the four <main> shells in two directions at once: 100
+ * against their 40 at every width, and unbounded against their 1440 above it.
  *
  * These are not per-page choices. Sections are separated by whitespace, never
  * by full-bleed background blocks.
@@ -33,7 +36,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={`px-5 py-[60px] lg:px-[100px] lg:py-24 ${className}`}>
+    <section className={`mag-gutter py-[60px] lg:py-24 ${className}`}>
       <div className={WIDTHS[width]}>{children}</div>
     </section>
   );
@@ -50,7 +53,7 @@ export function SectionInner({
   className?: string;
 }) {
   return (
-    <div className={`px-5 lg:px-[100px] ${className}`}>
+    <div className={`mag-gutter ${className}`}>
       <div className={WIDTHS[width]}>{children}</div>
     </div>
   );

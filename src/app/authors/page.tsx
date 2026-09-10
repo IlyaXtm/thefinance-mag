@@ -34,7 +34,7 @@ export default async function AuthorsPage() {
       <Section>
         <Breadcrumbs items={crumbs} />
 
-        <h1 className="mt-4 text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
+        <h1 className="mt-4 text-h1 font-bold text-text-primary">
           نویسندگان
         </h1>
 

@@ -102,7 +102,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
       >
         <CategoryChip name={category.name} variant="solid" className="self-start" />
 
-        <h2 className="max-w-[20ch] text-[26px] font-bold leading-[1.35] tracking-[-0.4px] text-text-primary [text-wrap:pretty] md:text-[36px]">
+        <h2 className="max-w-[20ch] text-display font-bold tracking-[-0.4px] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
@@ -151,7 +151,7 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
       <div className="flex min-w-0 flex-col gap-2">
         <span className="text-[12px] text-accent">{category.name}</span>
 
-        <h3 className="text-[16px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty] md:text-[18px]">
+        <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>

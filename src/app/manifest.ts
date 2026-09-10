@@ -56,11 +56,28 @@ export default function manifest(): MetadataRoute.Manifest {
         src: magPath('/icons/android-chrome-192x192.png'),
         sizes: '192x192',
         type: 'image/png',
+        purpose: 'any',
       },
       {
         src: magPath('/icons/android-chrome-512x512.png'),
         sizes: '512x512',
         type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        /*
+          MASKABLE, and separate from the two above rather than doubling as
+          them. Android crops a launcher icon to whatever shape the device
+          uses — circle, squircle, teardrop — and only the inner 80% is
+          guaranteed to survive. An `any` icon cropped that way loses the
+          triangle's corners; this one carries the mark at 60% of the canvas
+          inside a full-bleed plate, so the crop lands on empty white whatever
+          shape it takes.
+        */
+        src: magPath('/icons/maskable-512x512.png'),
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   };

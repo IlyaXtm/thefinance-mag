@@ -22,7 +22,7 @@ export function PageHeader({
   return (
     <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
       <div>
-        <h1 className="text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
+        <h1 className="text-h1 font-bold text-text-primary">
           {bidiTitle(title)}
         </h1>
         {subtitle && <p className="mt-2 text-text-secondary">{subtitle}</p>}

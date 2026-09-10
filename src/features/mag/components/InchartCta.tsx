@@ -126,7 +126,7 @@ export function InchartCta() {
       className="animate-none rounded-card border border-border-subtle bg-surface-raised p-[22px] opacity-0 [animation:tf-fade-in_200ms_ease-out_forwards] motion-reduce:opacity-100 motion-reduce:[animation:none]"
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 id="inchart-cta-heading" className="text-[16px] font-bold text-text-primary">
+        <h2 id="inchart-cta-heading" className="text-h4 font-bold text-text-primary">
           نمودارها را در اینچارت ببینید
         </h2>
 

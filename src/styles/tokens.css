@@ -438,14 +438,40 @@ body {
  * never goes below h3, and these exist so a heading added later inherits a
  * considered value rather than a browser default of 1.5em.
  *
+ * ── ONE STEP ABOVE h1, FOR THE LEAD CARD ────────────────────────────────
+ *
+ * `--fs-display` — 22 mobile / 27 desktop, the same two ratios run one step
+ * the other way (24 × 1.125 = 27; 20 × 1.09 = 21.8, rounded).
+ *
+ * It exists because adopting the scale everywhere hit one case it could not
+ * hold. The index's lead card was 26/36; the largest step the scale had was
+ * the h1's 24, and that headline sits on a card 1240px wide. Measured at 1440
+ * with the lead card on `--fs-h2`, the page's single largest editorial
+ * promise rendered at 21px — smaller than the body text of the article it
+ * links to, and visually a caption.
+ *
+ * It does NOT reintroduce "a listing heading bigger than the article's own
+ * title", which is the defect the adoption was for. That defect was two things
+ * on ONE page: the article's h1 at 24 tying with «مطالب مرتبط» at 24. Display
+ * never appears on an article page, and never on a page that also shows a
+ * visible h1 — its only consumers are the index lead card and FeaturedArticle.
+ * Per page the order is strict: index 27 → 21 → 19, article 24 → 21 → 19,
+ * listing 24 → 19.
+ *
+ * A THIRD CONSUMER NEEDS AN ARGUMENT, not a class name. The moment display
+ * appears under a visible h1 it is the old inversion again.
+ *
  * ── These are ELEMENT defaults, not the only sizes ──────────────────────
  *
  * Components that need a different size still set one, and a Tailwind utility
- * beats an element selector, so nothing that already carries `text-[Npx]`
- * changes underneath it. Card titles are component sizes; these are the
- * document's.
+ * beats an element selector. As of the scale adoption the components no longer
+ * pick their own numbers: every heading in the app takes a `text-h*` /
+ * `text-display` utility whose value comes from this block, chosen for the
+ * heading's ROLE rather than its tag depth — a footer column heading is an
+ * `<h2>` for the outline and an h5 on the page.
  */
 :root {
+  --fs-display: 22px;
   --fs-h1: 20px;
   --fs-h2: 18px;
   --fs-h3: 17px;
@@ -461,6 +487,7 @@ body {
 
 @media (min-width: 768px) {
   :root {
+    --fs-display: 27px;
     --fs-h1: 24px;
     --fs-h2: 21px;
     --fs-h3: 19px;

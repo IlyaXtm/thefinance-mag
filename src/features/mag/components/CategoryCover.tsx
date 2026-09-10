@@ -45,7 +45,7 @@ export function CategoryCover({
           />
           <div className="absolute inset-x-5 bottom-6 lg:inset-x-8" data-on-media>
             <Breadcrumbs items={crumbs} />
-            <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-on-media md:text-[34px]">
+            <h1 className="mt-2.5 text-h1 font-bold tracking-[-0.4px] text-on-media">
               {bidiTitle(title)}
             </h1>
           </div>
@@ -53,7 +53,7 @@ export function CategoryCover({
       ) : (
         <div className="px-5 pb-5 pt-6 lg:px-8">
           <Breadcrumbs items={crumbs} />
-          <h1 className="mt-2.5 text-[26px] font-bold tracking-[-0.4px] text-text-primary md:text-[34px]">
+          <h1 className="mt-2.5 text-h1 font-bold tracking-[-0.4px] text-text-primary">
             {bidiTitle(title)}
           </h1>
         </div>

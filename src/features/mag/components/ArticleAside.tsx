@@ -280,7 +280,7 @@ export function ArticleAside({ headings }: { headings: string[] }) {
       */}
       <nav
         aria-label="در این مطلب می‌خوانید"
-        className="hidden rounded-card border border-border-subtle bg-surface-raised p-5 xl:block"
+        className="hidden rounded-card border border-border-subtle bg-surface-raised p-5 wide:block"
       >
         {/*
           THE PROGRESS READOUT MOVED UP HERE, AND THE BAR WITH IT.
@@ -306,7 +306,7 @@ export function ArticleAside({ headings }: { headings: string[] }) {
           see lib/format.
         */}
         <div className="mb-2.5 flex items-baseline justify-between gap-3">
-          <p className="text-[14px] font-semibold text-text-primary">در این مطلب می‌خوانید</p>
+          <p className="text-h6 font-semibold text-text-primary">در این مطلب می‌خوانید</p>
           <p className="shrink-0 text-[12px] font-medium tabular-nums text-text-secondary">
             {toPersianDigits(progress)}٪
           </p>
@@ -345,7 +345,7 @@ export function ArticleAside({ headings }: { headings: string[] }) {
       </nav>
 
       {/* Mobile: native disclosure, closed by default, no custom JS. */}
-      <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 xl:hidden">
+      <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 wide:hidden">
         {/* `min-h-11`: the disclosure is the ONLY route to the table of
             contents below xl, and it measured 21px — under half the 44px floor
             and the smallest control on the article page. */}

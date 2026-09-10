@@ -52,7 +52,7 @@ export function ArticleRow({
         )}
 
         <div className="min-w-0 flex-1">
-          <h3 className="text-[17px] font-semibold leading-[1.6] text-text-primary transition-colors group-hover:text-accent md:text-[19px]">
+          <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary transition-colors group-hover:text-accent">
             {bidiTitle(title)}
           </h3>
 
@@ -94,7 +94,7 @@ export function SectionHeading({
 }) {
   return (
     <div className="mb-1 flex items-baseline justify-between gap-4 border-b border-border-strong pb-3">
-      <h2 className="text-[15px] font-bold text-text-primary">{title}</h2>
+      <h2 className="text-h5 font-bold text-text-primary">{title}</h2>
 
       {href && (
         <Link

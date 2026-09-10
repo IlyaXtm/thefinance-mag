@@ -90,7 +90,7 @@ export function CommentForm({ articleId }: { articleId: string }) {
       aria-labelledby="comment-form-heading"
       className="rounded-card border border-border-subtle bg-surface-raised p-5"
     >
-      <h2 id="comment-form-heading" className="text-[18px] font-bold text-text-primary">
+      <h2 id="comment-form-heading" className="text-h4 font-bold text-text-primary">
         دیدگاه شما
       </h2>
       <p className="mt-1 text-[13px] text-text-muted">

@@ -66,7 +66,7 @@ export function NewsletterCta() {
         background: 'linear-gradient(160deg, var(--accent-wash-from), var(--accent-wash-to))',
       }}
     >
-      <h2 id="newsletter-heading" className="text-[17px] font-bold text-text-primary">
+      <h2 id="newsletter-heading" className="text-h4 font-bold text-text-primary">
         خبرنامه‌ی هفتگی
       </h2>
       <p className="mt-2 text-[14px] font-light leading-[1.85] text-text-secondary">

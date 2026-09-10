@@ -73,7 +73,7 @@ export default function NotFound() {
             404
           </p>
 
-          <h1 className="mt-3 text-[28px] font-bold leading-[1.5] text-text-primary md:text-[34px]">
+          <h1 className="mt-3 text-h1 font-bold text-text-primary">
             این صفحه پیدا نشد
           </h1>
 
@@ -127,7 +127,7 @@ export default function NotFound() {
           <nav aria-labelledby="not-found-sections" className="mt-10">
             <h2
               id="not-found-sections"
-              className="text-[15px] font-semibold text-text-primary"
+              className="text-h5 font-semibold text-text-primary"
             >
               یا از این بخش‌ها شروع کنید
             </h2>

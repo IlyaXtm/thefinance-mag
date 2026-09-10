@@ -8,6 +8,236 @@ why it was made.
 
 ---
 
+## 2026-09-10 (night, second pass) — The four answers, applied
+
+Five decisions came back answered. All five are in, with the measurements that
+either confirmed the reasoning or corrected it.
+
+### 1 — Page padding: conformed to 20/100, and the cost was not where it was expected
+
+`CLAUDE.md` has always said 20/100 with no exceptions. Two shells existed —
+four `<main>` elements at `px-5 lg:px-10` (20/**40**) and `Section` at
+`px-5 lg:px-[100px]` **with no max-width at all**. Both numbers now live in one
+`.mag-gutter` class, applied by every shell, including the 1440px cap: without
+it the padding would have agreed at 1440 and still disagreed at 1920, where
+the search page ran 1720px wide against the archive's 1360.
+
+**The predicted cost — "three-column cards narrow by roughly 40px" — does not
+happen, and the reason is worth recording.** The three-column `ArticleGrid`
+appears on `/search` and `/author`, and both of those were already on the
+100px shell. Measured on the built page, old shell against new:
+
+```
+route     width   content 40→100     card
+search    1280    1080 → 1080        344 → 344     unchanged
+search    1440    1240 → 1240        397 → 397     unchanged
+search    1920    1720 → 1240        557 → 397     the CAP, not the padding
+search    2560    2360 → 1240        771 → 397     the CAP, not the padding
+```
+
+At 1280 and 1440 nothing moves. Above 1440 the cards stop growing, which is
+the cap doing its job — a 771px card at 2560 was never the intended design.
+
+The real cost landed on the routes that actually were 20/40:
+
+```
+route     width   content        lead / row card
+home      1280    1200 → 1080    715 → 642    (−73)
+home      1440    1360 → 1240    812 → 739    (−73)
+archive   1280    1200 → 1080    824 → 704    (−120)
+archive   1440    1360 → 1240    984 → 864    (−120)
+```
+
+120px off the archive's full-width rows and 73px off the index lead card. Both
+still hold their images and their clamped titles. Taken, as instructed.
+
+**Where it genuinely bit was the article page, and neither rule was bent.**
+100px gutters take 120px out of every desktop row, and the article's column
+counts had been chosen against 40. Measured immediately after conforming the
+padding and before fixing it:
+
+```
+1024   two columns     body 476px   ~48 characters
+1280   three columns   body 424px   ~42 characters
+1440   three columns   body 584px   ~58 characters
+```
+
+against a 700px measure `CLAUDE.md` calls calibrated to IRANYekanX. **The
+column count moved up a breakpoint instead of the text getting narrower** —
+which is the argument the article page's own note already made at 1024
+("about 30 Persian characters a line, less than half the 70–73 the type scale
+is built for"), arriving at two more widths because the row shrank:
+
+```
+< 1280   one column, contents as a <details> above the article
+1280+    article + end rail        1080 − 300 − 48 = 732 → caps at 700
+1440+    all three                 208 + 32 + 700 + 32 + 268 = 1240
+```
+
+The body column now measures **exactly 700px at 1024, 1280, 1440, 1600 and
+1920**. It had never held at more than three of those — 596/544/700/700/700
+before the gutter change, 476/424/584/584/584 after it and before this. The
+header row follows the body's tracks at `wide`, so the h1 and the first
+paragraph share an inline-start edge and a width.
+
+`wide` (1440px) is a new named breakpoint and it is a CONTENT CAP, not a
+device: above it `.mag-gutter` stops growing, so 1240px is the content width
+at every larger width too, and the three-column row is exact rather than
+fluid. Tailwind's own 2xl is 1536 — past the point where the cap engages.
+
+CLAUDE.md is unchanged. The rule was right; the code had drifted from it.
+
+### 2 — The type scale: adopted everywhere, and one step added
+
+For its first day the scale governed ONE heading. Every other heading carried a
+hardcoded pixel value, because a Tailwind utility beats the `@layer base`
+element rule. Five different `<h1>` sizes shipped.
+
+**Every heading now takes a `text-*` utility off `--fs-*`.** Rendered across 17
+routes at both breakpoints: 57 distinct headings, and the only three without a
+utility are `.article-body`'s own `<h2>`s, which take the same tokens through
+the element rule.
+
+**Chosen by ROLE, not by tag depth.** A footer column heading is an `<h2>` for
+the outline and an h5 on the page; a comment form's «دیدگاه شما» is an `<h2>`
+and an h4. Mapping tag→step would have printed a 21px heading over a footer
+link list.
+
+The full scale, both breakpoints:
+
+```
+              mobile  desktop   colour       used for
+  display       22      27      primary      index lead card only
+  h1            20      24      primary      every page title, article and listing
+  h2            18      21      primary      section headings, .article-body h2
+  h3            17      19      primary      every card title
+  h4          15.5      17      primary      panel headings (comment form, CTAs)
+  h5            14      15      secondary    rail and footer list labels
+  h6            13    13.5      muted        the smallest labels (ToC, aside)
+  body          17      18      —            unchanged, as instructed
+  dek           17      18      secondary
+  meta        12.5      13      muted
+  caption       13      14      muted
+```
+
+**Body text did not move and did not need to.** The instruction was that if
+deriving the scale put an article `h2` level with or above the 24px `h1`, the
+body scale comes down. It does not: `.article-body h2` is 21 against an h1 of
+24, and that gap was already established when the h1 was first set to 20/24 —
+the body scale came down then. Nothing here required it to come down again.
+
+**One step was ADDED rather than forced: `--fs-display`, 22/27.** The index
+lead card was 26/36 and the scale's ceiling was the h1's 24. Put on `--fs-h2`
+it rendered at **21px on a card 1240px wide** — the page's largest editorial
+promise, set smaller than the body text of the article it links to, and reading
+as a caption. Display is derived, not chosen: one step further along the same
+two ratios (24 × 1.125 = 27; 20 × 1.09 ≈ 22).
+
+It does not reintroduce the defect the adoption was for. That defect was two
+things on ONE page — the article h1 at 24 tying with «مطالب مرتبط» at 24.
+Display never appears on an article page or under a visible `<h1>`; its
+consumers are the index lead card and `FeaturedArticle`. Per page the order is
+now strict:
+
+```
+index      27 → 21 → 19
+article    24 → 21 → 19        («مطالب مرتبط» is 21 now, not 24)
+listing    24 → 19
+```
+
+**A third consumer needs an argument, not a class name** — the moment display
+appears under a visible h1 it is the old inversion again.
+
+**The weight column left the recorded scale.** It said 700 for h1–h4 and 600
+for h5–h6, and the code has never matched: card titles are `font-semibold` at
+h3, and that 600-against-700 contrast is what separates a card title from a
+section heading once the sizes are one step apart. Sizes are the scale; weights
+stay a component decision. B34 still stands separately — the rule says
+400/600/700 and `font-light` is used in twelve places.
+
+`FeaturedArticle` turns out to have no callers — it is exported from the barrel
+and used nowhere. It took its scale step along with everything else; whether it
+should exist at all is a separate question and is not answered here.
+
+### 3 — «FINANCE PULSE» removed, at every size
+
+Pulse is not part of this brand. The wordmark is gone from the tab icon, the
+apple-touch icon and both launcher icons — **including the launcher sizes where
+it was perfectly legible**, because the objection is the name, not the
+rendering. A name the site does not use should not appear on a home screen
+either. Cropped at the transparent gutter the export already put between the
+mark and the bar, so the mark itself is untouched.
+
+A maskable launcher icon was added while regenerating the set: Android crops a
+launcher icon to whatever shape the device uses and only the inner 80% is
+guaranteed, so an `any` icon cropped that way loses the triangle's corners.
+The maskable one carries the mark at 60% of a full-bleed plate.
+
+### 4 — `display: standalone` stays out, and is now a recorded deferral
+
+Backlog **B35**, with the reasoning in the content numbers rather than the
+code: `standalone` promises *this is a thing you open daily*, and an
+installable app opening onto a magazine whose newsletter subscribed nobody,
+whose archive tags 14 of 54 articles, and none of whose articles has a
+hand-written dek is a worse first impression than a web page opening onto the
+same thing. Revisit when the newsletter works and the archive is tagged.
+
+Everything else the manifest needs is committed. Adding the field later is one
+line in a file that is otherwise finished.
+
+### 5 — The font: applied
+
+`src/app/fonts/IRANYekanX.woff2` is **81,576 bytes, down from 95,404** — the
+unused `dots` axis dropped. Verified after the write: 648 glyphs, 462
+codepoints, `wght` still 100–1000, 11 named instances, ZWNJ present.
+
+Measured on the throttled mobile profile: the font now arrives at **1326 ms
+instead of 1613**, cutting 287 ms off the window in which the fallback is on
+screen.
+
+**What that bought, and what it did not.** Desktop CLS is now **0.0000 on every
+route measured** — it was 0.0201 on an article — and the index's mobile CLS
+went 0.0230 → 0.0005. But the longest article's mobile CLS is **unchanged at
+0.0974**: the shift simply moved earlier, from 1735 ms to 1465 ms. CLS scores
+how much moves, not when. Getting that last number down means making the
+fallback's metrics match the webfont's, which is the `size-adjust` problem this
+project cannot solve honestly from a container with no Persian system fonts
+installed.
+
+```
+MOBILE  Pixel 5 · 4x CPU · 1.6 Mbps · 150 ms
+route                                  TTFB   FCP    LCP    CLS      longTasks
+/mag                                      9    748    748  0.0005      576ms
+/mag/archive                            327   1028   1028  0.0041      554ms
+/mag/notcoin-guide                        9    768    768  0.0165      553ms
+/mag/stress-long-technical-analysis      12    808    808  0.0974      634ms
+/mag/stress-rich-article                  9    900    900  0.0082      804ms
+
+DESKTOP 1440 — CLS 0.0000 on all five, LCP 288–592 ms
+```
+
+The 400–700 variant stays rejected: `font-light` (300) is used in twelve
+places and that axis would silently render every one of them at 400.
+
+### Verification
+
+Every sweep re-run against the final build, because the padding and type
+changes touch every route:
+
+```
+structure   17 routes x 8 widths (320→1440)   0 findings
+contrast    3,261 rendered samples, 3 themes  0 failures
+a11y        17 routes x 2 widths              0 beyond the known exemptions
+keyboard    34 walks, 1,226 tab stops         0 invisible rings, skip link first on all 34
+invariants  9 routes x 7 widths               all hold
+```
+
+Both sweeps have caught regressions in this project that looked cosmetic, which
+is why they run on a change like this one rather than only on a change that
+looks structural.
+
+---
+
 ## 2026-09-10 (later) — The favicon pack, wired up
 
 A generated favicon pack arrived: the Finance mark in its LIGHT colourway —

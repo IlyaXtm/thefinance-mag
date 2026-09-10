@@ -45,7 +45,7 @@ export function NewsRow({ article }: { article: ArticleSummary }) {
       </div>
 
       <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-span-1">
-        <h3 className="text-[16px] font-medium leading-[1.6] text-text-primary [text-wrap:pretty] sm:text-[18px]">
+        <h3 className="text-h3 font-medium leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
@@ -79,7 +79,7 @@ export function NewsDayGroup({
   return (
     <section className="mb-8">
       <div className="mb-2.5 flex items-center gap-4">
-        <h2 className="text-[14px] font-semibold text-accent">{formatJalali(isoDate)}</h2>
+        <h2 className="text-h5 font-semibold text-accent">{formatJalali(isoDate)}</h2>
         <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
         <span className="text-[12.5px] text-text-muted">
           {toPersianDigits(articles.length)} خبر

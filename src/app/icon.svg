@@ -14,12 +14,15 @@
   straight out of android-chrome-512x512.png, 900 bytes against 33KB, and sharp
   at every size a browser asks for instead of at the three it was exported at.
 
-  WHY NO «FINANCE PULSE» WORDMARK. Two reasons, either sufficient. It is
-  illegible below about 48px — at 32 it renders as a row of grey speckle and at
-  16 it is gone — and it costs a tenth of the icon's height to say nothing.
-  And the magazine is «مجله فایننس» / TheFinance; "Pulse" appears nowhere in
-  this product. A tab is the last place to introduce a name the site does not
-  use. The full lockup is kept for the launcher sizes, where it is legible.
+  NO WORDMARK, AT ANY SIZE. The pack's mark carries a wordmark bar reading a
+  name this product does not use — the magazine is «مجله فایننس» / TheFinance —
+  so it is not a lockup to reproduce at the sizes where it happens to be
+  legible. It is removed from the tab icon, the apple-touch icon and both
+  launcher icons alike, cropped at the transparent gutter the export already
+  put between the mark and the bar. A brand name is not a legibility question.
+
+  (It was illegible below about 48px in any case: grey speckle at 32, gone at
+  16, for a tenth of the icon's height.)
 -->
 <rect width="64" height="64" rx="14" fill="#FFFFFF"></rect>
 <g transform="translate(32 32) scale(0.72) translate(-164 -28)"><path fill-rule="evenodd" clip-rule="evenodd" d="M157.553 47.8532L147.104 29.5693H139.047L149.495 47.8532H157.553Z" fill="#0163E1"></path>

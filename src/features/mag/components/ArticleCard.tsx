@@ -85,7 +85,7 @@ export function ArticleCard({
             The min-height is what keeps a short title from pulling the meta
             row up and breaking row alignment.
           */}
-          <h3 className="mt-2 min-h-[51px] text-[17px] font-semibold leading-[1.5] text-text-primary [display:-webkit-box] [overflow:hidden] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+          <h3 className="mt-2 min-h-[51px] text-h3 font-semibold text-text-primary [display:-webkit-box] [overflow:hidden] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
             {bidiTitle(title)}
           </h3>
 

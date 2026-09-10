@@ -1004,9 +1004,18 @@ today. This is about which number the floor should be, not about a gap.
 
 ---
 
-## B29 — 🟠 Page padding is 20/40, and CLAUDE.md says 20/100
+## B29 — ✅ Page padding is 20/40, and CLAUDE.md says 20/100
 
-**Status:** open, small, found while measuring something else.
+**Status:** CLOSED 2026-09-10 — conformed to 20/100 on every route, and the
+1440px cap with it. One `.mag-gutter` class now holds both numbers, so the two
+shells cannot drift apart again. The cost, stated: three-column cards narrow
+from 437px to 397px at 1440 and 384 → 344 at 1280, both still clearing two
+clamped title lines and a 16:9 image. The article page needed its column
+breakpoints moved up a stop to keep the 700px measure — see the changelog.
+
+Original entry follows.
+
+**Status was:** open, small, found while measuring something else.
 
 `CLAUDE.md` states page horizontal padding of **20px mobile / 100px desktop**.
 
@@ -1080,9 +1089,19 @@ honest, and it has now been caught being honest about the wrong thing.
 
 ---
 
-## B31 — 🟠 The type scale governs one heading out of twenty-three
+## B31 — ✅ The type scale governs one heading out of twenty-three
 
-**Status:** open, medium, found by the 2026-09-10 UI review.
+**Status:** CLOSED 2026-09-10 — adopted everywhere. 57 distinct headings across
+17 routes now render from `--fs-*`; the only ones without a `text-*` utility
+are `.article-body`'s own `<h2>`s, which take the same tokens through the
+`@layer base` element rule. One step was ADDED — `--fs-display`, 22/27 — for
+the index lead card, because at `--fs-h2` the page's largest editorial promise
+rendered at 21px on a 1240px card. The reasoning and the full table are in the
+changelog.
+
+Original entry follows.
+
+**Status was:** open, medium, found by the 2026-09-10 UI review.
 
 Round K put a full type scale in `tokens.css` — `--fs-h1` … `--fs-h6`, both
 breakpoints — with the explicit instruction to set it there "not as a one-off
@@ -1126,9 +1145,18 @@ overridden in twenty-two — is the one option that teaches nobody anything.
 
 ---
 
-## B32 — 🟢 The article body measure is 544px at 1280–1439
+## B32 — ✅ The article body measure is 544px at 1280–1439
 
-**Status:** open, small, found by the 2026-09-10 UI review.
+**Status:** CLOSED 2026-09-10, by the padding conformance that would otherwise
+have made it worse. Conforming the gutter to 100px cut the row by 120px and
+took the measure to 476/424/584 at 1024/1280/1440; the fix was to move each
+column count up one breakpoint rather than narrow the text. The body column is
+now exactly 700px at 1024, 1280, 1440, 1600 and 1920 — it had never held at
+more than three of those. See the changelog.
+
+Original entry follows.
+
+**Status was:** open, small, found by the 2026-09-10 UI review.
 
 CLAUDE.md fixes the content column at **700px**, calibrated to IRANYekanX at
 70–73 characters, and says a typeface change means re-measuring it. At 1280–
@@ -1148,9 +1176,17 @@ and say so in CLAUDE.md next to the 700.
 
 ---
 
-## B33 — 🟡 The font carries an axis nothing uses — 14.5% of it
+## B33 — ✅ The font carries an axis nothing uses — 14.5% of it
 
-**Status:** open, small, VERIFIED but not applied.
+**Status:** CLOSED 2026-09-10 — applied. `src/app/fonts/IRANYekanX.woff2` is
+now 81,576 bytes, down from 95,404, with the `dots` axis dropped. Verified
+after the write: 648 glyphs, 462 codepoints, `wght` still 100–1000, 11 named
+instances, ZWNJ present. The 400–700 variant stays rejected for the reason
+below.
+
+Original entry follows.
+
+**Status was:** open, small, VERIFIED but not applied.
 
 IRANYekanX ships two variable axes: `wght` 100–1000 and `dots` 0–4. Nothing in
 this codebase sets `dots`. Dropping it:
@@ -1203,3 +1239,40 @@ future attempt to narrow the `wght` axis has to know 300 is in use.
 
 Either add 300 to the stated set or replace the three uses that matter with
 400. Do not leave the rule saying something the code has never done.
+
+---
+
+## B35 — 🟡 Installability: `display: standalone` is deferred, not forgotten
+
+**Status:** deferred 2026-09-10, by decision. Revisit when the conditions below
+change.
+
+The favicon pack's `site.webmanifest` asked for `display: standalone` and the
+committed `manifest.ts` deliberately leaves it out. Without it Chrome treats
+the magazine as a web page; with it, Chrome offers to install it, and it gets
+a home-screen icon, no address bar and its own launch behaviour.
+
+**The reason is in the content numbers, not the code.** `standalone` makes a
+promise — *this is a thing you open daily* — and an installable app that opens
+onto the current magazine is a worse first impression than a web page that
+opens onto the same thing:
+
+- the newsletter is hidden because it subscribed nobody
+- 14 of 54 articles carry a market tag
+- no article has a hand-written dek (0 of 54, per roadmap.md)
+
+An app icon on a home screen is the most committed surface a reader can give a
+publication, and it is asked for before the publication has given them a reason
+to open it twice.
+
+**What has to be true to revisit:** the newsletter works, and the archive is
+tagged. At that point the magazine has a repeat-visit story, and `standalone`
+is one field plus a decision about what the launch view should be — an
+installed app opening on the same index a browser does is usually the wrong
+answer, so that is the design question this defers, not the field.
+
+Everything else the manifest needs is already committed: real Persian
+`name`/`short_name`, `lang`/`dir`, `start_url` and `scope` under the basePath,
+the dark theme colour, and both `any` and `maskable` icons. Adding
+`display: standalone` later is a one-line change to a file that is otherwise
+finished.

@@ -126,6 +126,36 @@
  */
 @layer components {
   /*
+   * THE PAGE GUTTER — one class, because there were two shells and the rule
+   * says there is one.
+   *
+   * CLAUDE.md states 20px mobile / 100px desktop with no exceptions. Measured
+   * across every route, six families rendered 20/40 (`px-5 lg:px-10` on four
+   * <main> elements) and four rendered 20/100 (Section). A reader moving from
+   * /mag/archive to /mag/search saw the content block jump 60px, and the next
+   * page added would have inherited whichever shell it was copied from.
+   *
+   * The two shells also disagreed above 1440: the <main> ones capped at
+   * 1440px and Section had no cap at all, so at 1920 the search page ran
+   * 1720px wide against the archive's 1360. Conforming the padding without
+   * the cap would have left that one standing, so both live here.
+   *
+   * Written as one class rather than a repeated utility string precisely so
+   * the next shell cannot quietly pick different numbers.
+   */
+  .mag-gutter {
+    margin-inline: auto;
+    max-width: 1440px;
+    padding-inline: 20px;
+  }
+
+  @media (min-width: 1024px) {
+    .mag-gutter {
+      padding-inline: 100px;
+    }
+  }
+
+  /*
    * A CARD THAT CLIPS ITS OWN IMAGE ALSO CLIPS ITS FOCUS RING.
    *
    * Measured on /author and /search at 390 and 1440: tabbing onto an article

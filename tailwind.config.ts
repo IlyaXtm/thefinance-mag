@@ -12,6 +12,19 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /*
+       * `wide` is the content cap, not a device.
+       *
+       * `.mag-gutter` caps the page at 1440px and pads it 100px, so content is
+       * 1240px at 1440 AND AT EVERY WIDTH ABOVE IT. Layouts that need a
+       * specific content width therefore key off 1440 — the point where the
+       * cap engages — and Tailwind's own 2xl (1536) is past it. The article's
+       * three-column layout is the one consumer: 208 + 32 + 700 + 32 + 268 is
+       * exactly 1240, and it cannot exist below that.
+       */
+      screens: {
+        wide: '1440px',
+      },
       colors: {
         surface: 'var(--surface)',
         'surface-raised': 'var(--surface-raised)',
@@ -66,6 +79,11 @@ const config: Config = {
        * one thing the rescale was told not to move.
        */
       fontSize: {
+        /* One step above h1, for the index lead card only — see tokens.css.
+           1.35 rather than 1.5: at 27px a Persian headline of two or three
+           lines needs less leading, not more, and the old lead card carried
+           exactly that value. */
+        display: ['var(--fs-display)', { lineHeight: '1.35' }],
         h1: ['var(--fs-h1)', { lineHeight: '1.5' }],
         h2: ['var(--fs-h2)', { lineHeight: '1.5' }],
         h3: ['var(--fs-h3)', { lineHeight: '1.5' }],

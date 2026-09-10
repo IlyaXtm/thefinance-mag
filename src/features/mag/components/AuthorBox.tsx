@@ -61,7 +61,7 @@ export function AuthorBox({
 
       <div className="min-w-0">
         {isCurrentPage ? (
-          <h1 className="text-[24px] font-bold leading-[1.5] text-text-primary md:text-[28px]">
+          <h1 className="text-h1 font-bold text-text-primary">
             {author.name}
           </h1>
         ) : (

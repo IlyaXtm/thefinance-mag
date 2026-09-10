@@ -61,7 +61,7 @@ export default async function MagIndexPage() {
   const grid = rest.slice(2, 8);
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="mag-gutter">
       <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 8))]} />
 
       <h1 className="sr-only">{MAG_NAME}</h1>
@@ -93,7 +93,7 @@ export default async function MagIndexPage() {
           <div className="mb-6 flex items-center gap-4">
             <h2
               id="latest-heading"
-              className="text-[22px] font-bold tracking-[-0.2px] text-text-primary md:text-[24px]"
+              className="text-h2 font-bold tracking-[-0.2px] text-text-primary"
             >
               تازه‌ترین مطالب
             </h2>

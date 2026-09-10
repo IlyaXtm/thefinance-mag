@@ -86,7 +86,7 @@ export function TableOfContents({ headings }: { headings: string[] }) {
     <>
       {/* Desktop — sticky in the inline-end column, the LEFT side in RTL. */}
       <nav aria-label="در این مقاله" className="sticky top-8 hidden lg:block">
-        <p className="mb-3 text-[13px] font-semibold text-text-muted">در این مقاله</p>
+        <p className="mb-3 text-h6 font-semibold text-text-muted">در این مقاله</p>
         {/*
           Capped height with internal scroll. Articles here run long — the
           technical-analysis piece is a 41-minute read — and an uncapped list
@@ -98,7 +98,7 @@ export function TableOfContents({ headings }: { headings: string[] }) {
 
       {/* Mobile — native disclosure, closed by default, no custom JS. */}
       <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 lg:hidden">
-        <summary className="cursor-pointer list-none text-[14px] font-semibold text-text-primary">
+        <summary className="cursor-pointer list-none text-h6 font-semibold text-text-primary">
           در این مقاله
         </summary>
         <ul className="mt-3 max-h-[50vh] space-y-0.5 overflow-y-auto">{links}</ul>

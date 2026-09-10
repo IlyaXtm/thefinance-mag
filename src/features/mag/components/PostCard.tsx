@@ -41,7 +41,7 @@ export function PostCard({ article }: { article: ArticleSummary }) {
           <CardDate iso={article.publishedAt} />
         </div>
 
-        <h3 className="text-[19px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
+        <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
@@ -111,7 +111,7 @@ export function ArchiveCard({
           <CardDate iso={article.publishedAt} />
         </div>
 
-        <h3 className="text-[19px] font-semibold leading-[1.6] text-text-primary [text-wrap:pretty] lg:text-[21px]">
+        <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>

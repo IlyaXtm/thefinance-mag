@@ -291,7 +291,7 @@ export default async function ArticlePage({
   ];
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-[1440px] px-5 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="mag-gutter">
       {isPreview && <PreviewBanner />}
 
       <JsonLdScript
@@ -325,20 +325,23 @@ export default async function ArticlePage({
         being second in the DOM, so a screen reader still meets the h1 before
         the figure.
 
-        AT xl THE TWO TRACKS ARE THE BODY GRID'S TRACKS, and that is a fix
+        AT `wide` THE TWO TRACKS ARE THE BODY GRID'S TRACKS, and that is a fix
         rather than a coincidence. They were `[320px 700px]` with a 56px gap
-        inside a 1076px box while the body below is `[260px 704px 300px]` with
-        a 48px gap — so the headline began 68px inside its own article's text
-        at every width from 1280 up. Measured: h1 inline-start 416, body
-        inline-start 348, at 1280, 1440 and 1600 alike. Matching 260 + 48
-        puts both at 348 and both at the 700px measure.
+        while the body below was `[260px 704px 300px]` with a 48px gap — so the
+        headline began 68px inside its own article's text at every width from
+        1280 up. Matching the body's own numbers puts both at the same
+        inline-start and both at the 700px measure. When the gutter became
+        100px and the body's three-column row was re-cut to
+        `208 + 32 + 700 + 32 + 268`, this row followed it to `208 + 32 + 700`:
+        940px, and the h1 starts where the first paragraph starts.
 
-        BELOW xl THEY STILL DO NOT ALIGN — 272px apart at 768–1023, 340px at
-        1024–1279 — and that one is left alone deliberately. There the body has
-        no inline-start rail to sit beside, so the offset is the full width of
-        the hero image: large enough to read as a two-column header rather than
-        as a near miss. Closing it would mean giving up the side-by-side header
-        at those widths, which is the arrangement that was asked for.
+        BELOW `wide` THEY DO NOT ALIGN, deliberately. There the body has no
+        inline-start rail to sit beside, so the offset is the full width of the
+        hero image — large enough to read as a two-column header rather than as
+        a near miss. Closing it would mean giving up the side-by-side header at
+        those widths, which is the arrangement that was asked for. The text
+        column still caps at 700 from `lg` up, so the headline is never wider
+        than the paragraph it introduces.
 
         MOBILE STACKS WITH THE IMAGE FIRST, via `order`, and that is a choice
         rather than a fallback — on a phone the picture establishes the subject
@@ -371,7 +374,7 @@ export default async function ArticlePage({
         data-hero-grid=""
         className={
           hasHero
-            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10 xl:max-w-[1008px] xl:grid-cols-[260px_minmax(0,700px)] xl:gap-12'
+            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,700px)] md:items-center md:gap-8 lg:gap-10 wide:max-w-[940px] wide:grid-cols-[208px_minmax(0,700px)] wide:gap-8'
             : 'mt-5 max-w-[700px]'
         }
       >
@@ -656,18 +659,36 @@ export default async function ArticlePage({
 
 
       {/*
-        THREE COLUMNS ONLY AT xl (1280+).
+        THE COLUMN COUNT IS DECIDED BY THE 700px MEASURE, AT EVERY BREAKPOINT.
 
-        The obvious `lg:grid-cols-[260px_1fr_300px]` is wrong and measurably
-        so: at exactly 1024 it leaves the article column 299px wide — about 30
-        Persian characters a line, less than half the 70–73 the type scale is
-        built for. The design's responsive note says the post page drops to two
-        columns between 1024 and 1279, with the contents collapsing into a
-        `<details>` above the article, and this is why.
+        The rule this layout serves is CLAUDE.md's: the content column is 700px,
+        calibrated to IRANYekanX at 70–73 characters. Every breakpoint here is
+        the width at which one more column can be added without going under it.
 
-        So: one column below lg, article + right rail at lg, all three at xl.
+        THESE MOVED UP ONE STOP WHEN THE PAGE GUTTER BECAME 100px. The gutter
+        was 40 on this page and the rule said 100; conforming it (see
+        `.mag-gutter`) took 120px out of every desktop row, and the old
+        breakpoints stopped clearing the measure. Measured, before the shift:
+
+          1024 two columns   body 476px   ~48 characters
+          1280 three columns body 424px   ~42 characters
+          1440 three columns body 584px   ~58 characters
+
+        which is the same defect the previous note here described at 1024 —
+        "about 30 Persian characters a line, less than half the 70–73 the type
+        scale is built for" — arriving at two more widths because the row got
+        narrower. The answer is the one that note already reached: add the
+        column later, not narrow the text.
+
+          < 1280   one column, contents as a <details> above the article
+          1280+    article + right rail        1080 − 300 − 48 = 732 → caps at 700
+          1440+    all three                   208 + 32 + 700 + 32 + 268 = 1240
+
+        1440 is where `.mag-gutter`'s cap engages, so 1240 is the content width
+        at every width above it too — the three-column row is exact and never
+        grows. See the `wide` screen in tailwind.config.ts.
       */}
-      <div className="mt-9 grid items-start gap-8 lg:mt-11 lg:grid-cols-[1fr_300px] lg:gap-12 xl:grid-cols-[260px_1fr_300px]">
+      <div className="mt-9 grid items-start gap-8 xl:mt-11 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-12 wide:grid-cols-[208px_minmax(0,700px)_268px] wide:gap-8">
         {/*
           `sticky` GOES ON THE GRID ITEM, not on the panel inside it — the same
           shape the right-hand rail below uses, deliberately, because two
@@ -692,11 +713,11 @@ export default async function ArticlePage({
           <details> disclosure, not a rail — and a sticky strip there would
           pin a collapsed accordion over the text. See ArticleAside.
         */}
-        <div className="lg:order-2 lg:col-span-2 xl:order-1 xl:col-span-1 xl:sticky xl:top-[76px]">
+        <div className="xl:order-2 xl:col-span-2 wide:order-1 wide:col-span-1 wide:sticky wide:top-[76px]">
           <ArticleAside headings={article.outline} />
         </div>
 
-        <div className="min-w-0 lg:order-3 xl:order-2">
+        <div className="min-w-0 xl:order-3 wide:order-2">
           <ArticleBody html={article.content} />
 
           <div className="mt-10 flex flex-col gap-8">
@@ -707,7 +728,7 @@ export default async function ArticlePage({
           </div>
         </div>
 
-        <aside className="flex flex-col gap-6 lg:sticky lg:order-4 lg:top-[76px] xl:order-3">
+        <aside className="flex flex-col gap-6 xl:sticky xl:order-4 xl:top-[76px] wide:order-3">
           <LinkListCard
             title={onwardTitle}
             items={onwardItems.map((a) => ({
@@ -725,7 +746,7 @@ export default async function ArticlePage({
           <div className="mb-6 flex items-center gap-4">
             <h2
               id="related-heading"
-              className="text-[22px] font-bold tracking-[-0.2px] text-text-primary md:text-[24px]"
+              className="text-h2 font-bold tracking-[-0.2px] text-text-primary"
             >
               مطالب مرتبط
             </h2>

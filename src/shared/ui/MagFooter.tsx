@@ -296,7 +296,7 @@ function FooterColumn({
 }) {
   return (
     <div className={wide ? 'col-span-2 lg:col-span-1' : undefined}>
-      <h2 className="text-[15px] font-semibold text-text-primary">{title}</h2>
+      <h2 className="text-h5 font-semibold text-text-primary">{title}</h2>
       <ul className={`mt-3 grid ${wide ? 'grid-cols-2 lg:grid-cols-1' : 'grid-cols-1'}`}>
         {children}
       </ul>

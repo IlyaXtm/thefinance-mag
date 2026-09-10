@@ -507,16 +507,26 @@ still met a headline and an image before any prose. So the header became two
 columns — text and image side by side, the whole thing inside one screen, and
 the body beginning directly under it.
 
-Measured on the built page:
+Measured on the built page (updated 2026-09-10, after the gutter conformance):
 
-  1440 / 1280   text 700 · image 320   (31% of the pair)
-  1024          text 604 · image 300
+  1440+         text 700 · image 208   — the header row is the body's own tracks
+  1280          text 700 · image 240
+  1024          text 544 · image 240
   768           text 456 · image 240
   390 / 320     stacked, image first, full width
 
 **700 is the number that does not move.** It is the measure calibrated to
 IRANYekanX at 70–73 characters, so below xl the IMAGE gives way rather than the
-text column dropping under it. The no-cropping rule above is untouched and now
+text column dropping under it.
+
+**The header row IS the body's grid, from 1440 up.** Amended 2026-09-10. The
+two were laid out independently — the header `[320px 700px]` gap 56, the body
+`[260px 704px 300px]` gap 48 — so the headline began 68px inside its own
+article's first paragraph at every desktop width. They now share one set of
+numbers: 208 + 32 + 700, which is the body's row minus its end rail. Below 1440
+they do not align and that is deliberate: the body has no inline-start rail
+there, so the offset is the full width of the hero image, which reads as a
+two-column header rather than as a near miss. The no-cropping rule above is untouched and now
 does even less work: at 320px wide, no clamp is being asked for much.
 
 **The image takes the inline-start column; the text sits beside it.** Amended
@@ -669,6 +679,32 @@ Inline rather than `<img>` for two reasons: «مجله» is a live `<text>` node
 an externally-loaded SVG cannot reach the page's fonts, and the header logo
 stays markup on the LCP path rather than a request that can 400.
 
+**The favicon carries the mark and no wordmark, at any size.** Amended
+2026-09-10, after a generated favicon pack was supplied.
+
+The pack is the same mark in the LIGHT colourway — `#071331` triangle, the same
+three blues — on transparency, with a wordmark bar reading «FINANCE PULSE».
+Two things follow.
+
+*The wordmark is removed everywhere, and that is a brand call rather than a
+legibility one.* Pulse is not part of this brand: the magazine is «مجله فایننس»
+/ TheFinance, and the word appears nowhere in the product. It is gone from the
+tab icon, the apple-touch icon and both launcher icons alike — including the
+sizes where it would have been perfectly readable, because a name the site does
+not use should not appear on a home screen either. (It was also illegible below
+about 48px: grey speckle at 32, gone at 16, for a tenth of the icon's height.)
+
+*The ground is part of the icon.* `#071331` on transparency measures about
+1.1:1 against Chrome's dark tab strip, so at 16 and 32 the triangle and its
+baseline vanish and three blue bars float with no shape around them. An icon
+does not choose what is behind it. White, because that is the ground this
+colourway was drawn for — and the same plate carries into `apple-icon`, since
+iOS composites a transparent touch icon onto black.
+
+`icon.svg` keeps the vector paths the mark already had and takes the pack's
+four colours: 2.2 KB and sharp at any size, against a 33 KB raster exported at
+three. The three blues stay literal here too, for the reason above.
+
 **The typeface in the logo is IRANYekanX, overriding the asset's own README.**
 The pack specifies Vazirmatn Light and supplies a Google Fonts `<link>`. Both
 are refused: the typeface is fixed product-wide by CLAUDE.md — Blog v4 shipped
@@ -677,6 +713,55 @@ foreign CDN may sit on the critical path of a site served from Iran behind
 ArvanCloud. `font-family: inherit`, weight 300, a real instance of the variable
 face. To match the drawing exactly, outline the word in IRANYekanX; never load
 a second face.
+
+---
+
+## Page gutter
+
+**One class holds 20/100 and the 1440px cap.** Decided 2026-09-10; closes
+backlog B29 and B32.
+
+CLAUDE.md has always said 20px mobile / 100px desktop, "no exceptions". Two
+shells existed. Four `<main>` elements carried `px-5 lg:px-10` — 20 and **40** —
+and `Section` carried `px-5 lg:px-[100px]` and **no max-width at all**. So the
+content block jumped 60px between `/mag/archive` and `/mag/search` at 1440, and
+at 1920 the search page ran 1720px wide against the archive's 1360.
+
+Both numbers now live in `.mag-gutter`, applied by every shell. A repeated
+utility string is how the second convention appeared in the first place.
+
+**The cost, stated rather than discovered later.** Three-column listing cards
+narrow from 437px to 397px at 1440, and 384 → 344 at 1280. Measured on the
+built page: both still hold a 16:9 image and a two-line clamped title, so the
+card works at the smaller figure. That is the whole cost on listings.
+
+**The article page was where it actually bit.** 100px gutters take 120px out of
+every desktop row, and the article's column counts had been chosen against 40.
+Measured immediately after conforming the padding and before fixing it:
+
+  1024   two columns     body 476px   ~48 characters
+  1280   three columns   body 424px   ~42 characters
+  1440   three columns   body 584px   ~58 characters
+
+against a 700px measure that CLAUDE.md calls calibrated to the typeface. Two
+rules collided and neither was going to be bent: **the column count moved up a
+breakpoint instead.**
+
+  < 1280   one column, contents as a <details> above the article
+  1280+    article + end rail          1080 − 300 − 48 = 732 → caps at 700
+  1440+    all three                   208 + 32 + 700 + 32 + 268 = 1240
+
+This is the same argument the article page's own note already made at 1024 —
+"about 30 Persian characters a line, less than half the 70–73 the type scale is
+built for" — arriving at two more widths because the row got narrower. The
+answer was the one that note reached: add the column later, never narrow the
+text. The body column now measures exactly 700px at 1024, 1280, 1440, 1600 and
+1920; it had never held at more than three of those.
+
+**1440 is a content cap, not a device.** Above it `.mag-gutter` stops growing,
+so 1240px is the content width at every larger width too. The `wide` breakpoint
+in tailwind.config.ts is named for that, and the three-column row is exact
+rather than fluid because it can never have more room than it has at 1440.
 
 ---
 
@@ -709,17 +794,54 @@ reviewer's decision and are recorded as that — not as a measurement of a
 reference. Everything else is derived: desktop steps down from 24 at ~1.125,
 mobile from 20 at ~1.09.
 
-                mobile  desktop   weight  colour
-  h1              20      24        700   primary
-  h2              18      21        700   primary
-  h3              17      19        700   primary
-  h4            15.5      17        700   primary
-  h5              14      15        600   secondary
-  h6              13    13.5        600   muted
-  body            17      18        400   —
-  dek             17      18        400   secondary
-  meta          12.5      13        400   muted
-  caption         13      14        400   muted
+              mobile  desktop   colour
+  display       22      27        primary     ← added 2026-09-10
+  h1            20      24        primary
+  h2            18      21        primary
+  h3            17      19        primary
+  h4          15.5      17        primary
+  h5            14      15        secondary
+  h6            13    13.5        muted
+  body          17      18        —
+  dek           17      18        secondary
+  meta        12.5      13        muted
+  caption       13      14        muted
+
+**ADOPTED EVERYWHERE 2026-09-10.** For its first day this scale governed ONE
+heading — the article `<h1>` — while twenty-two components kept hardcoded
+pixel values, because a Tailwind utility beats the `@layer base` element rule.
+Five different `<h1>` sizes shipped (20/24, 24/28, 26/32, 26/34, 28/34), and on
+an article page at 1440 the title (24) tied exactly with the «مطالب مرتبط»
+label at the foot of the same page while a listing title was 34.
+
+Every heading now takes a `text-*` utility off these tokens. 57 distinct
+headings across 17 routes; the only ones without a utility are `.article-body`'s
+own `<h2>`s, which take the same values through the element rule.
+
+**Chosen by ROLE, not by tag depth.** A footer column heading is an `<h2>` for
+the outline and an h5 on the page; a comment form's «دیدگاه شما» is an `<h2>`
+and an h4. Mapping tag→step instead would have printed a 21px heading over a
+footer link list. The rule is: what is this heading's rank ON THIS PAGE.
+
+**One step was added rather than forced.** `--fs-display` (22/27) exists
+because the index lead card would not fit the scale: at `--fs-h2` the page's
+largest editorial promise rendered at 21px on a card 1240px wide — smaller
+than the body text of the article it links to. It is derived, not chosen: one
+step further along the same two ratios (24 × 1.125 = 27; 20 × 1.09 ≈ 22).
+
+It does not reintroduce the defect the adoption was for. That defect was two
+things on ONE page. Display never appears on an article page or under a visible
+`<h1>`; its consumers are the index lead card and FeaturedArticle. Per page the
+order is strict — index 27 → 21 → 19, article 24 → 21 → 19, listing 24 → 19.
+**A third consumer needs an argument, not a class name.**
+
+**The weight column is gone from this table, deliberately.** It recorded 700
+for h1–h4 and 600 for h5–h6, and the code has never matched: card titles are
+`font-semibold` (600) at h3, and that 600-against-700 contrast is what
+separates a card title from a section heading once the sizes are one step
+apart. Sizes are the scale; weights stay a component decision. See B34 for the
+related gap — the rule says 400/600/700 and `font-light` (300) is used in
+twelve places.
 
 **Derived, not adjusted tag by tag.** Forty-odd `text-[Npx]` literals with no
 relationship to each other is how a hierarchy drifts a pixel at a time: a new

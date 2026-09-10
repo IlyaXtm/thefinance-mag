@@ -54,7 +54,7 @@ export function FeaturedArticle({ article }: { article: ArticleSummary }) {
             allowed three lines rather than the two a Latin design would give
             it — clamping tighter would truncate mid-thought.
           */}
-          <h2 className="mt-3 text-[24px] font-bold leading-[1.5] text-text-primary transition-colors group-hover:text-accent md:text-[32px]">
+          <h2 className="mt-3 text-display font-bold text-text-primary transition-colors group-hover:text-accent">
             {bidiTitle(title)}
           </h2>
 
