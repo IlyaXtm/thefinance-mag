@@ -331,6 +331,26 @@ to merge them: `decisions.md` chose two axes over six because taxonomy bloat is
 this category's documented failure, and a nav that blurs them undoes that
 quietly.
 
+**A dropdown hangs from the edge it shares with its trigger.** Amended
+2026-09-10, from a screenshot of the «بازارها» panel.
+
+The markets panel was `absolute end-0` — pinned to the trigger's inline-END —
+so in RTL its LEFT edge sat on the trigger's left edge and the rest hung out in
+the inline-start direction, under «تحلیل» and «آموزش». Measured at 1024, 1280,
+1440, 1600 and 1920: the trigger is 55px wide, the panel 240, and the panel's
+start edge landed **185px past the trigger's at every width**. A menu that
+opens under a different item than the one you pointed at reads as a stray box,
+which is a thing no amount of elevation or offset fixes — and both of those had
+already been added trying to fix it.
+
+The logical property was right and the side was wrong. A dropdown aligns on the
+edge it shares with its trigger and grows AWAY from it in the reading
+direction: right-aligned growing left in RTL, left-aligned growing right in
+LTR. That is `start-0` in both. `end-0` is the OVERFLOW variant, for a trigger
+close enough to the inline-start edge that a panel would clip — and this nav
+sits mid-header. At 1024, the tightest width the menu appears at, `start-0`
+puts the panel at 399..639 in a 1024 viewport.
+
 **The masthead links to the magazine.** Every publication's masthead links to
 that publication's home. The route back to the main site is a separate, quieter
 link at the end of the row — an exit, not a destination the magazine promotes,

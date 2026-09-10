@@ -8,6 +8,49 @@ why it was made.
 
 ---
 
+## 2026-09-10 (night, third pass) — The markets menu opened under the wrong item
+
+Reported from a screenshot: the «بازارها» panel looked detached from its
+trigger. It was, by a measurable amount.
+
+`absolute end-0` pins a panel to its trigger's inline-END, which in RTL is the
+LEFT edge — so the panel's left edge sat on the trigger's left edge and the
+remaining width hung out in the inline-start direction, landing under «تحلیل»
+and «آموزش». The trigger is 55px wide and the panel is 240, so the overhang was
+the difference:
+
+```
+width   trigger [L..R]     panel [L..R]     start-edge gap
+1024    [ 584.. 639]       [ 584.. 824]     −185px
+1280    [ 840.. 895]       [ 840..1080]     −185px
+1440    [1000..1055]       [1000..1240]     −185px
+1600    [1080..1135]       [1080..1320]     −185px
+1920    [1240..1295]       [1240..1480]     −185px
+```
+
+`start-0` puts it at 0px at all five.
+
+**The logical property was right; the side was wrong** — which is why this
+survived a review that specifically checked for `left`/`right`. `end-0` is
+correctly logical and correctly mirrors; it just mirrors the wrong alignment. A
+dropdown hangs from the edge it SHARES with its trigger and grows away from it
+in the reading direction, which is `start-0` in both directions. `end-0` is the
+overflow variant, for a trigger near the inline-start edge — and this nav sits
+mid-header. At 1024, the tightest width the menu appears at, `start-0` leaves
+399px of room.
+
+Worth noting what the old comment claimed: "Measured at 1024, where the header
+row is tightest, the panel stays inside the viewport." True, and it was
+answering the wrong question — staying inside the viewport is not the same as
+sitting under the control. Two earlier passes had added `mt-2` and a panel
+shadow trying to stop it reading as a stray box; neither could, because the box
+was in the wrong place.
+
+No other component uses this pattern — `start-0`/`end-0` on an absolutely
+positioned panel appears once in the codebase.
+
+---
+
 ## 2026-09-10 (night, second pass) — The four answers, applied
 
 Five decisions came back answered. All five are in, with the measurements that

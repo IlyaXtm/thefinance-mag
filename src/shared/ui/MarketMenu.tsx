@@ -226,16 +226,32 @@ export function MarketMenu({ markets }: { markets: Market[] }) {
             v2 dark themes a tight dark shadow is invisible against a dark page,
             so this leans on spread and a low alpha, which reads on all three.
 
-            `end-0`, a logical property: the panel hangs from the trigger's
-            inline-end — the left in RTL, the right in LTR — without the
-            component knowing which.
+            `start-0`, and the logical property was right while the side was
+            wrong. This was `end-0` — the panel pinned to the trigger's
+            inline-END, so in RTL its LEFT edge sat on the trigger's left edge
+            and the other 185px hung out in the inline-start direction, under
+            «تحلیل» and «آموزش». Measured at 1024, 1280, 1440, 1600 and 1920:
+            the trigger is 55px wide, the panel 240, and the panel's start edge
+            landed 185px past the trigger's every time. A menu that opens under
+            a different nav item than the one you pointed at reads as a stray
+            box no amount of elevation fixes.
+
+            A dropdown hangs from the edge it shares with its trigger and grows
+            AWAY from it, in the reading direction: right-aligned and growing
+            left in RTL, left-aligned and growing right in LTR. That is
+            `start-0` in both.
+
+            `end-0` is the OVERFLOW variant, and it was not needed here: this
+            nav sits mid-header, never at the inline-start edge. At 1024, the
+            tightest width the menu appears at, `start-0` puts the panel at
+            399..639 in a 1024 viewport — 399px of room to spare. It would take
+            a panel wider than the whole nav to clip.
 
             `min-w-[240px]`: «اقتصاد جهانی» is the longest label and needs the
             room, and a menu whose width changes with its contents reads as
-            unstable. Measured at 1024, where the header row is tightest, the
-            panel stays inside the viewport.
+            unstable.
           */
-          className="absolute end-0 top-full z-20 mt-2 min-w-[240px] rounded-card border border-border-subtle bg-surface-raised p-2"
+          className="absolute start-0 top-full z-20 mt-2 min-w-[240px] rounded-card border border-border-subtle bg-surface-raised p-2"
           /* Inline, from a token. A Tailwind arbitrary `shadow-[…]` compiled to
              `rgba(0,0,0,0) 0px 0px 0px` here — no shadow at all — and it looked
              correct in the class list, which is why this was measured rather
