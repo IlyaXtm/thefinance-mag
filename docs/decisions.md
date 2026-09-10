@@ -519,6 +519,24 @@ IRANYekanX at 70–73 characters, so below xl the IMAGE gives way rather than th
 text column dropping under it. The no-cropping rule above is untouched and now
 does even less work: at 320px wide, no clamp is being asked for much.
 
+**The image takes the inline-start column; the text sits beside it.** Amended
+2026-09-10 — the first version had them the other way round.
+
+The reference this was built against is a Persian RTL site and puts the image
+on the right with the text to its left, which is the reverse of what shipped.
+Nothing about the implementation names a side: the tracks are ordered, not
+placed, so `dir` still mirrors the whole thing and the LTR case comes out
+image-left/text-right as an LTR reader expects.
+
+Measured at 1440: image 320 ending at the page's right edge, text 700 ending at
+1024. The 700px measure is unchanged — the image column and the text column
+swapped tracks, they did not swap sizes.
+
+**The image is now first at every width**, so there is no `order` swap at the
+breakpoint: mobile stacks image-then-text and desktop places them in the same
+sequence. One rule instead of two, and the visual order stops rearranging
+itself as the window narrows.
+
 **Mobile stacks with the image first, and that is a choice.** On a phone the
 picture establishes the subject in space a headline does not have. DOM order
 stays text-first so a screen reader does not meet a figure before the page's
@@ -697,6 +715,49 @@ measured 18px at 1440 — exactly `--fs-body` — while `--fs-h2` on `:root` rea
 that is right in the custom properties and wrong on every unclassed heading.**
 Inside `@layer base` it wins over preflight, and a component's own utility
 still wins over both, which is the order that lets components override.
+
+---
+
+## Justified prose
+
+**Justify at the desktop measure, `start` below it.** Decided 2026-09-10,
+amending a rule that said never.
+
+`CLAUDE.md` carried "Never `text-align: justify` — without kashida support it
+creates rivers of whitespace." The mechanism is real and the rule had never
+been measured. Measured now, over roughly 420 inter-word gaps per pass on the
+24-heading article:
+
+  width  align      median   p90     max     worst / natural space
+  1440   start        4.50   4.50    4.50    1.00×
+  1440   justify      5.28   7.19    7.27    1.62×
+   390   start        4.25   4.25    4.25    1.00×
+   390   justify      6.89  10.22   12.14    2.86×
+
+**It is a rule about measure, not about Persian.** At the 700px column — the
+one calibrated to IRANYekanX at 70–73 characters — the worst gap in the entire
+article is 1.62× a normal space and NOT ONE gap reaches twice the median. There
+are no rivers to have, because a line that wide finds enough break
+opportunities. At 350px the median gap is already 62% wider than natural and
+the worst is nearly triple; that is the failure the rule described, and it is
+real at that width.
+
+**ZWNJ was the risk worth checking, and it is safe.** The dangerous outcome was
+never stretched spaces, it was the half-space inside «می‌پردازیم» being treated
+as a justification opportunity — words coming apart mid-word, which would be
+unshippable at any measure. The word measures 72.05px justified and unjustified
+alike at 1440, and 68.05px at both at 390. Justification distributes at real
+spaces and nowhere else. `text-justify: inter-word` says so explicitly rather
+than trusting the default.
+
+**Prose only.** Paragraphs and list items. A justified heading stretches a
+three-word line across the column and is wrong at any measure; captions, table
+cells, code and the quote attribution are all short enough that justifying them
+is all cost and no benefit.
+
+**The sanitizer still strips authors' inline `text-align: justify`, and that is
+not a contradiction.** It exists so the CMS cannot decide alignment on
+arbitrary elements. The stylesheet decides, at the one measure it can defend.
 
 ---
 

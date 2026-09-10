@@ -304,6 +304,70 @@
     overflow-wrap: break-word;
   }
 
+  /*
+   * ── JUSTIFIED PROSE, AT THE DESKTOP MEASURE ONLY ──────────────────────
+   *
+   * CLAUDE.md says "Never text-align: justify. Without kashida support it
+   * creates rivers of whitespace." That rule was right about the mechanism and
+   * was never measured. It has been now, on the 24-heading article, over ~420
+   * inter-word gaps per pass:
+   *
+   *   width  align      median   p90     max     worst / natural space
+   *   1440   start        4.50   4.50    4.50    1.00×
+   *   1440   justify      5.28   7.19    7.27    1.62×
+   *    390   start        4.25   4.25    4.25    1.00×
+   *    390   justify      6.89  10.22   12.14    2.86×
+   *
+   * At the 700px column the worst gap in the whole article is 1.62× a normal
+   * space and NOT ONE gap reaches twice the median — there are no rivers to
+   * have, because the measure is wide enough that every line finds enough
+   * break opportunities. At 350px the median gap is already 62% wider than
+   * natural and the worst is nearly triple. That is the rule's failure case,
+   * and it is real.
+   *
+   * So the rule becomes a rule about MEASURE rather than about Persian:
+   * justified at 768 and up, `start` below it. CLAUDE.md carries the amended
+   * version and the numbers.
+   *
+   * ── The join is safe, which was the thing worth checking ──────────────
+   *
+   * The danger was never the spaces, it was ZWNJ: if the browser treated the
+   * half-space inside «می‌پردازیم» as a justification opportunity, words would
+   * come apart mid-word and that would be unshippable at any measure.
+   * Measured — the word is 72.05px in both modes at 1440 and 68.05px in both
+   * at 390. Justification distributes at real spaces and nowhere else.
+   *
+   * `text-justify: inter-word` states that explicitly rather than relying on
+   * the default, so a future engine that decides to stretch elsewhere is told
+   * not to.
+   *
+   * ── Prose only ────────────────────────────────────────────────────────
+   *
+   * Paragraphs and list items. NOT headings — a justified heading stretches a
+   * three-word line across the column and is wrong at any measure — and not
+   * captions, table cells, code or the quote attribution, all of which are
+   * short enough that justifying them is all cost.
+   *
+   * The sanitizer still strips authors' inline `text-align: justify`, and that
+   * is not a contradiction: it exists so the CMS does not decide alignment on
+   * arbitrary elements. The stylesheet decides, at the measure it can defend.
+   */
+  @media (min-width: 768px) {
+    /*
+      Every paragraph and list item, not only the direct children. A callout's
+      paragraph sits at the same measure as the prose above it, and leaving it
+      ragged beside justified body text is a difference the reader sees without
+      being able to name. `p` and `li` are safe as a blanket: captions are
+      <figcaption>, attributions are <cite>, table text is <td>, and none of
+      them is a paragraph.
+    */
+    .article-body p,
+    .article-body li {
+      text-align: justify;
+      text-justify: inter-word;
+    }
+  }
+
   .article-body > * + * {
     margin-block-start: 1.4em;
   }

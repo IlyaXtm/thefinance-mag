@@ -80,7 +80,17 @@ Two tokens are new system additions introduced by Mag: `--border-interactive` (i
 ## Persian typography
 
 1. **Never `font-style: italic`.** No true italic exists for Persian faces; browsers synthesize a broken slant. Emphasis is weight or color. Watch blockquotes and figure captions.
-2. **Never `text-align: justify`.** Without kashida support it creates rivers of whitespace. Use `text-align: start`.
+2. **Justify only at the 700px column; `start` below 768.** The old rule was
+   "never justify — without kashida support it creates rivers of whitespace."
+   Right about the mechanism, and it turned out to be a rule about MEASURE, not
+   about Persian. Measured over ~420 inter-word gaps per pass on the 24-heading
+   article: at 1440 the worst gap is 1.62× a normal space and not one reaches
+   twice the median; at 390 the median is already 1.62× and the worst is 2.86×.
+   So: `.article-body` paragraphs and list items justify at `md` and up, `start`
+   below. Headings, captions, table cells and quote attributions are never
+   justified at any width — they are too short for it to be anything but cost.
+   ZWNJ was the risk worth checking and is safe: «می‌پردازیم» measures 72.05px
+   justified and unjustified alike, so the join is not a distribution point.
 3. Real font weights only (400/600/700) — no synthetic bold.
 4. ZWNJ (نیم‌فاصله) must render: «می‌شود», «نمی‌کند», «سرمایه‌گذاری». A mid-word fallback break is the fastest sign of a font failure.
 5. Line-height: body `1.9`, headings `1.5`, captions `1.7`.

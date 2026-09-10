@@ -352,11 +352,11 @@ export default async function ArticlePage({
         data-hero-grid=""
         className={
           hasHero
-            ? 'mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-10 xl:max-w-[1076px] xl:grid-cols-[minmax(0,700px)_320px] xl:gap-14'
+            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10 xl:max-w-[1076px] xl:grid-cols-[320px_minmax(0,700px)] xl:gap-14'
             : 'mt-5 max-w-[700px]'
         }
       >
-        <div className="order-2 min-w-0 md:order-1">
+        <div className="order-2 min-w-0">
         {/*
           THE KICKER — one chip or two, and the design's third is missing on
           purpose.
@@ -454,9 +454,15 @@ export default async function ArticlePage({
           stop balancing past their line cap anyway, and pretty does the one
           thing that matters here — it prevents a single orphaned word on the
           last line.
+
+          JUSTIFIED AT md AND UP, on the same evidence and at the same measure
+          as the body — see the note in globals.css. It sits in the 700px text
+          column, so it gets the treatment that column can defend, and `start`
+          below 768 where it cannot. The two properties compose: `pretty`
+          chooses where the lines break, `justify` distributes what is left.
         */}
         {article.excerpt && (
-          <p className="mt-4 text-dek text-text-secondary [text-wrap:pretty]">
+          <p className="mt-4 text-dek text-text-secondary [text-wrap:pretty] md:text-justify md:[text-justify:inter-word]">
             {article.excerpt}
           </p>
         )}
@@ -526,7 +532,7 @@ export default async function ArticlePage({
           320. Measured that way for one build — and it looks deliberate in a
           screenshot, because the picture simply appears to be the wide one.
         */}
-        <div className="order-1 min-w-0 md:order-2">
+        <div className="order-1 min-w-0">
         {/* Featured image — the ONE priority image on this page. */}
         {article.featuredImage && heroRatios && (
           /* `data-hero`: tells MediaErrorGuard to REMOVE this figure if the image
