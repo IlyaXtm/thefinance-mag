@@ -315,11 +315,30 @@ export default async function ArticlePage({
         changes the order: text column and image sit side by side, the whole
         header occupies one screen, and the body starts directly under it.
 
-        DIRECTION. The text column is FIRST IN THE DOM and takes grid column 1,
-        which RTL resolves to the right — text right, image left, matching the
-        reference. Nothing here names a side: swap `dir` and the whole thing
-        mirrors. `left`/`right` would have looked identical in Persian and been
-        silently wrong in the LTR case.
+        DIRECTION. The FIGURE takes grid column 1, which RTL resolves to the
+        right — image right, text left. This comment used to say the opposite,
+        and it was describing the arrangement before the reviewer asked for the
+        image on the inline-start side; the code moved and the note did not.
+        Nothing here names a side: swap `dir` and the whole thing mirrors.
+        `left`/`right` would have looked identical in Persian and been silently
+        wrong in the LTR case. The text column carries `order-2` rather than
+        being second in the DOM, so a screen reader still meets the h1 before
+        the figure.
+
+        AT xl THE TWO TRACKS ARE THE BODY GRID'S TRACKS, and that is a fix
+        rather than a coincidence. They were `[320px 700px]` with a 56px gap
+        inside a 1076px box while the body below is `[260px 704px 300px]` with
+        a 48px gap — so the headline began 68px inside its own article's text
+        at every width from 1280 up. Measured: h1 inline-start 416, body
+        inline-start 348, at 1280, 1440 and 1600 alike. Matching 260 + 48
+        puts both at 348 and both at the 700px measure.
+
+        BELOW xl THEY STILL DO NOT ALIGN — 272px apart at 768–1023, 340px at
+        1024–1279 — and that one is left alone deliberately. There the body has
+        no inline-start rail to sit beside, so the offset is the full width of
+        the hero image: large enough to read as a two-column header rather than
+        as a near miss. Closing it would mean giving up the side-by-side header
+        at those widths, which is the arrangement that was asked for.
 
         MOBILE STACKS WITH THE IMAGE FIRST, via `order`, and that is a choice
         rather than a fallback — on a phone the picture establishes the subject
@@ -352,7 +371,7 @@ export default async function ArticlePage({
         data-hero-grid=""
         className={
           hasHero
-            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10 xl:max-w-[1076px] xl:grid-cols-[320px_minmax(0,700px)] xl:gap-14'
+            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-10 xl:max-w-[1008px] xl:grid-cols-[260px_minmax(0,700px)] xl:gap-12'
             : 'mt-5 max-w-[700px]'
         }
       >

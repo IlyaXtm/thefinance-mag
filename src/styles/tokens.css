@@ -219,16 +219,40 @@
   --text-secondary: #3a4359;
   --text-muted: #4d5874; /* 6.43 on raised */
 
-  /* The logo's deep blue — the other end of the same ramp. #10A5F5 measures
-     2.72 on white and is unusable as text here; #0163E1 measures 5.42 and is
-     the mark's own colour rather than a darkened guess. */
-  --accent: #0163e1;
-  --accent-contrast: #ffffff; /* 5.42 on accent */
-  --accent-soft: rgba(1, 99, 225, 0.1);
+  /*
+   * The logo's deep blue, taken down one step — and the step is measured.
+   *
+   * This token was #0163E1, the mark's own colour, on the argument that 5.42
+   * against white beat "a darkened guess". The argument was right about the
+   * surfaces it checked and wrong about the one it did not: the soft chip.
+   * `--accent` text on `--accent-soft` over a card measures 4.27, under the
+   * 4.5 floor, on every listing card in this theme. That pairing is two
+   * tokens and one of them had to move.
+   *
+   * MOVING THIS ONE RATHER THAN THE FILL, because the fill cannot be fixed.
+   * Dropping --accent-soft's alpha to 0.04 still only reaches 4.65, and a 4%
+   * tint over an off-white card is not a pill any more — it is a chip with no
+   * chip. Darkening the text raises every pair in the theme at once:
+   *
+   *   pair                              #0163E1   #015BD0
+   *   accent on soft-over-card             4.27      4.83
+   *   accent on soft-over-surface          4.69      5.29
+   *   accent on white                      5.42      6.16
+   *   --accent-contrast (white) on accent  5.42      6.16
+   *
+   * THE MARK ITSELF IS UNTOUCHED. MagLogo.tsx keeps #0163E1 · #10A5F5 ·
+   * #00DBFF literal, as its own note requires — those three are the artwork.
+   * This is the UI token that happened to be set to one of them, and it is
+   * following the same path --accent-2 (#00DBFF → #0090C4) and --warn
+   * (#FFB44D → #8A5200) already took in this theme for the same reason.
+   */
+  --accent: #015bd0;
+  --accent-contrast: #ffffff; /* 6.16 on accent */
+  --accent-soft: rgba(1, 91, 208, 0.1);
   /* Lighter than the dark themes on purpose: the same 16% over white is a
      heavy blue panel, not a wash. */
-  --accent-wash-from: rgba(1, 99, 225, 0.09);
-  --accent-wash-to: rgba(1, 99, 225, 0.02);
+  --accent-wash-from: rgba(1, 91, 208, 0.09);
+  --accent-wash-to: rgba(1, 91, 208, 0.02);
   /* Darkened from #00DBFF, which measures 1.67 on white — a bar nobody can
      see is not a brand moment. */
   --accent-2: #0090c4;
@@ -238,13 +262,16 @@
    *
    * #4D9AFE measures 2.85 against white and 2.59 against surface-raised,
    * failing WCAG 2.2 SC 1.4.11 (3:1 for focus indicators) — keyboard focus is
-   * effectively invisible. The darker accent measures 6.12 / 5.55.
+   * effectively invisible. The darker accent measures 6.16 / 5.59.
    *
    * This is a SYSTEM-LEVEL defect, not a Mag one: every focus indicator on the
    * light theme site-wide has it. Fixed here so Mag is correct; the redesign
    * token layer needs the same fix.
+   *
+   * It tracks --accent deliberately — one blue, so a focused control and the
+   * link beside it cannot end up two different blues.
    */
-  --focus-ring: #0163e1;
+  --focus-ring: #015bd0;
 
   --danger: #a8180f; /* 7.49 vs surface · 6.80 vs raised */
   /* NOT #FFB44D. The design's amber measures 1.72 against white — invisible

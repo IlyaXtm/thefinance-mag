@@ -1009,12 +1009,36 @@ today. This is about which number the floor should be, not about a gap.
 **Status:** open, small, found while measuring something else.
 
 `CLAUDE.md` states page horizontal padding of **20px mobile / 100px desktop**.
-Every page container in the app is `px-5 lg:px-10` — 20 and **40**.
+
+**AMENDED 2026-09-10 after the UI review measured it: there are TWO conventions
+in the app, not one, and this entry only knew about the first.** Measured from
+the outermost text leaf on every route, excluding scrollers and `sr-only`:
+
+```
+                  390    768    1024   1440
+home              20     20     40     40
+archive           20     20     40     40      ← ArchiveShell: px-5 lg:px-10
+category/market   20     20     40     40
+article           20     20     40     40
+news              20     20     40     40
+authors           20     20     100    100     ← Section: px-5 lg:px-[100px]
+search            20     20     100    100
+author            20     20     100    100
+404               20     20     100    100
+```
+
+Mobile is compliant everywhere. On desktop the content block **jumps 60px**
+moving from `/mag/archive` to `/mag/search` — the same site, two page shells.
+So this is no longer only "the code never met a stated constraint"; the code
+does not agree with itself, and one of the two shells does meet the constraint.
 
 It has been that way since the listing was built, so this is a documentation
 question at least as much as a layout one: the max-width container plus 40px
 produces a similar optical inset at 1440 to what 100px would give on a
 narrower content column, and nobody has complained about the built pages.
+Conforming everything to 100 is the larger change — it narrows each card in the
+3-column grid by roughly 40px — which is why the review reported it rather than
+picking a side.
 
 Not changed here because it is site-wide chrome and this round was the article
 page. Someone should decide which number is right and then make the two agree —
@@ -1053,3 +1077,129 @@ Two possible fixes, and the second is better:
 
 Worth doing: every measurement in this project rests on that guard being
 honest, and it has now been caught being honest about the wrong thing.
+
+---
+
+## B31 — 🟠 The type scale governs one heading out of twenty-three
+
+**Status:** open, medium, found by the 2026-09-10 UI review.
+
+Round K put a full type scale in `tokens.css` — `--fs-h1` … `--fs-h6`, both
+breakpoints — with the explicit instruction to set it there "not as a one-off
+on the article page". `globals.css` applies it to bare `h1`…`h6` in
+`@layer base`, so it is the default. Twenty-two headings opt out of it with
+hardcoded pixel utilities, which beat a base-layer element rule. `text-h1` is
+consumed in exactly one place: the article `<h1>`.
+
+Five different `<h1>` sizes ship:
+
+```
+20 / 24    article            (from the scale)
+24 / 28    AuthorBox
+26 / 32    news
+26 / 34    CategoryCover
+28 / 34    PageHeader, authors, 404
+```
+
+The visible consequence at 1440: the article's own title is 24px and the
+«مطالب مرتبط» label at the foot of the same page is also 24px, while a listing
+page's `<h1>` is 34px. The article headline is the smallest `<h1>` on the site
+and ties with a related-articles label.
+
+**The 20/24 article title is not the thing to reopen** — it was the reviewer's
+explicit decision, recorded as such in the Round K changelog entry, and it is
+correct for a title that sits beside a hero image. What is open is that the
+rest of the site never adopted the scale, so that decision has no context to
+sit in.
+
+Two ways to close it, and they are not equivalent:
+
+1. Point the twenty-two components at `text-h2`/`text-h3`/etc. and let the
+   scale actually be the scale. Cheapest to write, and it rescales the whole
+   site in one commit — which needs a designer to look at it, not a reviewer.
+2. Decide the scale describes ARTICLE BODY typography only and that page
+   chrome sizes itself, then write that down in CLAUDE.md so the next person
+   does not read the scale as site-wide and "fix" the components to match.
+
+Whichever, the current state — a scale that is authoritative in one place and
+overridden in twenty-two — is the one option that teaches nobody anything.
+
+---
+
+## B32 — 🟢 The article body measure is 544px at 1280–1439
+
+**Status:** open, small, found by the 2026-09-10 UI review.
+
+CLAUDE.md fixes the content column at **700px**, calibrated to IRANYekanX at
+70–73 characters, and says a typeface change means re-measuring it. At 1280–
+1439 the article body renders **544px**: the three-column grid is
+`[260px 1fr 300px]` with 48px gaps inside a 1200px content box, leaving
+`1200 − 260 − 300 − 96 = 544`. Roughly 55 characters.
+
+Pre-existing, and it became visible in the same review that aligned the
+article `<h1>` to the body's inline-start edge: at 1280 the headline is 700px
+wide directly above a 544px column, so the discrepancy now reads as a mistake
+rather than as a narrow page.
+
+At 1440 and up the column reaches its 700 and the two match exactly. So this is
+a question about one 160px band of widths, and the honest options are to drop a
+rail below 1440, narrow the rails, or accept a shorter measure at laptop widths
+and say so in CLAUDE.md next to the 700.
+
+---
+
+## B33 — 🟡 The font carries an axis nothing uses — 14.5% of it
+
+**Status:** open, small, VERIFIED but not applied.
+
+IRANYekanX ships two variable axes: `wght` 100–1000 and `dots` 0–4. Nothing in
+this codebase sets `dots`. Dropping it:
+
+```
+fonttools varLib.instancer -o IRANYekanX.woff2 --no-optimize \
+    src/app/fonts/IRANYekanX.woff2 dots=drop
+```
+
+95,404 → **81,576 bytes**. Same 648 glyphs, same 462 codepoints, same `wght`
+range, same 11 named instances, and metric-identical: the rendered advance
+width of a mixed Persian/Latin/digit sample at 100px is the same to four
+decimal places at every weight stop from 100 to 1000.
+
+**Why it matters more than 13KB sounds.** The font is the largest asset on
+every page — larger than all JavaScript (121 KB transfer), the CSS (11 KB) and
+the images. It is preloaded and starts at 180 ms, but on a 1.6 Mbps mobile
+profile 93 KB takes 1433 ms to arrive, leaving the fallback on screen for
+roughly 940 ms after FCP. Every CLS number on this site traces to that window:
+the longest article measures 0.0974 against a 0.1 target.
+
+**Limiting `wght` to 400–700 as well is REJECTED**, and not for the reason the
+first check flagged. That reached 47,280 bytes — a 50% cut — and the metric
+check reported 214 advance-width differences at weight 600, all ±1 unit at 1000
+upem, rendering as 0.313px over a 1853px paragraph with identical line
+breaking. Not a real objection. The real one is coverage: `font-light` (300) is
+used in twelve places — the hero dek, card excerpts, the footer description,
+the news and 404 pages — so a 400–700 axis would silently render every one of
+them at 400.
+
+Left unapplied only because replacing the font binary was outside what the
+review pass could do. The command above reproduces it exactly.
+
+---
+
+## B34 — 🟢 CLAUDE.md says weights 400/600/700; the code uses 300 throughout
+
+**Status:** open, tiny, a documentation question.
+
+Typography rule 3 reads "Real font weights only (400/600/700) — no synthetic
+bold." `font-light` (300) appears in twelve components: HeroFeature's dek,
+PostCard excerpts, CategoryCover, NewsletterCta, InchartCta, MagFooter's
+description and legal block, the news page and the 404.
+
+Nothing is wrong with the rendering — 300 comes from a variable axis that spans
+100–1000, so it is a real weight and not a synthesised light. The rule's intent
+is anti-synthetic-bold and that intent is met. But the rule states a SET, the
+code uses a weight outside it, and B33 turned that into a live decision: any
+future attempt to narrow the `wght` axis has to know 300 is in use.
+
+Either add 300 to the stated set or replace the three uses that matter with
+400. Do not leave the rule saying something the code has never done.

@@ -97,6 +97,23 @@ export default async function SearchPage({
               «<span className="ltr">{query}</span>»
             </p>
 
+            {/*
+              A VISUALLY-HIDDEN <h2>, because the outline skipped a level here.
+              Measured: this page went h1 → h3 (the card titles) with nothing
+              between, on both 390 and 1440. CLAUDE.md names the remedy exactly
+              — "if a grid is the only content and a visible heading adds
+              nothing, use a visually-hidden <h2> rather than skipping h1 → h3"
+              — and ArchiveShell already does this. Search had been missed.
+
+              It is not decoration: the count line above it is a <p>, so before
+              this a screen-reader user moving by heading went from the page
+              title straight into individual article titles with no announced
+              boundary for the result set itself.
+            */}
+            <h2 id="search-results-heading" className="sr-only">
+              نتایج جستجو
+            </h2>
+
             <ArticleGrid articles={results.items} />
             {/* Query string, not a path segment: /search/page/2 is not a
                 route and would drop `q` even if it were. */}

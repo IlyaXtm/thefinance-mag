@@ -103,7 +103,18 @@ export default function NotFound() {
               name="q"
               type="search"
               placeholder="موضوعی را جست‌وجو کنید"
-              className="h-[46px] min-w-0 flex-1 rounded-full border border-border-interactive bg-surface-raised px-4 text-[15px] text-text-primary outline-none placeholder:text-text-muted focus:border-accent"
+              /*
+                `sm:flex-1`, NOT `flex-1`.
+                The form is `flex-col` below `sm`, so on a phone the main axis
+                is VERTICAL — and `flex-1` is `flex: 1 1 0%`, whose zero basis
+                overrides `h-[46px]` on that axis. Measured at 390px: the input
+                rendered 22px tall instead of 46, a squashed search box on the
+                one page whose whole job is to offer a way out, and under both
+                SC 2.5.8's 24px floor and this project's own 44px floor for
+                controls. Growing to fill the row is only meaningful once the
+                row exists, which is exactly what `sm:` says.
+              */
+              className="h-[46px] min-w-0 rounded-full border border-border-interactive bg-surface-raised px-4 text-[15px] text-text-primary outline-none placeholder:text-text-muted focus:border-accent sm:flex-1"
             />
             <button
               type="submit"

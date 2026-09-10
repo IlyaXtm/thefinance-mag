@@ -92,6 +92,43 @@ const THEMES = [
 const TEXT = ['--text-secondary', '--text-muted'];
 const SURFACES = ['--surface', '--surface-raised', '--surface-hover'];
 
+/**
+ * TINTED FILLS — the gap that let a real failure through.
+ *
+ * The check above pairs text tokens with opaque surfaces, and every pair
+ * passed. It never asked what happens when a TINTED fill sits between them,
+ * which is exactly what the soft chip is: `--accent` text on `--accent-soft`,
+ * and `--accent-soft` is an alpha tint that composites over whichever surface
+ * the component is placed on. Measured on a rendered listing card in v2-light
+ * it came out at 4.25 — below the floor, on every card on the site, while this
+ * script reported all clear.
+ *
+ * So the fill is composited over each surface first and the text measured
+ * against THAT, which is what the reader's eye is actually doing.
+ */
+const TINTED = [
+  {
+    text: '--accent',
+    fill: '--accent-soft',
+    /*
+      NOT `--surface-hover`, and the omission is measured rather than
+      convenient. The soft chip has exactly one consumer — PostCard — and
+      PostCard's hover is a BORDER shift, not a background one: forcing :hover
+      through CDP and re-sampling the rendered pixel returns the same backdrop
+      in all three themes. ArticleCard is the card that hovers to
+      `--surface-hover`, and it carries no chip.
+      Over that surface the pair would read 4.20 in v1 and 4.47 in v2-light,
+      so if a soft chip is ever placed on a hovering card, add the surface
+      back here and expect it to fail. Fixing it then means a LIGHTER accent
+      in v1 (the hover surface is lighter than the base) and a darker one in
+      v2-light — the two themes pull opposite ways, which is why this is a
+      placement rule rather than a token that can absorb both.
+    */
+    surfaces: ['--surface', '--surface-raised'],
+  },
+  { text: '--warn', fill: '--warn-soft' },
+];
+
 const rows = [];
 const problems = [];
 
@@ -118,6 +155,23 @@ for (const [theme, selector] of THEMES) {
       rows.push({ theme, text: t, surface: s, ratio: r });
     }
   }
+
+  for (const { text, fill, surfaces } of TINTED) {
+    const fg = tokenIn(block, text);
+    const tint = tokenIn(block, fill);
+    if (!fg || !tint) {
+      problems.push(`${theme}: ${text} or ${fill} not found`);
+      continue;
+    }
+    for (const s of surfaces ?? SURFACES) {
+      const bgc = tokenIn(block, s);
+      if (!bgc) continue;
+      /* the tint composites over the surface; the text then sits on that */
+      const bg = composite(tint, bgc.slice(0, 3));
+      const eff = fg[3] < 1 ? composite(fg, bg) : fg.slice(0, 3);
+      rows.push({ theme, text, surface: `${fill} on ${s.replace('--surface', 'srf')}`, ratio: ratio(eff, bg) });
+    }
+  }
 }
 
 /*
@@ -142,12 +196,12 @@ if (root) {
 
 const pad = (s, n) => String(s).padEnd(n);
 console.log(`\nContrast — text tokens against every surface they are used on\n`);
-console.log(pad('theme', 12), pad('text token', 22), pad('surface', 22), 'ratio   AA 4.5');
+console.log(pad('theme', 12), pad('text token', 22), pad('surface', 30), 'ratio   AA 4.5');
 for (const r of rows) {
   const ok = r.ratio >= FLOOR;
   if (!ok) problems.push(`${r.theme}: ${r.text} on ${r.surface} = ${r.ratio.toFixed(2)}`);
   console.log(
-    pad(r.theme, 12), pad(r.text, 22), pad(r.surface, 22),
+    pad(r.theme, 12), pad(r.text, 22), pad(r.surface, 30),
     pad(r.ratio.toFixed(2), 7), ok ? 'PASS' : 'FAIL',
   );
 }

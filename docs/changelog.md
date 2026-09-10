@@ -8,6 +8,254 @@ why it was made.
 
 ---
 
+## 2026-09-10 (late) — Full UI/UX review with a performance pass
+
+A sweep rather than a request: every route at eight widths, every text token
+in three themes, a keyboard walk of all seventeen routes, and Core Web Vitals
+under a throttled mobile profile. Six defects found, five fixed, and the
+measurements that found them are now guards so they cannot come back quietly.
+
+### What was measured
+
+| pass | scope | result |
+|---|---|---|
+| structure | 17 routes × 8 widths (320→1440) | 0 horizontal overflows, 0 missing `alt`, 0 unfixed image boxes, 0 italic |
+| contrast | 3,246 rendered text samples, 3 themes × 2 widths | 1 failure → 0 |
+| targets | every visible control, 2 widths | 3 real failures → 0 |
+| keyboard | 17 routes × 2 widths, 1,226 tab stops | 14 invisible focus rings → 0; skip link first on all 34 walks |
+| headings | 17 routes | 1 level skip → 0; one `<h1>` everywhere |
+| CWV | 5 routes, Pixel 5 · 4× CPU · 1.6 Mbps · 150 ms | LCP 720–944 ms, CLS ≤0.0974, 0 third-party requests |
+
+### The five fixes
+
+**Keyboard focus on an article card was invisible — the card was clipping its
+own ring.** The worst finding of the pass, and it hid behind two true facts:
+the computed style said `outline: 2px solid var(--focus-ring)` and
+`:focus-visible` matched. The link is `flex h-full flex-col` and fills its
+`<article>` exactly — 395×377 inside a 397×379 card — so `outline-offset: 3px`
+draws the ring outside the card's padding box, and the card carries
+`overflow-hidden` because that is what clips the featured image to the card
+radius. The ring was painted and immediately clipped. Fourteen stops across
+`/search`, `/author` and `/author/no-bio-author` produced ZERO differing pixels
+in a crop inflated 8px past the card on every side.
+
+The ring moves out to the card via `:has(> a:focus-visible)`; the grid around
+it is `overflow: visible`, and the card's box and the link's box are the same
+rectangle, so nothing changes about what a reader perceives as focused. Not
+solved with an inset `outline-offset: -3px`, which would put 2px of accent on
+top of an arbitrary photograph where no contrast can be guaranteed.
+
+**The soft chip failed 4.5:1 in the light theme, on every listing card.**
+`--accent` on `--accent-soft` over a card measured 4.25. The chip's own comment
+argued the fill was decorative because "the accent TEXT carries the contrast
+(6.84 on surface)" — true of `--surface`, and the chip does not sit on
+`--surface`, it sits on the fill. `--accent` moves #0163E1 → #015BD0 in
+v2-light, which raises every pair in the theme at once:
+
+| pair | #0163E1 | #015BD0 |
+|---|---|---|
+| accent on soft-over-card | 4.27 | **4.83** |
+| accent on soft-over-surface | 4.69 | 5.29 |
+| accent on white | 5.42 | 6.16 |
+| white on accent | 5.42 | 6.16 |
+| focus ring vs white / raised | 5.42 / 4.92 | 6.16 / 5.59 |
+
+The fill was the other candidate and it cannot be fixed: dropping the alpha to
+0.04 still only reaches 4.65, and a 4% tint over an off-white card is not a
+pill any more. The mark itself is untouched — MagLogo.tsx keeps #0163E1 ·
+#10A5F5 · #00DBFF literal. This is the UI token that happened to equal one of
+them, following the path `--accent-2` (#00DBFF → #0090C4) and `--warn`
+(#FFB44D → #8A5200) already took in this theme for the same reason.
+
+**`check-contrast.mjs` had passed that failure, and now cannot.** It paired
+text tokens with opaque surfaces and never asked what a TINTED fill in between
+does. Tinted pairs are composited over each surface first and the text measured
+against the result — 21 pairs became 36. `--accent`'s row deliberately omits
+`--surface-hover`: the soft chip has one consumer, PostCard, whose hover is a
+border shift, verified by forcing `:hover` through CDP and re-sampling the
+rendered pixel — same backdrop in all three themes. ArticleCard is the card
+that hovers to `--surface-hover` and it carries no chip. Over that surface the
+pair would read 4.20 in v1 and 4.47 in v2-light, so the omission is recorded
+with the numbers: v1 would need a LIGHTER accent and v2-light a darker one, the
+two themes pulling opposite ways, which makes it a placement rule rather than a
+token that can absorb both.
+
+**The 404's search input rendered 22px tall on a phone.** The form is
+`flex flex-col gap-2.5 sm:flex-row`, so below `sm` the main axis is vertical
+and `flex-1`'s `flex-basis: 0%` overrides `h-[46px]` on that axis. Measured 350
+× 22 at 390px — a squashed search box on the one page whose whole job is to
+offer a way out, under SC 2.5.8's 24px floor and this project's own 44px floor.
+`sm:flex-1`: growing to fill the row is only meaningful once the row exists.
+
+**The header's section links were 22.5px tall.** 28.5×22.5, 41.5×22.5 and
+37.1×22.5 at 1440 — bare inline text in a row that is already 44px. The box
+grows into space that was there and dead: the links do not move and nothing
+reflows.
+
+**Search results skipped h1 → h3.** ArchiveShell already carries the
+visually-hidden `<h2>` that CLAUDE.md prescribes for exactly this case; search
+had been missed. Before it, a screen-reader user moving by heading went from
+the page title straight into individual article titles.
+
+### The article header was 68px out of line with its own body
+
+Two independent grids: the header `[320px 700px]` gap 56 inside a 1076px box,
+the body `[260px 704px 300px]` gap 48. So the headline began 68px inside the
+article's own text at 1280, 1440 and 1600 alike — h1 inline-start 416, body
+inline-start 348. Matching the body's `260 + 48` puts both at 348 and both at
+the 700px measure.
+
+Below xl they still do not align — 272px apart at 768–1023, 340px at 1024–1279
+— and that is left alone deliberately. There the body has no inline-start rail
+to sit beside, so the offset is the full width of the hero image: large enough
+to read as a two-column header rather than as a near miss. Closing it would
+mean giving up the side-by-side header that was asked for.
+
+**This cost CLS, and the trade is recorded rather than hidden.** Desktop CLS on
+an article went 0.0045 → 0.0201 (target ≤0.1). The 260px image is shorter than
+the 320px one was, so the TEXT column is now the taller of the two header
+children and its font-swap rewrap drives the row height instead of being
+absorbed. `items-start` was tried and changes nothing — the row height is the
+mechanism, not the alignment. 68px of permanent visible misalignment against
+0.0156 of CLS five times inside the target is not a close call.
+
+### Performance
+
+Under Pixel 5 · 4× CPU · 1.6 Mbps · 150 ms RTT:
+
+| route | TTFB | FCP | LCP | CLS | long tasks |
+|---|---|---|---|---|---|
+| `/mag` | 11 | 740 | 740 | 0.0230 | 466 ms |
+| `/mag/archive` | 323 | 944 | 944 | 0.0003 | 392 ms |
+| `/mag/notcoin-guide` | 7 | 720 | 720 | 0.0165 | 437 ms |
+| `/mag/stress-long-technical-analysis` | 10 | 792 | 792 | **0.0974** | 604 ms |
+| `/mag/stress-rich-article` | 10 | 848 | 848 | 0.0082 | 555 ms |
+
+LCP is the featured image on every route and lands at roughly a third of the
+2.5s target. Zero third-party requests on every route. Desktop LCP 272–588 ms.
+
+**Every CLS number on this site is the font swap.** The longest article sits at
+0.0974 against a 0.1 target — it passes with 2.6% of margin, which is not a
+margin. The shift lands at 1735 ms and its sources are `#text` nodes. The font
+is preloaded and starts at 180 ms, but it is 93 KB and takes 1433 ms to arrive
+on 1.6 Mbps, so the fallback is on screen for roughly 940 ms after FCP. It is
+also the single largest asset on the page — larger than all JavaScript (121 KB
+transfer), larger than the CSS (11 KB) and the images combined.
+
+**`adjustFontFallback` is off, and the comment above it claimed the opposite.**
+The note said fallback metrics "are adjusted automatically by next/font to
+reduce the layout shift", directly above `adjustFontFallback: false`. The code
+is right and the comment was wrong: the option takes 'Arial' or
+'Times New Roman' and emits a `local("Arial")` face with overrides derived
+against Arial's metrics. Arial carries no usable Persian, so wherever it
+resolves the browser falls through per glyph to Noto Naskh, Geeza Pro or
+Tahoma, and overrides computed for Arial never apply to a single Persian glyph.
+An adjusted fallback that cannot attach to the script the page is written in is
+not a CLS fix. The comment now says so.
+
+**14.5% of the font is an axis nothing uses, and slimming it is verified but
+not applied.** IRANYekanX ships two variable axes: `wght` 100–1000 and `dots`
+0–4. Nothing in this codebase sets `dots`. Dropping it with
+`fonttools varLib.instancer` gives 81,576 bytes against 95,404 — same 648
+glyphs, same 462 codepoints, same `wght` range, same 11 named instances — and
+it is metric-identical: rendered advance width of a mixed Persian/Latin/digit
+sample at 100px is the same to four decimal places at every weight stop from
+100 to 1000.
+
+```
+pyftsubset is not what this needs — the subset is already tight. The axis drop:
+  fonttools varLib.instancer -o IRANYekanX.woff2 --no-optimize \
+      src/app/fonts/IRANYekanX.woff2 dots=drop
+```
+
+Limiting `wght` to 400–700 as well would reach 47,280 bytes — a 50% cut — and
+it is REJECTED, though not for the reason the first check flagged. That check
+reported 214 advance-width differences at weight 600, all ±1 unit at 1000 upem,
+which render as 0.313px over a 1853px paragraph with identical line breaking:
+not a real objection. The real one is coverage. `font-light` (300) is used in
+twelve places — the hero dek, card excerpts, the footer description, the news
+and 404 pages — so a 400–700 axis would silently render every one of them at
+400. Worth recording separately that CLAUDE.md's typography rule 3 says "real
+font weights only (400/600/700)" and the codebase uses 300 throughout; 300 from
+a variable axis is a real weight, not synthetic, but the rule and the code
+disagree about the set.
+
+The 13,828-byte saving is left unapplied because replacing the font binary was
+not something this pass could do; the command above reproduces it exactly.
+
+### Two findings that need a decision, not a fix
+
+**Page horizontal padding is 20/40 on six route families and 20/100 on four.**
+CLAUDE.md says 20px mobile / 100px desktop, "no exceptions". Measured from the
+outermost text leaf, excluding scrollers and `sr-only`:
+
+```
+                  390    768    1024   1440
+home              20     20     40     40
+archive           20     20     40     40      ← ArchiveShell: px-5 lg:px-10
+category/market   20     20     40     40
+article           20     20     40     40
+news              20     20     40     40
+authors           20     20     100    100     ← Section: px-5 lg:px-[100px]
+search            20     20     100    100
+author            20     20     100    100
+404               20     20     100    100
+```
+
+Mobile is compliant everywhere. On desktop the content block jumps 60px moving
+from `/mag/archive` to `/mag/search`, which is the most visible inconsistency
+on the site. This is backlog B29, now with the full table: it was recorded as
+"20/40 vs stated 20/100" and the second convention was not in it. Conforming to
+the rule is the larger change — it narrows the 3-column grid's cards by ~40px
+each — so it is a design call rather than a bug fix. Not taken unilaterally at
+the end of a review.
+
+**The type scale governs one heading out of twenty-three.** Round K set a full
+scale in `tokens.css` with the explicit instruction to put it there "not as a
+one-off on the article page". It is consumed by `text-h1` in exactly one place,
+the article `<h1>`; twenty-two headings carry hardcoded pixel sizes. Five
+different `<h1>` sizes ship: 20/24 (article, from the scale), 24/28
+(AuthorBox), 26/32 (news), 26/34 (CategoryCover), 28/34 (PageHeader, authors,
+404).
+
+The visible consequence: at 1440 the article's own title is 24px and the
+«مطالب مرتبط» label at the foot of the same page is also 24px, while a listing
+page's `<h1>` is 34px. The article headline is the smallest h1 on the site and
+ties with a related-articles label. The 20/24 article title was the reviewer's
+explicit decision in Round K and is recorded as such — this is the consequence
+of it meeting a site that never adopted the rest of the scale, and rescaling
+twenty-two components is a redesign, not a review fix.
+
+### Also recorded
+
+- **The article header comment described the opposite of what ships.** It said
+  "text right, image left, matching the reference"; the figure has taken grid
+  column 1 since the image was moved to the inline-start side, and the note did
+  not follow. Corrected, including why `order-2` on the text column is not the
+  same as putting it second in the DOM.
+- **`/mag/archive` is the one route rendered per request** — TTFB 323 ms here
+  against 7–11 ms everywhere else. The 323 is the mock's own simulated latency
+  (`NEXT_PUBLIC_MOCK_LATENCY_MS`, default 300), so the number is not a
+  prediction; what it proves is that the site's main browsing surface pays a
+  live backend round trip on every request while everything else is
+  prerendered. Its own comment says why: `type` is read from the query string.
+- **The body measure is 544px at 1280–1439**, not the calibrated 700 — the
+  three-column grid leaves `1200 − 260 − 300 − 96`. Pre-existing; visible now
+  that the h1 above it is 700 and aligned.
+- **B30 sharpened.** Running `next build` while a `next start` holds `.next`
+  produced HTML referencing a CSS chunk that was never emitted — the page
+  served completely unstyled while `/mag/health` reported a BUILD_ID match.
+  Kill the server before building, not just before measuring.
+- **Measurement mistakes worth not repeating.** A rendered-pixel contrast probe
+  that hides text with `color: transparent` races `transition-colors`: the
+  screenshot catches the glyph fully painted and reports text sitting on brown
+  and teal backgrounds that exist nowhere in the palette. 147 phantom failures
+  became 1 real one once transitions were disabled first. Separately, a
+  synthetic `page.hover()` does not reliably reach a card covered by a link
+  overlay — `CSS.forcePseudoState` does.
+
+---
+
 ## 2026-09-10 (night) — Title width, a missing affordance, and the logo's blue
 
 Four things from one mobile screenshot.

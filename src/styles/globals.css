@@ -126,6 +126,49 @@
  */
 @layer components {
   /*
+   * A CARD THAT CLIPS ITS OWN IMAGE ALSO CLIPS ITS FOCUS RING.
+   *
+   * Measured on /author and /search at 390 and 1440: tabbing onto an article
+   * card produced NO visible change at all — 0 differing pixels in a crop
+   * inflated 8px past the card on every side — while the computed style said
+   * `outline: 2px solid var(--focus-ring); outline-offset: 3px` and
+   * `:focus-visible` matched. Both facts were true.
+   *
+   * The link is `flex h-full flex-col` and fills its <article> exactly: the
+   * link's box measures 395×377 inside a 397×379 card, the difference being
+   * the 1px border. `outline-offset: 3px` therefore draws the ring 3–5px
+   * OUTSIDE the card's padding box, and the card carries `overflow-hidden` —
+   * which it needs, because that is what clips the featured image to the card
+   * radius. The ring was painted and immediately clipped away.
+   *
+   * So the ring moves OUT to the card, which is not clipped by anything: the
+   * grid around it is `overflow: visible`. The card, not the link, is what a
+   * reader perceives as the focused thing anyway — the link's box and the
+   * card's box are the same rectangle.
+   *
+   * `:has()` rather than a class toggled in JS, because focus is a CSS state
+   * and a card is a server-rendered component with no client boundary. In a
+   * browser without `:has()` this rule simply does not match and the ring
+   * stays where it is today, which is the current behaviour rather than a
+   * regression.
+   *
+   * NOT solved with `outline-offset: -3px`. An inset ring on this card lands
+   * on top of the featured image, where 2px of accent over an arbitrary
+   * photograph has no contrast guarantee at all — the ring has to sit on a
+   * theme surface to be worth measuring.
+   */
+  .mag-card-ring:has(> a:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  /* The link keeps focus; only its ring is suppressed, so the card shows one
+     ring rather than two rectangles 3px apart. */
+  .mag-card-ring > a:focus-visible {
+    outline: none;
+  }
+
+  /*
    * The mobile table-of-contents disclosure marker.
    *
    * `list-none` on the <summary> removes the browser's own triangle, which the

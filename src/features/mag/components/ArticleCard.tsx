@@ -39,7 +39,10 @@ export function ArticleCard({
   const { slug, title, featuredImage, market, contentType, readingTime, publishedAt } = article;
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-card border border-border-subtle bg-surface-raised transition-colors hover:border-border-strong hover:bg-surface-hover">
+    /* `mag-card-ring`: this card's `overflow-hidden` was clipping the link's
+       own focus ring to nothing — see the rule in globals.css, which moves the
+       ring out to the card. */
+    <article className="mag-card-ring flex h-full flex-col overflow-hidden rounded-card border border-border-subtle bg-surface-raised transition-colors hover:border-border-strong hover:bg-surface-hover">
       <Link href={`/${slug}`} className="flex h-full flex-col">
         {/*
           Fixed aspect ratio, always. An image without a reserved box is the

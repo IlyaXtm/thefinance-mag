@@ -41,9 +41,25 @@ const iranYekan = localFont({
   preload: true,
   variable: '--font-fa',
   /*
-    Fallback metrics are adjusted automatically by next/font to reduce the
-    layout shift when the webfont swaps in — this is what keeps CLS low while
-    still using `swap` rather than blocking render.
+    ADJUSTED FALLBACK METRICS ARE OFF, DELIBERATELY — and the comment that used
+    to sit here claimed the opposite of the line below it, which is how this
+    got read as solved for as long as it did.
+
+    `adjustFontFallback` for a local font takes 'Arial' or 'Times New Roman'.
+    It emits a second @font-face sourced `local("Arial")` with size-adjust and
+    ascent/descent overrides derived from this font's metrics against Arial's.
+    That works when the fallback actually renders the text. It does not here:
+    Arial carries no usable Persian, so on any device where it resolves at all
+    the browser falls through PER GLYPH to whatever does cover Persian — Noto
+    Naskh on Android, Geeza Pro on iOS, Tahoma on Windows — and the overrides
+    computed for Arial never apply to a single Persian glyph. An adjusted
+    fallback that cannot attach to the script the page is written in is not a
+    CLS fix, it is a second @font-face and a `local()` lookup.
+
+    So the swap window is paid down by SIZE instead, which is the lever that
+    actually moves on this network: the file is preloaded, and every byte cut
+    from it is time the fallback is not on screen. Measured — see
+    docs/changelog.md, the performance pass.
   */
   adjustFontFallback: false,
   fallback: ['Tahoma', 'system-ui', 'sans-serif'],

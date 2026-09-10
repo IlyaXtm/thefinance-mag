@@ -76,7 +76,17 @@ export function MagHeader({ markets }: { markets: Market[] }) {
             <Link
               key={link.href}
               href={link.href}
-              className="whitespace-nowrap text-[15px] text-text-secondary transition-colors hover:text-text-primary"
+              /*
+                `inline-flex min-h-11 items-center`, and it is a TARGET-SIZE fix
+                rather than a layout one. These links were bare inline text:
+                measured 28.5×22.5, 41.5×22.5 and 37.1×22.5 at 1440, all under
+                WCAG 2.2 SC 2.5.8's 24px floor and well under this project's own
+                44px floor for controls. The row they sit in is already 44px
+                tall, so the box grows into space that was there and dead — the
+                links do not move, the gaps between them do not change, and
+                nothing else on the row reflows.
+              */
+              className="inline-flex min-h-11 items-center whitespace-nowrap text-[15px] text-text-secondary transition-colors hover:text-text-primary"
             >
               {link.label}
             </Link>
