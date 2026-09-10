@@ -902,6 +902,22 @@ one column no matter what, so the fix had to be structural:
   compliance copy under Iranian securities law. If one of the two goes, it is
   not that one. It returns at `md`, where there is a column to put it in.
 
+**The legal block is one row at desktop, not two stacked ones.** Added
+2026-09-10, from a desktop screenshot.
+
+Measured at 1440: the disclaimer is 666px of text in a 1360px row, anchored at
+the inline-start, so **694px of that row was empty** — and the copyright row
+beneath repeated the shape with even less text in it. Two right-anchored blocks
+with the whole left half of the footer blank.
+
+`justify-between` puts the disclaimer at one end and the legal bits at the
+other. The empty pixels between them are the same count; they now read as two
+anchored blocks rather than as a page that ran out of content. It also removes
+a row — the footer went 557 → 513 at desktop.
+
+Below `lg` they stack, which is what a 350px column needs and what they already
+did: `justify-between` on a wrapped flex row is `flex-col` with a gap.
+
 **An accordion was the alternative and is worse.** Collapsing each group behind
 a `<details>` hides four links behind a tap in the one part of the page a
 reader reaches deliberately, and adds three disclosures to a page that already

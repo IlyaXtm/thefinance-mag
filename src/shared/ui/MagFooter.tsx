@@ -214,12 +214,32 @@ export function MagFooter({ markets }: { markets: Market[] }) {
           </FooterColumn>
         </div>
 
+        {/*
+          THE LEGAL BLOCK IS ONE ROW AT DESKTOP, NOT TWO STACKED ONES.
+
+          Measured at 1440: the disclaimer is 666px of text inside a 1360px
+          row, sitting at the inline-start, so 694px of the row was empty — and
+          the copyright row beneath it repeated the shape with even less text.
+          Two right-anchored blocks with the whole left half of the footer
+          blank, which is the whitespace that got reported.
+
+          `justify-between` puts the disclaimer at one end and the legal bits
+          at the other. The space between them is the same number of pixels; it
+          now reads as two anchored blocks rather than as a page that ran out
+          of content. It also removes a row: the footer is shorter by the
+          copyright line plus its margin.
+
+          Below `lg` they stack, which is what they already did and what a
+          350px column needs — `justify-between` on a wrapped flex row is
+          `flex-col` with a gap.
+        */}
         <div className="mt-8 border-t border-border-subtle pt-6 lg:mt-12 lg:pt-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
           <p className="max-w-[92ch] text-[13px] font-light leading-[1.85] text-text-muted">
             {SITE_DISCLAIMER_TEXT}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-text-muted">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-text-muted lg:shrink-0">
             <span>
               © {year} {ORGANIZATION.name}
             </span>
@@ -245,6 +265,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
             >
               Paradigm
             </a>
+          </div>
           </div>
         </div>
       </div>
