@@ -97,6 +97,68 @@
  */
 @layer components {
   /*
+   * The condensed mobile header.
+   *
+   * 64px at the top of the page, 52px once the reader is past it. The header
+   * now stays put instead of hiding on scroll — see MagHeaderShell for why
+   * that reversed — so the 12px it gives back is how the "a sticky bar costs
+   * vertical space" objection gets paid rather than argued with.
+   *
+   * The lockup shrinks with the row. A 28px mark in a 52px bar has less air
+   * above and below it than it needs; 24px keeps the same proportion, and the
+   * brand floor for the full lockup is 24, so this sits ON that floor and
+   * cannot go further without dropping to the mark alone.
+   *
+   * Height and not padding, because the row is `items-center`: animating a
+   * height keeps the contents centred the whole way, where animating padding
+   * moves them and then re-centres them.
+   *
+   * Desktop never condenses — the header is static there and 80px is the
+   * design's row.
+   */
+  /*
+   * ONE SOURCE FOR THE HEADER'S HEIGHT.
+   *
+   * The mobile nav panel hangs off the bottom of this bar, so it has to know
+   * how tall the bar currently is. It used to hardcode `top-16` (64px), which
+   * was right until the bar learned to condense to 52 and then left a 12px
+   * slot of page showing between the two. A variable means the panel cannot
+   * disagree with the header about a number neither of them owns alone.
+   */
+  header {
+    --mag-header-h: 64px;
+  }
+
+  header[data-condensed] {
+    --mag-header-h: 52px;
+  }
+
+  header > div:first-child {
+    height: var(--mag-header-h);
+  }
+
+  header[data-condensed] > div:first-child svg[data-mag-logo] {
+    height: 24px;
+  }
+
+  @media (min-width: 1024px) {
+    header,
+    header[data-condensed] {
+      --mag-header-h: 5rem;
+    }
+
+    header[data-condensed] > div:first-child svg[data-mag-logo] {
+      height: 30px;
+    }
+  }
+
+  header > div:first-child,
+  header svg[data-mag-logo] {
+    transition:
+      height 150ms ease-out;
+  }
+
+  /*
    * The lead card once its image has failed at runtime.
    *
    * The server-rendered no-image branch drops the image layer and the scrim

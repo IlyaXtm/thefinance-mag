@@ -28,13 +28,58 @@
 
 :root,
 [data-theme='v1'] {
-  /* v1 — navy dark */
+  /*
+   * v1 — navy dark.
+   *
+   * ── The page stays this dark; everything ON it got bluer ────────────
+   *
+   * Reported from a device: "very dark bg is good but add some colour like
+   * the logo colour for better contrast." Both halves of that are actionable
+   * and they pull in opposite directions, so only one thing moved.
+   *
+   * `--surface` is untouched — it is the half that was praised, and it is the
+   * page.
+   *
+   * The RAISED surfaces moved toward the logo's blue. The problem they had was
+   * not brightness, it was that a card separated from the page by 1.06:1,
+   * which is a difference you can measure and not one you can see. Bluer and
+   * a shade lighter puts that at 1.14 for a card and 1.26 for a hover, so a
+   * card reads as a card by its own colour rather than by its border.
+   *
+   * ── Why not further ─────────────────────────────────────────────────
+   *
+   * Every step lighter costs the text on top of it. Measured, over the hover
+   * surface:
+   *
+   *   #111c39 (was)   muted 5.10   separation 1.16   interactive 3.41
+   *   #12224d (now)   muted 4.87   separation 1.26   interactive 3.13
+   *   #14275a         muted 4.66   separation 1.36   interactive 2.90  ✗
+   *
+   * The last one is where it stops: `--border-interactive` falls under the
+   * 3:1 that WCAG 2.2 SC 1.4.11 requires of a control boundary, and it is the
+   * token that exists precisely because the other two borders could not clear
+   * it. So the surfaces stop one step short of that, and
+   * `--border-interactive` is lightened to keep real headroom rather than
+   * sitting on the floor: #6b7fa3 measures 4.82 / 4.23 / 3.81 across the three
+   * surfaces where #63718a gave 3.95 / 3.47 / 3.13.
+   *
+   * ── The borders carry the hue too ───────────────────────────────────
+   *
+   * A white hairline over navy reads grey and flattens everything it outlines.
+   * The same line in the logo's blue belongs to the palette. Contrast is
+   * unaffected — these two are decorative and nothing reads text against them;
+   * the one border that has a ratio to clear is `--border-interactive`, above.
+   *
+   * v2-dark is deliberately NOT changed. It is the neutral-black variant and
+   * being neutral is its entire purpose — it is not reachable from the toggle
+   * and exists as a design reference.
+   */
   --surface: #040c1f;
-  --surface-raised: #071331;
-  --surface-hover: #111c39;
+  --surface-raised: #0a1a3d; /* 1.14 vs surface — was #071331 at 1.06 */
+  --surface-hover: #12224d; /* 1.26 vs surface — was #111c39 at 1.16 */
 
-  --border-subtle: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-subtle: rgba(125, 170, 255, 0.16);
+  --border-strong: rgba(125, 170, 255, 0.3);
 
   /*
    * Panel elevation — the one shadow in the system.
@@ -52,11 +97,11 @@
    * grime rather than as elevation.
    */
   --shadow-panel: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
-  --border-interactive: #63718a; /* 3.95 vs surface · 3.72 vs raised */
+  --border-interactive: #6b7fa3; /* 4.82 vs surface · 4.23 vs raised · 3.81 vs hover */
 
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 9.24 vs raised */
-  --text-muted: rgba(255, 255, 255, 0.5); /* 5.34 vs surface · 5.23 vs raised */
+  --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 8.82 vs raised */
+  --text-muted: rgba(255, 255, 255, 0.5); /* 5.31 vs surface · 5.10 vs raised */
 
   --accent: #4d9afe;
   --accent-contrast: #041024; /* 6.67 on accent */

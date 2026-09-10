@@ -60,6 +60,10 @@ export function MagLogo({ className = 'h-[30px] w-auto' }: { className?: string 
       role="img"
       aria-label="مجله فایننس"
       fill="none"
+      /* The hook the condensed mobile header shrinks — see globals.css. The
+         size stays a class here so every other consumer keeps setting it the
+         normal way; only the sticky row overrides it. */
+      data-mag-logo=""
       className={className}
     >
       <g transform="translate(49.3 0)"><path d="M3.33789 9.48828H9.61026V11.1308H5.29526V13.6008H9.34781V15.2185H5.29526V19.2396H3.33789V9.48828Z" fill="currentColor" />

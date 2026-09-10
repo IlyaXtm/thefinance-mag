@@ -58,9 +58,27 @@ export function MagFooter({ markets }: { markets: Market[] }) {
         The BOTTOM padding is unchanged — that one is the footer's own internal
         breathing room above the page edge, not a gap between two things.
       */}
-      <div className="mx-auto max-w-[1440px] px-5 pb-12 pt-[60px] lg:px-10 lg:pb-16 lg:pt-24">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
+      <div className="mx-auto max-w-[1440px] px-5 pb-10 pt-[60px] lg:px-10 lg:pb-16 lg:pt-24">
+        {/*
+          TWO COLUMNS ON A PHONE, NOT ONE.
+
+          Reported from a device as "footer too long on mobile", and it was:
+          one column meant the brand block, then three link groups stacked end
+          to end, then the disclaimer, then the legal row — a screen and a half
+          of footer under every article.
+
+          The three link groups are short (4–6 items each) and narrow, so two
+          of them fit side by side at 320px with room to spare. The brand block
+          keeps the full width — its description is a paragraph and halving its
+          measure would set it in a column two words wide.
+
+          A `<details>` accordion per group was the other option and is worse
+          here: it hides four links behind a tap to save a few hundred pixels
+          in the one part of the page a reader reaches by choice, and it puts
+          three more disclosures on a page that already has one.
+        */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="col-span-2 lg:col-span-1">
             <div className="flex items-center text-text-primary">
               <MagLogo className="h-[32px] w-auto" />
             </div>
@@ -78,7 +96,25 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               46ch → 52ch: at 46 characters this sets seven lines on desktop
               and towers over the columns; 52 brings it to five.
             */}
-            <p className="mt-4 max-w-[52ch] text-[13px] font-light leading-[1.9] text-text-muted">
+            {/*
+              HIDDEN BELOW md, AND IT IS THE ONLY THING HERE THAT IS.
+
+              The footer measured 1046px at 390 — a screen and a quarter under
+              every article — and this paragraph is 125px of it. It is also the
+              second long boilerplate paragraph in the same footer: the site
+              disclaimer sits below the link groups and is COMPLIANCE COPY
+              under Iranian securities law, so if one of the two goes on a
+              phone it is not that one.
+
+              The note above already says two stacked descriptions are "the
+              wall of text the review warned about" at desktop width. On a
+              350px column they stack five lines and four lines deep, which is
+              the same objection with less room to absorb it.
+
+              It stays at md and up, where there is a column to put it in and
+              it reads as the boilerplate it is rather than as a wall.
+            */}
+            <p className="mt-4 hidden max-w-[52ch] text-[13px] font-light leading-[1.9] text-text-muted md:block">
               {ORGANIZATION_DESCRIPTION}
             </p>
 
@@ -154,7 +190,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
             </FooterLink>
           </FooterColumn>
 
-          <FooterColumn title="فایننس">
+          <FooterColumn title="فایننس" wide>
             {FOOTER_PRODUCT_LINKS.map((link) => (
               <FooterLink key={link.href} href={link.href} external>
                 {link.label}
@@ -163,7 +199,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
           </FooterColumn>
         </div>
 
-        <div className="mt-12 border-t border-border-subtle pt-8">
+        <div className="mt-8 border-t border-border-subtle pt-6 lg:mt-12 lg:pt-8">
           <p className="max-w-[92ch] text-[13px] font-light leading-[1.85] text-text-muted">
             {SITE_DISCLAIMER_TEXT}
           </p>
@@ -201,11 +237,33 @@ export function MagFooter({ markets }: { markets: Market[] }) {
   );
 }
 
-function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+/**
+ * `wide` is for the LAST column, and it exists because three groups do not
+ * divide into two columns.
+ *
+ * At mobile the grid is two columns, so the third group used to land alone on
+ * a row with the other half of that row empty — about 500px of blank beside
+ * four links, in the footer that was just reported as too long. Spanning both
+ * columns and putting its own links two-up uses the space instead of leaving
+ * it, and turns four stacked rows into two.
+ *
+ * At `lg` the footer is four real columns and this is an ordinary one again.
+ */
+function FooterColumn({
+  title,
+  wide = false,
+  children,
+}: {
+  title: string;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
+    <div className={wide ? 'col-span-2 lg:col-span-1' : undefined}>
       <h2 className="text-[15px] font-semibold text-text-primary">{title}</h2>
-      <ul className="mt-3 flex flex-col">{children}</ul>
+      <ul className={`mt-3 grid ${wide ? 'grid-cols-2 lg:grid-cols-1' : 'grid-cols-1'}`}>
+        {children}
+      </ul>
     </div>
   );
 }

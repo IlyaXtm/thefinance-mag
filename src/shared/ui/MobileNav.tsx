@@ -196,7 +196,7 @@ export function MobileNav({ markets }: { markets: Market[] }) {
           of the same motion. The panel simply is there.
         */
         className={[
-          'fixed inset-x-0 top-16 z-50 max-h-[calc(100dvh-4rem)] overflow-y-auto',
+          'fixed inset-x-0 top-[var(--mag-header-h)] z-50 max-h-[calc(100dvh-var(--mag-header-h))] overflow-y-auto',
           'border-b border-border-subtle bg-surface px-5 pb-6 pt-2',
           'transition-[opacity,transform] duration-[180ms] ease-out motion-reduce:transition-none',
           open

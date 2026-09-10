@@ -1,24 +1,35 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 /**
- * The header's mobile behaviour: sticky, hiding on scroll down, returning on
- * scroll up — with the reading-progress hairline riding its bottom edge.
+ * The header's mobile behaviour: sticky and ALWAYS VISIBLE, condensing once
+ * the reader is past the top — with the reading-progress hairline riding its
+ * bottom edge.
+ *
+ * ── It used to hide on scroll down, and that was wrong on a real phone ──
+ *
+ * Hide-on-scroll-down was asked for and built, and the mechanism was correct:
+ * verified under iPhone emulation, sticky resolves with no blocking ancestor,
+ * the header leaves at -65 going down and returns to 0 going up. It was
+ * reported from an actual device as "nav not sticky", and that report is
+ * right about the thing that matters — a reader scrolling an article sees no
+ * navigation, and "it comes back if you scroll the other way" is a rule they
+ * have to learn rather than a header they can reach.
+ *
+ * So the header stays. The objection it was answering — 64px of permanent
+ * cost on a 41-minute article — is real and is paid down a different way:
+ * past the fold the bar CONDENSES to 52px, dropping 12px and shrinking the
+ * lockup, while keeping every control reachable. Always-there and slightly
+ * smaller beats sometimes-there and full size.
  *
  * ── Why only mobile ─────────────────────────────────────────────────────
  *
- * The header's own note said NOT STICKY, on two grounds: a fixed bar costs
- * vertical space on mobile, and it would compete with the article page's
- * sticky table of contents. The first is what hide-on-scroll-down answers —
- * the header costs its height once, on the way in, and again only when the
- * reader asks for it by scrolling up. On a 41-minute article that is the
- * difference between paying 64px once and paying it permanently.
- *
- * The second ground still stands and is why this is mobile-only. The sticky
- * ToC rail is `xl:sticky` and the right rail `lg:sticky`, both measured
- * against `top-[76px]` with a STATIC header. Desktop is untouched: no
- * transform, no sticky, and those offsets keep meaning what they meant.
+ * The header's original note said NOT STICKY on two grounds. The first — a
+ * fixed bar costs vertical space — is what the condensed state answers. The
+ * second still stands and is why this is mobile-only: the sticky ToC rail is
+ * `xl:sticky` and the right rail `lg:sticky`, both measured against
+ * `top-[76px]` with a STATIC header. Desktop is untouched.
  *
  * ── The progress bar moved here ─────────────────────────────────────────
  *
@@ -34,44 +45,25 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
  * one number drift; a custom property cannot.
  */
 export function MagHeaderShell({ children }: { children: ReactNode }) {
-  const [hidden, setHidden] = useState(false);
-  const lastY = useRef(0);
+  const [condensed, setCondensed] = useState(false);
 
   useEffect(() => {
     /*
-      The header's own height. Nothing hides until the reader is past it —
-      otherwise a short flick at the top of the page pulls the masthead away
-      before it has been read once.
-    */
-    const REVEAL_ABOVE = 64;
+      One threshold, one direction, no history — which is the whole reason
+      this is simpler than what it replaces.
 
-    /*
-      A direction change under this many pixels is a wobble, not an intent.
-      Without it, momentum scrolling on iOS toggles the header several times a
-      second and the page appears to flicker.
+      Hide-on-scroll-down needed the last scroll position, a direction, and an
+      8px dead zone to stop iOS momentum toggling it several times a second.
+      A state that depends only on "am I past 64px" needs none of that: it
+      cannot flicker, because there is no direction to disagree about, and a
+      reader who stops mid-page finds it in the same state they left it.
     */
-    const THRESHOLD = 8;
+    const CONDENSE_BELOW = 64;
 
     let frame = 0;
-    lastY.current = window.scrollY;
-
     const measure = () => {
       frame = 0;
-      const y = window.scrollY;
-      const delta = y - lastY.current;
-
-      if (Math.abs(delta) < THRESHOLD) return;
-      lastY.current = y;
-
-      /* Above the fold the header is always present. So is the top of the
-         page after a browser's overscroll bounce, where scrollY goes
-         negative. */
-      if (y <= REVEAL_ABOVE) {
-        setHidden(false);
-        return;
-      }
-
-      setHidden(delta > 0);
+      setCondensed(window.scrollY > CONDENSE_BELOW);
     };
 
     const onScroll = () => {
@@ -79,6 +71,7 @@ export function MagHeaderShell({ children }: { children: ReactNode }) {
       frame = requestAnimationFrame(measure);
     };
 
+    measure();
     window.addEventListener('scroll', onScroll, { passive: true });
 
     return () => {
@@ -100,11 +93,22 @@ export function MagHeaderShell({ children }: { children: ReactNode }) {
         that is scrolled and then narrowed must not open with its header
         already slid away.
       */
+      /*
+        `data-condensed` rather than a height class: the row inside is
+        MagHeader's markup, and the two would have to agree on a number if this
+        component set the height itself. The attribute lets the row own its own
+        collapse — see the `[data-condensed]` rules in globals.css — so there
+        is one place that knows what 64 and 52 mean.
+      */
+      data-condensed={condensed ? '' : undefined}
       className={[
         'sticky top-0 z-40 border-b border-border-subtle bg-surface',
-        'transition-transform duration-[180ms] ease-out motion-reduce:transition-none',
-        hidden ? '-translate-y-full' : 'translate-y-0',
-        'lg:static lg:translate-y-0',
+        'transition-shadow duration-150 motion-reduce:transition-none',
+        /* A shadow only once it is over content. At the top of the page the
+           header is part of the page; past the fold it is above it, and the
+           edge is what says so on a surface this dark. */
+        condensed ? 'shadow-[0_1px_0_0_var(--border-strong)]' : '',
+        'lg:static lg:shadow-none',
       ].join(' ')}
     >
       {children}
