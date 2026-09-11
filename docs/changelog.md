@@ -8,6 +8,213 @@ why it was made.
 
 ---
 
+## 2026-09-11 — One rail: the contents, with «بیشتر در …» beneath it
+
+The container went to the width measured off the reference with a ruler, and
+the article's third column went with it. What replaces it is one rail carrying
+both navigations.
+
+### The container: 1224, and an admission
+
+A ruler on the reference and on our own page, in the same browser at the same
+window, read **1223px** against **1427px**. An earlier pass in this project had
+compared the reference's OUTER box against our CONTENT box and concluded we
+were "within 10–99px". We were **217px wider**. The ruler is right and that
+comparison was not.
+
+`.mag-gutter` caps at **1224** rather than 1223 because 1224 divides exactly
+into the article's two rows — `340 + 64 + 700 + 2 × 60` — so the hero image
+lands above the rail and the h1 above the first paragraph with nothing over.
+
+**Desktop padding goes 100 → 60, and that amends CLAUDE.md.** The 100 was
+written when the container was effectively the window and the padding WAS the
+gutter. With a 1224 cap the centring margin is the gutter — 341px a side at a
+1785 window — and this number is the container's internal inset. 60 is the
+largest value that keeps BOTH recorded constraints at once:
+
+```
+padding   content   3-col article   hero pair 1080   ToC rail
+   100      1023     impossible     image → 283px      275
+    80      1063     impossible     image → 323px      315
+    60      1104     impossible     image stays 340    355   ← taken
+    40      1143     impossible     image stays 340    395
+```
+
+At 100 the hero drops to 283px — 27.7% of the pair — undoing the correction
+made one commit earlier. There is no value at or above 72 that keeps both.
+Below the cap the padding is still the gutter and 60 is more generous there
+than 100 was: at a 1024 window the content is 904px rather than 824.
+
+### The third column was impossible, not sacrificed
+
+Three columns need 1240 of content for the 700px measure to survive. The
+largest content box a 1224 container can produce is 1143. There is no padding
+that fits it. The reference runs two columns for the same reason.
+
+### One rail, pinned as one unit — and the detour is worth recording
+
+The rail carries the table of contents, then «بیشتر در …» beneath it. Both are
+navigation answering the same question at the same moment — the ToC moves the
+reader inside the article, the onward panel moves them out of it.
+
+**`sticky` is on the rail, the grid item, exactly as instructed. I tried the
+other thing first and measurement sent me back.** The reasoning for the detour
+was: a sticky box moves as one, so pinning the pair means the pair has to fit
+the viewport, and measured at 1280×800 it was 741px against a 700px budget on
+an ordinary article and 1472px on the 24-heading one. So I put `sticky` on the
+ToC panel inside a `self-stretch` rail instead, which does give "contents
+pinned, onward panel scrolls away".
+
+**It also puts a STATIC element behind a POSITIONED one.** The onward panel
+scrolled up behind the pinned contents, and Tab landed on links the reader
+could not see. Measured at 1440 with `elementFromPoint` at each focused link's
+centre:
+
+```
+article                          ToC height   headings   occluded stops
+stress-long-technical-analysis      633–1002      24            3
+stress-wide-content                      409       7            1
+```
+
+At 800, 900 and 1169 viewport heights alike. Two of twelve articles, and a
+seven-heading article is not an edge case. That is SC 2.4.11 — focus obscured —
+and it is not a thing to document and move past.
+
+Pinning the pair removes it by construction: nothing moves relative to anything
+else, so nothing can cover anything. **The instruction was right and the
+objection to it was a budget problem, not a mechanism problem.**
+
+### Paying for the budget: the ToC cap, and one item off the onward panel
+
+The rail has to fit `viewport − 76 − 24`. Measured on the built page: the
+onward panel is 446px at four items, the ToC's own chrome is 89, the gap is 24.
+That left the contents list `100vh − 659`, and at a 1280×800 window an ordinary
+FOUR-heading ToC started scrolling. An everyday laptop, an everyday article —
+too expensive.
+
+**So the onward panel went from four items to three**, 446px → 352, which also
+matches «مطالب مرتبط» below it. The list cap is `100vh − 37rem`. Entries
+visible before the contents scroll:
+
+```
+viewport   old cap (16rem)   new cap (37rem)
+   800           16                 6
+   900           19                 9
+  1169           26                17
+```
+
+The result, measured across every article × height:
+
+```
+article        headings   rail height vs budget          onward visible at rest
+24 headings       24      673/700  773/800  873/900       65px of 352, then all
+rich               4      647 at every height             43–352, then all
+short              3      601 at every height             65–352, then all
+```
+
+**Every rail fits at every height.** Once the reader scrolls and the rail pins,
+the onward panel is fully on screen on every article — including the 24-heading
+one, where the previous design showed 0px of it at every viewport and this one
+shows all 352. The ToC scrolls internally on that article, which it already did.
+
+**No scrollbar on the rail.** A column with its own scrollbar beside a page that
+also scrolls is two competing scroll contexts. The cap is inside the ToC panel,
+on its list — the one place an overflow is load-bearing rather than a second
+scroll context for the page.
+
+### It is an invariant now, not a note
+
+`check-invariants` scrolls 1000px and asserts the ToC lands on 76. Its first
+version asserted `after <= 80`, which a ToC that has scrolled clean PAST the top
+satisfies trivially — with the stretch removed it read −116 and still passed.
+Negative-tested both ways:
+
+```
+as shipped              top 414 →   76    PASS
+self-stretch removed    top 414 → −116    FAIL ✓ caught
+sticky removed          top 414 → −586    FAIL ✓ caught
+```
+
+And the occlusion check: **120 onward-panel tab stops across 12 articles and
+four viewport heights, 0 occluded.**
+
+### Mobile: after the body, before «مطالب مرتبط»
+
+NOT inside the `<details>` that holds the contents below `xl`. That disclosure
+is closed by default and most phone readers never open it — a panel in there is
+a panel nobody sees. After the body is the first moment the question it answers
+is live. Verified on 12 articles: `afterBody=true, beforeRelated=true` on every
+one.
+
+### The dedupe had a hole, and the move would have exposed it
+
+`onwardInType` was filtered against «مطالب مرتبط» from the day it was written.
+**The recency fallback underneath it was not** — so on a content type too small
+to fill the panel, the reader could meet the same article twice. It was
+invisible while the two sat in opposite columns of a three-column row; as a
+rail and a block on the same reading path, one after the other on a phone, it
+would not have been.
+
+Fixed, and the filter now runs against `relatedRendered` rather than
+`related.items` — the related section only renders at three or more, so below
+that there is nothing to collide with and filtering would thin the panel for no
+reason. The panel is also mapped once and rendered twice, so the rail and the
+mobile placement cannot drift into two different lists.
+
+Verified across 12 articles at 390 and 1440: **0 overlaps**. The fallback
+heading still applies — «بیشتر در گزارش» on the thin types, never a name the
+content does not earn.
+
+### The cost in tab order, which is inherent and not a bug
+
+Measured at 1440, the order is now **header → ToC → «بیشتر در …» → body**. The
+onward panel used to sit after the body in the DOM; in one rail it cannot, so a
+keyboard reader passes three more links before the article.
+
+Not fixable within the one-rail structure, and the attempt is worth recording
+so nobody spends an afternoon on it. Keeping the panel after the body in source
+order while showing it in the rail means explicit grid placement — ToC in
+column 1 row 1, onward in column 1 row 2, body spanning both rows in column 2 —
+which needs `grid-template-rows: auto 1fr` to stop row 1 stretching. That makes
+row 1 exactly as tall as the ToC, which is the `397475f` containing block again
+and the sticky dies.
+
+Three stops, all of them real navigation, immediately after a table of contents
+the reader was already passing. Taken.
+
+### Also
+
+- **The reading-progress readout stays with the ToC**, in its panel header
+  where `ae71cae` put it. A progress bar at the foot of a rail that now ends
+  with a different panel would read as progress through the rail.
+- **`NewsletterCta` loses its article-page slot.** It renders null today
+  (`NEWSLETTER_ENABLED` is false) so nothing changes on screen, and it keeps
+  its four other homes. The rail is navigation; if the flag is ever flipped,
+  the article page is deliberately not where the card comes back.
+- **The `wide` breakpoint is gone from tailwind.config.ts.** It existed for the
+  three-column row and has no other consumer.
+
+### Verified
+
+```
+container    outer 1224 from 1280 up; body 700px at 1024/1223/1280/1440/1785/2041
+rail         fits the viewport on every article at 720/800/900/1169
+occlusion    120 onward-panel tab stops, 12 articles, 4 heights   0 occluded
+dedupe       12 articles × 2 widths                               0 overlaps
+structure    17 routes × 8 widths                                 0 findings
+contrast     3 themes × 2 widths, 3,261 samples                   0 failures
+a11y         17 routes × 2 widths                       0 beyond known exemptions
+keyboard     34 walks, 1,232 stops            0 invisible, skip link first on all
+invariants   9 routes × 7 widths          all hold, including the new sticky check
+```
+
+`npm run check:invariants` needs a running server and a base URL —
+`BASE_URL=http://127.0.0.1:3420 npm run check:invariants`. Bare, it prints
+usage and exits 2, so a chain that includes it will stop rather than silently
+skip the check.
+
+---
+
 ## 2026-09-10 (night, fourth pass) — The hero image, measured against the reference
 
 A reference screenshot came back with a selection frame drawn on it: "i wanna

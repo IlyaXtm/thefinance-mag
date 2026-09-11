@@ -12,19 +12,6 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
-      /*
-       * `wide` is the content cap, not a device.
-       *
-       * `.mag-gutter` caps the page at 1440px and pads it 100px, so content is
-       * 1240px at 1440 AND AT EVERY WIDTH ABOVE IT. Layouts that need a
-       * specific content width therefore key off 1440 — the point where the
-       * cap engages — and Tailwind's own 2xl (1536) is past it. The article's
-       * three-column layout is the one consumer: 208 + 32 + 700 + 32 + 268 is
-       * exactly 1240, and it cannot exist below that.
-       */
-      screens: {
-        wide: '1440px',
-      },
       colors: {
         surface: 'var(--surface)',
         'surface-raised': 'var(--surface-raised)',

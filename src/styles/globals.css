@@ -145,13 +145,43 @@
    */
   .mag-gutter {
     margin-inline: auto;
-    max-width: 1440px;
+    /*
+      1224, MEASURED OFF THE REFERENCE WITH A RULER RATHER THAN ESTIMATED.
+      The reference's container reads 1223px; ours read 1427 (the 1440 cap,
+      minus drag) in the same browser at the same window. 1224 rather than
+      1223 because it divides exactly into the article's two rows —
+      340 + 64 + 700 + 2 × 60 — so the hero image sits above the rail and the
+      h1 above the first paragraph with nothing left over.
+
+      An earlier pass compared the reference's OUTER box against our CONTENT
+      box and concluded we were within 10–99px. We were 217px wider.
+    */
+    max-width: 1224px;
     padding-inline: 20px;
   }
 
   @media (min-width: 1024px) {
     .mag-gutter {
-      padding-inline: 100px;
+      /*
+        60, NOT 100, AND THE CAP IS WHY.
+
+        CLAUDE.md said 100px desktop, and that number was written when the
+        container was effectively the window: the padding WAS the gutter. With
+        a 1224px cap the centring margin is the gutter — at a 1785 window it is
+        (1785 − 1224) / 2 + 60 = 341px a side — and this value is the
+        container's internal inset, a different thing wearing the same name.
+
+        It is 60 because 1224 − 120 = 1104 is the smallest content box that
+        still holds BOTH recorded constraints at once: the 700px measure and
+        the hero image at the reference's ~31% of the header pair. At 100 the
+        content is 1023, and 1023 − 40 − 700 leaves the hero 283px — 27.7%,
+        undoing the correction made one commit earlier. There is no value of
+        this padding at or above 72 that keeps both.
+
+        Below the cap it is still the gutter, and 60 is more generous there
+        than 100 was: at a 1024 window the content is 904px rather than 824.
+      */
+      padding-inline: 60px;
     }
   }
 

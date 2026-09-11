@@ -31,7 +31,6 @@ import {
   CommentForm,
   CommentList,
   LinkListCard,
-  NewsletterCta,
   PostCard,
   ShareRow,
 } from '@/features/mag/components';
@@ -278,11 +277,44 @@ export default async function ArticlePage({
     «ادامه‌ی مسیر» over unrelated articles is a promise the content does not
     keep, which is what the review was pointing at.
   */
-  const relatedSlugs = new Set(related.items.map((a) => a.slug));
-  const onwardInType = onward.items.filter((a) => !relatedSlugs.has(a.slug)).slice(0, 4);
-  const onwardItems = onwardInType.length > 0 ? onwardInType : latest.items.slice(0, 4);
+  /*
+    THE DEDUPE COVERS THE FALLBACK TOO, and it did not before.
+
+    `onwardInType` was filtered against «مطالب مرتبط» from the day it was
+    written. The recency fallback underneath it was not — so on a content type
+    too small to fill the panel, the reader could meet the same article in both
+    places, which is the exact failure the filter exists to prevent. It was
+    invisible while the two panels sat in different columns at opposite edges
+    of a three-column row; now they are a rail and a block on the same reading
+    path, one after the other on a phone.
+
+    `relatedRendered` and not `related.items`: the section below only renders
+    at three or more, so with fewer than three there is nothing to collide with
+    and filtering against it would thin the panel for no reason.
+  */
+  const relatedRendered = related.items.length >= 3 ? related.items : [];
+  const relatedSlugs = new Set(relatedRendered.map((a) => a.slug));
+  /* THREE, NOT FOUR, and the rail's height budget is why. The panel is 446px
+     at four items and 366 at three, and every pixel it takes comes off the
+     contents list above it — at four, an ordinary four-heading ToC starts
+     scrolling at a 1280×800 window. Three also matches «مطالب مرتبط» below.
+     The count is shared by both placements so they cannot drift. */
+  const onwardInType = onward.items.filter((a) => !relatedSlugs.has(a.slug)).slice(0, 3);
+  const onwardItems =
+    onwardInType.length > 0
+      ? onwardInType
+      : latest.items.filter((a) => !relatedSlugs.has(a.slug) && a.slug !== article.slug).slice(0, 3);
   const onwardTitle =
     onwardInType.length > 0 ? `بیشتر در ${article.contentType.name}` : 'تازه‌ترین مطالب';
+
+  /* Mapped once. The panel renders in the rail above `xl` and after the body
+     below it, and two call sites building their own list is how the two
+     placements end up showing different articles. */
+  const onwardCardItems = onwardItems.map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
+  }));
 
   const crumbs = [
     { name: MAG_NAME, href: '/' },
@@ -325,29 +357,31 @@ export default async function ArticlePage({
         being second in the DOM, so a screen reader still meets the h1 before
         the figure.
 
-        THE IMAGE IS SIZED AGAINST THE REFERENCE, AND THE HEADER DOES NOT TRY
-        TO ALIGN WITH THE BODY GRID. Both halves of that are a correction.
+        THE HEADER ROW IS THE BODY ROW, AND THE IMAGE KEEPS ITS SIZE. Getting
+        both at once took three attempts and they are worth recording.
 
-        This row was briefly `[208px 700px]` — the body grid's own inline-start
-        track — to close a 68px offset between the h1 and the first paragraph.
-        It closed it, and it cost the image a third of its width: 208 against a
-        pair of 940 is 22%, where the reference and this project's own record
-        both say 31%.
+        First this row was `[320px 700px]` gap 56 while the body was
+        `[260px 704px 300px]` gap 48, so the headline began 68px inside its own
+        article's first paragraph. Then it was cut to the body's inline-start
+        track, `[208px 700px]` — which closed the offset and cost the image a
+        third of its width: 208 of a 940 pair is 22%, against the reference's
+        31.5% and this project's own recorded 31%. Then it went back to 340 and
+        the offset came back with it.
 
-        Measured off the reference at MacBook "More Space" widths, its hero is
-        348–398 CSS px against a pair of roughly 1100–1265 — 31.5% — and its
-        header text does NOT line up with its body text either. The offset
-        there is about 350px, and it reads as a two-column band rather than as
-        a mistake precisely BECAUSE it is large. 68px was the bad middle: too
-        big to look intentional, too small to look structural.
+        The 1224 container settles it. The body row is now `[340 64 700]` and
+        this row is the same two tracks, because the third column is gone and
+        the rail is 340 wide — the image's width. So the image sits exactly
+        above the rail, the h1 exactly above the first paragraph, and the image
+        is 340: 30.8% of the 1104 pair, against the reference's 31.5%.
 
-        So the image wins and the offset is allowed to be obvious. At `wide`:
-        340 + 40 + 700 = 1080, image 31.5% of the pair, headline starting 380px
-        in from the inline-start edge against the body's 240.
+        There was never a version of this with a third column where both were
+        possible. 68px was the bad middle — too big to look intentional, too
+        small to look structural — and the way out was the row, not a
+        compromise between the two numbers.
 
         The text column still caps at 700 from `md` up, so the headline is
         never wider than the paragraph it introduces, and the image gives way
-        below `wide` rather than the measure — 300 at `lg`, 240 at `md`.
+        below `xl` rather than the measure — 300 at `lg`, 240 at `md`.
 
         MOBILE STACKS WITH THE IMAGE FIRST, via `order`, and that is a choice
         rather than a fallback — on a phone the picture establishes the subject
@@ -380,7 +414,7 @@ export default async function ArticlePage({
         data-hero-grid=""
         className={
           hasHero
-            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,700px)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,700px)] lg:gap-10 wide:max-w-[1080px] wide:grid-cols-[340px_minmax(0,700px)]'
+            ? 'mt-5 grid gap-6 md:grid-cols-[240px_minmax(0,700px)] md:items-center md:gap-8 lg:grid-cols-[300px_minmax(0,700px)] lg:gap-10 xl:max-w-[1104px] xl:grid-cols-[340px_minmax(0,700px)] xl:gap-16'
             : 'mt-5 max-w-[700px]'
         }
       >
@@ -665,66 +699,104 @@ export default async function ArticlePage({
 
 
       {/*
-        THE COLUMN COUNT IS DECIDED BY THE 700px MEASURE, AT EVERY BREAKPOINT.
+        TWO COLUMNS: THE TEXT, AND ONE RAIL THAT CARRIES BOTH NAVIGATIONS.
 
-        The rule this layout serves is CLAUDE.md's: the content column is 700px,
-        calibrated to IRANYekanX at 70–73 characters. Every breakpoint here is
-        the width at which one more column can be added without going under it.
+        The third column is gone, and the container is why. With the cap at
+        1224 the content box is 1104px, and a three-column row needs 1240 for
+        the 700px measure to survive — impossible at any padding. The reference
+        this width came from runs two columns for the same reason.
 
-        THESE MOVED UP ONE STOP WHEN THE PAGE GUTTER BECAME 100px. The gutter
-        was 40 on this page and the rule said 100; conforming it (see
-        `.mag-gutter`) took 120px out of every desktop row, and the old
-        breakpoints stopped clearing the measure. Measured, before the shift:
+        So the table of contents and «بیشتر در ...» share one rail. They belong
+        together on their own merits: both are navigation, answering the same
+        question at the same moment — the ToC moves the reader INSIDE the
+        article, the onward panel moves them OUT of it. A reader chooses their
+        next article mid-read, not after scrolling past the footer, and on a
+        41-minute piece whoever reaches the bottom is the smallest part of the
+        audience.
 
-          1024 two columns   body 476px   ~48 characters
-          1280 three columns body 424px   ~42 characters
-          1440 three columns body 584px   ~58 characters
+        THE ROW IS THE HERO ROW'S ROW: 340 + 64 + 700 = 1104, the same tracks
+        the header above uses. The hero image sits exactly above the rail and
+        the h1 exactly above the first paragraph — no near-miss offset, which
+        this page has now produced twice by getting one of the two rows wrong.
 
-        which is the same defect the previous note here described at 1024 —
-        "about 30 Persian characters a line, less than half the 70–73 the type
-        scale is built for" — arriving at two more widths because the row got
-        narrower. The answer is the one that note already reached: add the
-        column later, not narrow the text.
+        BREAKPOINT. The row needs 1104 of content, which arrives at a window of
+        1224 — the cap plus the two 60px insets. `xl` (1280) is used anyway,
+        because Tailwind has that stop and the 1224–1279 band is 56px of
+        viewport; those windows get one column when they could hold two, and
+        that is a deliberate trade against a custom screen for a 56px range.
 
-          < 1280   one column, contents as a <details> above the article
-          1280+    article + right rail        1080 − 300 − 48 = 732 → caps at 700
-          1440+    all three                   208 + 32 + 700 + 32 + 268 = 1240
-
-        1440 is where `.mag-gutter`'s cap engages, so 1240 is the content width
-        at every width above it too — the three-column row is exact and never
-        grows. See the `wide` screen in tailwind.config.ts.
+        At 1223 the content is 1103 — one pixel short of the row. Below that it
+        falls away fast: at 1024 the content is 904 and the rail would be
+        904 − 764 = 140px, which is not a rail. One column there, contents as a
+        <details> above the article and the onward panel below the body.
       */}
-      <div className="mt-9 grid items-start gap-8 xl:mt-11 xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-12 wide:grid-cols-[208px_minmax(0,700px)_268px] wide:gap-8">
+      <div className="mt-9 grid items-start gap-8 xl:mt-11 xl:grid-cols-[340px_minmax(0,700px)] xl:gap-16">
         {/*
-          `sticky` GOES ON THE GRID ITEM, not on the panel inside it — the same
-          shape the right-hand rail below uses, deliberately, because two
-          sidebars in one grid with two positioning strategies is how this
-          drifts apart again.
+          ONE STICKY ELEMENT: THE RAIL, WHICH IS THE GRID ITEM.
 
-          THIS IS WHY THE ToC DID NOT STICK. `ArticleAside`'s <nav> already
-          carried `sticky top-[76px]` and had since it was written. It did
-          nothing, because a sticky element can only travel inside its
-          containing block, and its containing block was this wrapper — which
-          under the grid's `items-start` is exactly as tall as the panel it
-          holds. Zero travel. Nothing errors, nothing warns, and the class is
-          right there in the markup, which is why it survived a review.
+          Not each panel individually — that is `397475f`, where `sticky` sat on
+          `ArticleAside`'s <nav> inside a wrapper the grid had sized to its own
+          content. A sticky element travels only inside its containing block and
+          a content-sized box has ZERO travel. Nothing errors, nothing warns,
+          the class reads correctly, and it survived two reviews. A sticky GRID
+          ITEM resolves against its grid AREA, which spans the row.
 
-          The right-hand rail escaped it by accident of structure: it IS the
-          grid item, and a sticky grid item resolves against its grid AREA,
-          which spans the full row height — the length of the article. Moving
-          `sticky` up one level here gives the ToC the same travel.
+          THE ALTERNATIVE WAS BUILT AND MEASURED, AND IT FAILED ON ACCESSIBILITY.
+          Sticking only the ToC inside a stretched rail does give the behaviour
+          "contents pinned, onward panel scrolls away" — but the onward panel is
+          a STATIC sibling below a POSITIONED one, so it scrolls BEHIND the
+          pinned contents. Tab then lands on links the reader cannot see:
+          measured at 1440, three occluded stops on the 24-heading article and
+          one on a seven-heading article, at 800, 900 and 1169 viewport heights
+          alike. Two of twelve articles, every height. That is SC 2.4.11, and a
+          seven-heading article is not an edge case.
 
-          `xl:` and not `lg:`, unlike the right rail. Below 1280 this column is
-          `lg:col-span-2` — a full-width strip above the article holding the
-          <details> disclosure, not a rail — and a sticky strip there would
-          pin a collapsed accordion over the text. See ArticleAside.
+          Pinning the pair removes it by construction: nothing moves relative to
+          anything, so nothing can be covered. The price is that the rail must
+          FIT THE VIEWPORT, which is what the cap on the ToC's list buys — see
+          ArticleAside, where the arithmetic is recorded.
+
+          NO SCROLLBAR ON THIS RAIL. A column with its own scrollbar beside a
+          page that also scrolls is two competing scroll contexts, and on a
+          trackpad a reader cannot tell which one they are in. The cap is inside
+          the ToC panel, on its list, which is the one place an overflow is
+          load-bearing rather than a second scroll context for the page.
         */}
-        <div className="xl:order-2 xl:col-span-2 wide:order-1 wide:col-span-1 wide:sticky wide:top-[76px]">
+        <div className="flex flex-col gap-6 xl:order-1 xl:sticky xl:top-[76px]">
           <ArticleAside headings={article.outline} />
+
+          {/*
+            BENEATH THE CONTENTS, IN THE SAME RAIL — above `xl`. Below it this
+            renders after the body instead; see the block further down. One
+            component, one list, so the two placements cannot drift apart.
+          */}
+          <div className="hidden xl:block">
+            <LinkListCard title={onwardTitle} items={onwardCardItems} />
+          </div>
         </div>
 
-        <div className="min-w-0 xl:order-3 wide:order-2">
+        <div className="min-w-0 xl:order-2">
           <ArticleBody html={article.content} />
+
+          {/*
+            THE ONWARD PANEL'S MOBILE HOME: after the article, BEFORE
+            «مطالب مرتبط».
+
+            NOT inside the <details> that holds the contents below `xl`. That
+            disclosure is closed by default and most readers on a phone never
+            open it — a panel in there is a panel nobody sees. Putting it after
+            the body is the first moment the question it answers ("what now?")
+            is actually live.
+
+            It sits above «مطالب مرتبط» rather than beside it because the two
+            are deduped, not duplicated: this one is more of the same content
+            type, that one is related articles, and `onwardCardItems` already
+            removes anything appearing in the other. Order matters — same-type
+            reading is the more specific offer, so it goes first.
+          */}
+          <div className="mt-10 xl:hidden">
+            <LinkListCard title={onwardTitle} items={onwardCardItems} />
+          </div>
 
           <div className="mt-10 flex flex-col gap-8">
             <ShareRow slug={article.slug} title={article.title} />
@@ -733,21 +805,9 @@ export default async function ArticlePage({
             <CommentForm articleId={article.id} />
           </div>
         </div>
-
-        <aside className="flex flex-col gap-6 xl:sticky xl:order-4 xl:top-[76px] wide:order-3">
-          <LinkListCard
-            title={onwardTitle}
-            items={onwardItems.map((a) => ({
-              slug: a.slug,
-              title: a.title,
-              meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
-            }))}
-          />
-          <NewsletterCta />
-        </aside>
       </div>
 
-      {related.items.length >= 3 && (
+      {relatedRendered.length > 0 && (
         <section aria-labelledby="related-heading" className="mt-16">
           <div className="mb-6 flex items-center gap-4">
             <h2
@@ -760,7 +820,7 @@ export default async function ArticlePage({
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {related.items.map((item) => (
+            {relatedRendered.map((item) => (
               <PostCard key={item.id} article={item} />
             ))}
           </div>

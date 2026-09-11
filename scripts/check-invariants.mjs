@@ -233,6 +233,48 @@ for (const route of ROUTES) {
     );
   }
 
+  /*
+    THE TABLE OF CONTENTS ACTUALLY TRAVELS.
+
+    `397475f` shipped `position: sticky` on the ToC that did nothing for weeks:
+    a sticky element travels only inside its containing block, and the wrapper
+    the grid had sized to its own content gave it ZERO travel. Nothing errors,
+    nothing warns, and the class reads correctly in the markup — which is
+    exactly why a human review passed it twice.
+
+    The only check that can catch that shape is to scroll and look. The panel
+    is now sticky inside a `self-stretch` rail, so its containing block is the
+    grid row; if anyone removes the stretch, or re-sizes the rail to its
+    content, this fails on the next run instead of in six months.
+
+    Only meaningful where the rail exists (xl and up) and only on an article
+    long enough to have somewhere to travel.
+  */
+  const stickyTravel = await page.evaluate(() => {
+    const toc = document.querySelector('nav[aria-label="در این مطلب می‌خوانید"]');
+    if (!toc || getComputedStyle(toc).display === 'none') return null;
+    const before = toc.getBoundingClientRect().top;
+    const room = document.documentElement.scrollHeight - window.innerHeight;
+    if (room < 1200) return null;
+    window.scrollTo(0, 1000);
+    const after = toc.getBoundingClientRect().top;
+    window.scrollTo(0, 0);
+    return { before: Math.round(before), after: Math.round(after) };
+  });
+
+  if (stickyTravel) {
+    check(
+      route,
+      'the contents rail actually sticks',
+      /* PINNED AT THE OFFSET, not merely "moved". The first version of this
+         asserted `after <= 80`, which a ToC that has scrolled clean past the
+         top satisfies trivially — removing `self-stretch` gave `after = -116`
+         and the check still passed. Pinning means landing ON 76 and staying. */
+      Math.abs(stickyTravel.after - 76) <= 4,
+      `top ${stickyTravel.before}px → ${stickyTravel.after}px after scrolling 1000px (want 76)`,
+    );
+  }
+
   const wantEager = NO_EAGER_IMAGE.has(route) ? 0 : 1;
   const third = [...hosts].filter((h) => !BASE.includes(h));
 

@@ -280,7 +280,7 @@ export function ArticleAside({ headings }: { headings: string[] }) {
       */}
       <nav
         aria-label="در این مطلب می‌خوانید"
-        className="hidden rounded-card border border-border-subtle bg-surface-raised p-5 wide:block"
+        className="hidden rounded-card border border-border-subtle bg-surface-raised p-5 xl:block"
       >
         {/*
           THE PROGRESS READOUT MOVED UP HERE, AND THE BAR WITH IT.
@@ -326,26 +326,49 @@ export function ArticleAside({ headings }: { headings: string[] }) {
         </div>
 
         {/*
-          Capped with internal scroll, and now that the panel actually sticks
-          this is load-bearing rather than defensive. A sticky box taller than
-          the viewport pins to the WRONG edge — the browser has to choose, and
-          it holds the top until the bottom is reached — so the last entries of
-          a 41-minute read would sit permanently below the fold, unreachable
-          for the whole article. The cap is what keeps the panel shorter than
-          the viewport so the top edge is the one that sticks.
+          Capped with internal scroll, and load-bearing rather than defensive.
+          A sticky box taller than the viewport pins to the WRONG edge — the
+          browser holds the top until the bottom is reached — so the last
+          entries of a 41-minute read would sit permanently below the fold,
+          unreachable for the whole article. The cap keeps the panel shorter
+          than the viewport so the top edge is the one that sticks.
 
-          16rem is the chrome around this list: the 76px offset below the
-          header, the panel's own padding and title, the progress block, and
-          breathing room at the bottom. Measured at 1440×900 — the tallest
-          the panel gets is the viewport height minus this.
+          THE BUDGET GREW WHEN «بیشتر در …» JOINED THE RAIL, and this number is
+          the whole reason that panel is usable. The rail is now
+          `ToC + 24 + onward` and the RAIL is what sticks, so the rail is what
+          has to fit. Measured on the built page: the onward panel is 446px, the
+          ToC's own chrome is 89, the sticky offset is 76 and the bottom needs
+          24. So the list gets `100vh − 659`, which 41rem (656) rounds to.
+
+          41rem, not 16, and the cost is real — measured entries visible before
+          this list scrolls:
+
+            viewport   at 16rem   at 41rem
+              800        16          4
+              900        19          7
+             1169        26         15
+
+          It is paid because the alternative is worse. Sticking only this panel
+          and letting the onward card scroll past it puts a STATIC element
+          behind a POSITIONED one: Tab lands on links hidden under the pinned
+          contents — three stops on the 24-heading article, one on a
+          seven-heading article, at every viewport height. Two of twelve
+          articles. A list that scrolls is a list; a focus ring nobody can see
+          is SC 2.4.11.
+
+          The onward panel was cut from four items to three for this budget —
+          446px to 366 — because at four an ordinary four-heading ToC started
+          scrolling at a 1280×800 window, which is an everyday laptop. The lever
+          in the other direction, if the contents are judged too short, is the
+          same one: each item is roughly 80px.
         */}
-        <ul ref={listRef} className="max-h-[calc(100vh-16rem)] space-y-0.5 overflow-y-auto">
+        <ul ref={listRef} className="max-h-[calc(100vh-37rem)] space-y-0.5 overflow-y-auto">
           {links}
         </ul>
       </nav>
 
       {/* Mobile: native disclosure, closed by default, no custom JS. */}
-      <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 wide:hidden">
+      <details className="rounded-card border border-border-subtle bg-surface-raised px-4 py-3 xl:hidden">
         {/* `min-h-11`: the disclosure is the ONLY route to the table of
             contents below xl, and it measured 21px — under half the 44px floor
             and the smallest control on the article page. */}

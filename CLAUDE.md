@@ -63,7 +63,7 @@ Strict types, no `any`. Small focused components, one responsibility each. Compo
 
 Two tokens are new system additions introduced by Mag: `--border-interactive` (interactive control boundaries need ≥3:1; `border-subtle` measures ~1.3 and `border-strong` ~1.7) and `--danger` (form validation). `--focus-ring` has a known light-theme defect — it must use the darker accent, not the dark-theme blue.
 
-**Spacing.** Page horizontal padding `20px` mobile / `100px` desktop. Section vertical spacing `60px` mobile / `96px` desktop. No exceptions.
+**Spacing.** Page container capped at `1224px` — measured off the reference, not chosen. Horizontal padding `20px` mobile / `60px` desktop; above the cap the centring margin is the real gutter (341px a side at a 1785 window) and this number is the container's internal inset. Section vertical spacing `60px` mobile / `96px` desktop. No exceptions.
 
 **Grid.** 1 col <768px · 2 cols 768–1279px · 3 cols ≥1280px. Gap 16px mobile / 24px desktop.
 

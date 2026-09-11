@@ -756,8 +756,25 @@ a second face.
 
 ## Page gutter
 
-**One class holds 20/100 and the 1440px cap.** Decided 2026-09-10; closes
-backlog B29 and B32.
+**One class holds 20/60 and the 1224px cap.** Decided 2026-09-10 as 20/100 at
+1440; amended 2026-09-11 when the reference was measured with a ruler rather
+than estimated from a screenshot. Closes backlog B29 and B32.
+
+The reference's container reads **1223px** and ours read **1427** in the same
+browser at the same window. An earlier pass had compared the reference's OUTER
+box against our CONTENT box and concluded we were within 10–99px; we were 217
+wider. The cap is **1224** rather than 1223 because it divides exactly into the
+article's two rows — 340 + 64 + 700 + 2 × 60.
+
+**The desktop padding is 60, and that is a different number wearing the same
+name.** CLAUDE.md's 100 was written when the container was effectively the
+window, so the padding WAS the gutter. Under a 1224 cap the centring margin is
+the gutter — 341px a side at a 1785 window — and this is the container's
+internal inset. 60 is the largest value that keeps both the 700px measure and
+the hero image at the reference's proportion: at 100 the content is 1023 and
+the hero drops to 283px, 27.7% of the pair, undoing the previous day's
+correction. Below the cap it is still the gutter, and more generous than 100
+was — 904px of content at a 1024 window against 824.
 
 CLAUDE.md has always said 20px mobile / 100px desktop, "no exceptions". Two
 shells existed. Four `<main>` elements carried `px-5 lg:px-10` — 20 and **40** —
@@ -773,8 +790,16 @@ narrow from 437px to 397px at 1440, and 384 → 344 at 1280. Measured on the
 built page: both still hold a 16:9 image and a two-line clamped title, so the
 card works at the smaller figure. That is the whole cost on listings.
 
-**The article page was where it actually bit.** 100px gutters take 120px out of
-every desktop row, and the article's column counts had been chosen against 40.
+**The article page was where it actually bit — and at 1224 it lost a column.**
+Three columns need 1240 of content for the 700px measure to survive, and the
+largest content box a 1224 container can produce is 1143 (at 40px padding).
+There is no padding that fits it. The reference runs two columns for the same
+reason, and the table of contents and «بیشتر در …» now share one rail — see
+Sticky sidebars.
+
+The history below is the 1440 era and is kept because the reasoning still
+governs where the breakpoints sit. 100px gutters take 120px out of every
+desktop row, and the article's column counts had been chosen against 40.
 Measured immediately after conforming the padding and before fixing it:
 
   1024   two columns     body 476px   ~48 characters
@@ -820,6 +845,39 @@ measurement of `getBoundingClientRect().top` while scrolled.
 
 Both sidebars on the post page now use the same shape. Two sidebars in one grid
 with two positioning strategies is how the last one drifted.
+
+**AMENDED 2026-09-11: still the grid item, and the amendment is about what
+that costs rather than where it goes.**
+
+The post page now has ONE rail carrying the table of contents and «بیشتر در …»
+beneath it — the third column did not survive the 1224 container. Sticking only
+the ToC inside a stretched rail was built and measured first, because pinning
+the pair means the pair must fit the viewport and at 1280×800 it was 741px
+against a 700px budget. It gives the nicer behaviour — contents pinned, onward
+panel scrolling away — and it is WRONG, because the onward panel is a static
+element scrolling behind a positioned one. Tab lands on links hidden under the
+pinned contents: three stops on the 24-heading article, one on a seven-heading
+article, at 800, 900 and 1169 viewport heights alike. Two of twelve articles.
+SC 2.4.11.
+
+Pinning the pair removes it by construction — nothing moves relative to
+anything, so nothing can cover anything — and the budget is paid for in the ToC
+list cap (`100vh − 37rem`) and by cutting the onward panel from four items to
+three. Both numbers are recorded in ArticleAside with the measurements that set
+them. Every rail now fits at every height, and the onward panel is fully on
+screen once the rail pins — including on the 24-heading article, where the
+stretched-rail design showed 0px of it at every viewport.
+
+**The distinction is an invariant rather than a note.** `check-invariants`
+scrolls 1000px and asserts the ToC lands on 76. Its first version asserted
+`after <= 80`, which a ToC that has scrolled clean past the top satisfies
+trivially — with the stretch removed it read −116 and still passed. Pinning
+means landing ON the offset.
+
+**No scrollbar on the rail.** A column with its own scrollbar beside a page
+that also scrolls is two competing scroll contexts, and on a trackpad a reader
+cannot tell which one they are in. The cap stays inside the ToC panel, on its
+list, which is the one place an overflow is load-bearing.
 
 ---
 
