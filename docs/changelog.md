@@ -8,6 +8,118 @@ why it was made.
 
 ---
 
+## 2026-09-11 (latest) — The operational documents move into the repo
+
+A set of documents maintained outside version control — an infrastructure
+reference, two server handovers, and the teaching material — is now in `docs/`.
+Sorting them was the work: some belonged in files that already existed and had
+to take their shape, some stood on their own, and some belonged nowhere.
+
+### Five of the nine hard rules were already recorded
+
+`decisions.md` → Infrastructure already carried `WP_SITEURL`, `--locale=fa_IR`,
+the sync direction, the GraphQL burst floor, and the admin-filter architecture,
+all in English with the incident attached. Those were extended in place rather
+than re-stated. **Four were missing and are now there:** the four cookie
+constants, never building on the production server, `grep` before stopping a
+container, and no diagnostic query printing a secret.
+
+**The four cookie constants also needed somewhere findable**, because
+`wp-config.php` holds secrets and is not committed, so those four lines existed
+nowhere in version control at all. They are now the first section of
+`docs/infra/wp-vps.md`, under a heading that says what it is for, with a table of
+what each one prevents. `ADMIN_COOKIE_PATH` is the one that cost a day: its
+default is `/wp-admin`, the panel is reachable from two paths, and the cookie
+never reached the second — so an editor mid-upload looked logged out after a
+minute. The symptom says session lifetime; the cause is a path.
+
+### A contradiction fixed rather than a document added
+
+`docs/infra/frontend-deploy.md` said the Dockerfile is **"built on the server"**
+and its deploy block ran `docker compose up -d --build` there. The rule is the
+exact opposite — one `docker build` on that host took `/inchart` down, because
+the main site, the magazine and Paradigm all run on it.
+
+Adding a second, correct runbook beside it would have left two files disagreeing
+and no way to tell which was current. So that file now carries the real sequence:
+build on a laptop, `docker save`, `rsync`, then three separate blocks on the
+server. The three-block split is documented as what it is — a guard, because the
+whole block including the rollback command was pasted at once three times.
+
+It also absorbed what the checklist knew and the runbook did not: why
+`--platform linux/amd64` is mandatory, why `rsync` rather than `scp`, the
+build-failure triage table, and **checking the image before transferring it** —
+an image was once built with the correct tag and the old code inside, since the
+tag comes from the SHA and proves nothing about what was compiled.
+
+### The content numbers got a file, a date, and a way to re-measure
+
+`docs/content-state.md`. 54 published · 14 with a market tag · 0 with a
+hand-written dek · 47 with a Rank Math primary category, plus the category and
+market distributions, with the WP-CLI queries that produce each one.
+
+These four numbers keep turning out to be the difference between a feature and
+an empty skeleton — 0 of 54 is why the dek was designed and not built, 14 of 54
+is why every market archive sits below the indexing floor, and 47 of 54 is what
+settled the `category` rule in B39. **A number without a date is a number nobody
+can decide whether to trust**, and all of these have moved at least once.
+
+### Two handovers became one document
+
+`handover-frontend-server-move.md` and `sina-mag-only.md` overlapped by roughly
+80% — the second is the magazine subset of the first. Committing both would have
+produced two accounts that disagree within a month. `docs/infra/server-move.md`
+is the full document with a delimited section at the top naming which parts
+matter if you are only taking the magazine, plus the hairpin trap moved up front
+because it once took every image on the site down.
+
+It stays in Persian. The rest of `docs/infra/` is English, and this is a
+deliberate exception: the document is handed to the person performing the move.
+Same reasoning as `docs/roadmap.md`.
+
+### The teaching material stands on its own
+
+`docs/learn/` — `frontend.md` (headless CMS, the four render modes, Server
+Components, the data layer, tokens, `basePath`, redirects, RTL, images, raw CMS
+content), `lessons.md`, `working-with-ai-tools.md`, and `after-a-round.md`.
+
+**`after-a-round.md` had to be edited, not copied.** Its steps 4–7 repeated the
+deploy commands that `frontend-deploy.md` now owns. Two copies of a command
+diverge and then neither can be trusted, so those steps became a pass/fail
+criteria table pointing at the runbook — the checklist says *when* and *by what
+measure*, the runbook says *what to type*.
+
+The justify correction in `learn/frontend.md` — that the rule is about column
+width and not about Persian, 1.62× at 700px against 2.86× at 350 — was checked
+against `decisions.md`, which already carries the corrected version with the same
+numbers. Nothing to fix there.
+
+### Left out, deliberately
+
+`session-2026-09-09-infra.md`, as instructed: everything worth keeping is in the
+reference, and two accounts of one day disagree within a month. The six
+`prompt-*.md` files, which are instructions that were carried out, not
+documentation. `00-INDEX.md`, which indexes the external bundle rather than the
+repo. And `cdn-purge-request.md` and `handover-main-site-dev.md` — both dated
+one-time requests to other teams; their durable content is the CDN rules, now in
+`frontend-deploy.md`, and B26.
+
+`roadmap-mag.md` needed nothing: it is **byte-identical** to `docs/roadmap.md`,
+so the merge the prompt asked for had already happened.
+
+### Three new backlog items, and four stale links
+
+**B40** CI/CD written and never run · **B41** `color-scheme: dark` never
+declared · **B42** two behaviours confirmed only against controlled inputs — a
+new article resolving without a rebuild, and image upload from inside the editor.
+Everything else in the reference's open-items section was already recorded under
+a different wording.
+
+Four cross-references pointed at files that do not exist — `wp-vps-setup.md` and
+`seo-safety-protocol.md`, in `media.md` and `wp-vps.md`. Fixed while in there.
+
+---
+
 ## 2026-09-11 (later) — B36: the 404 that actually happens is a real page now
 
 Closes backlog B36. `/mag/<dead-slug>` served 58 bytes — `<body><div hidden>

@@ -137,6 +137,51 @@ The build is the only legitimate caller that bursts this hard. Any limit on an
 endpoint the build reads has to be sized against the page count, and the page
 count grows with the archive.
 
+**Four cookie constants must be in `wp-config.php`, and they exist nowhere in
+version control.** `wp-config.php` holds secrets and is not committed, so these
+four lines live only on the CMS host. Rebuild it without them and a full day of
+debugging repeats exactly. They are written out, with what each one prevents, in
+`docs/infra/wp-vps.md` → "The four cookie constants".
+
+The one that cost the day was `ADMIN_COOKIE_PATH`. Its default is `/wp-admin`,
+and the panel is reachable from two paths — `wp.thefinance.ir/wp-admin/` and
+`thefinance.ir/mag/wp-admin/`. The cookie never reached the second, so an editor
+mid-upload hit an invalid session and appeared to be logged out after a minute.
+The symptom looks like a session-lifetime problem and is a path problem, which is
+why it took a day rather than an hour.
+
+**Do not define them in the mu-plugin.** The mu-plugin runs *after* core has
+already read these constants, so it works by accident when it works at all —
+and a stale copy there silently wins if the `wp-config.php` line is ever removed.
+
+**Never run `docker build` on the production server.** The main site, the
+magazine and Paradigm all run on `87.247.171.97`. One build there took
+`/inchart` down.
+
+The image is built on a laptop and moved as an artifact — `docker save`, gzip,
+`rsync` — so the production host only ever loads and runs. Sequence in
+`docs/infra/frontend-deploy.md`. This also applies to the main site's own
+builds, which is why `handover-main-site-dev.md` carried the same warning.
+
+**`grep` nginx before stopping any container.** Jannah's WordPress was shut down
+on 2026-09-10 and **every image on the site disappeared**, because the `uploads`
+location block proxied to its port, 9080. Nobody noticed until the CDN cache
+aged out, which made the cause look unrelated to the thing that had changed.
+
+```bash
+sudo grep -rn "<port or container name>" /etc/nginx/
+```
+
+Three seconds. The rule generalises past this incident — it is the check that
+was missing, not the container that was wrong — and it will be needed again at
+the frontend server move, where several containers stop at once.
+
+**No diagnostic query may print a secret's value.** `WP_PREVIEW_SECRET` was
+rotated twice in one day, the second time only because a debugging query echoed
+it. To compare two values, compare a hash or the first eight characters — that
+answers "are these the same" without putting the answer in a shell history, a
+scrollback buffer, or a chat log.
+
 ---
 
 ## Content model

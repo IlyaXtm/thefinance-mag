@@ -1,7 +1,68 @@
 # WordPress VPS — Provisioning & Configuration
 
 **Host:** `wp.thefinance.ir` · **Role:** CMS only, never a public reading surface
-**Related:** `seo-safety-protocol.md`, `CLAUDE.md`, `mag-build-plan.md`
+**Related:** `seo-safety.md`, `CLAUDE.md`, `frontend-deploy.md`
+
+---
+
+## If you are rebuilding this CMS, start here: the four cookie constants
+
+**These four lines exist nowhere else in version control.** `wp-config.php`
+holds secrets and is not committed, so this file is the only record. Without
+them the admin panel appears to log editors out every few minutes, and the
+symptom does not point at the cause.
+
+```php
+define('COOKIE_DOMAIN', 'wp.thefinance.ir');
+define('COOKIEPATH', '/');
+define('SITECOOKIEPATH', '/');
+define('ADMIN_COOKIE_PATH', '/');
+```
+
+They are all consequences of one thing: `siteurl` is `https://thefinance.ir/mag`
+while WordPress actually runs on `wp.thefinance.ir`. Every default WordPress
+derives from `home_url` is therefore derived for the wrong host.
+
+| Constant | Without it |
+|---|---|
+| `COOKIE_DOMAIN` | The domain is built from `home_url` — `thefinance.ir` — and the browser never sends the cookie to the `wp.` subdomain. Login fails with "cookies are blocked". |
+| `COOKIEPATH` | The path becomes `/mag/`, so the cookie does not reach `/wp-admin/`. |
+| `SITECOOKIEPATH` | Same, for the site cookie. |
+| `ADMIN_COOKIE_PATH` | **This is the one that cost a full day.** |
+
+`ADMIN_COOKIE_PATH` defaults to `/wp-admin`, and the panel is reachable from
+**two** paths — `wp.thefinance.ir/wp-admin/` and `thefinance.ir/mag/wp-admin/`.
+The cookie never reached the second. An editor working through the second path
+hit an invalid session mid-upload and looked like they had been logged out after
+a minute, which reads as a session-lifetime problem and is a path problem. That
+mismatch between symptom and cause is the whole reason it took a day.
+
+**Do not move these into the mu-plugin.** The mu-plugin runs after core has
+already read them, so it works by accident when it works at all. Worse: a stale
+copy there wins silently if the `wp-config.php` line is ever removed, so the
+next person debugging this finds a value that is set and still wrong.
+
+After changing them, every editor is logged out once. That is expected — the
+cookies they hold were minted under the old path.
+
+---
+
+## What runs here
+
+| What | Where |
+|---|---|
+| nginx | `/etc/nginx/sites-available/wp.thefinance.ir` |
+| WordPress | container `wp-wordpress-1` |
+| Database | container `wp-db-1` |
+| `wp-config.php` | `/root/wp/wp-config.php` on the host (bind mount) |
+| mu-plugins | `/root/wp/wordpress/wp-content/mu-plugins/` |
+
+```bash
+ssh -i ~/.ssh/sotoon-ilya compute@87.247.170.20
+```
+
+`wp-config.php` being a bind mount on the host is why a container rebuild does
+not lose the four constants above — and why a host rebuild does.
 
 ---
 

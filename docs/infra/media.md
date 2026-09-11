@@ -1,8 +1,8 @@
 # Media Architecture & the Image-URL Contract
 
 **Date:** 2026-08-19
-**Supersedes:** the uploads section of `wp-vps-setup.md` — see the correction below
-**Related:** `seo-safety-protocol.md`
+**Supersedes:** the uploads section of `wp-vps.md` — see the correction below
+**Related:** `seo-safety.md`
 **Corrected twice:** 2026-08-29 and 2026-09-06. The second correction reverses
 part of the first. Read the block below before anything else.
 
@@ -90,7 +90,7 @@ Once this holds, the storage backend becomes a free choice. Break it once and yo
 
 ## ⚠️ Correction to the nginx config
 
-The config in `wp-vps-setup.md` sets `X-Robots-Tag: noindex, nofollow` at the server level on `wp.thefinance.ir`, plus a `noindex` on the uploads location. That is correct **for that host**.
+The config in `wp-vps.md` sets `X-Robots-Tag: noindex, nofollow` at the server level on `wp.thefinance.ir`, plus a `noindex` on the uploads location. That is correct **for that host**.
 
 But when `thefinance.ir` proxies `/mag/wp-content/uploads/` to it, **nginx forwards the upstream's headers to the client by default**. The result: images served from `thefinance.ir` inherit `noindex` and drop out of Google Images. Self-inflicted, and silent — the images render perfectly the whole time.
 
@@ -140,7 +140,7 @@ curl -sI https://thefinance.ir/mag/wp-content/uploads/<known-file>.jpg | grep -i
 curl -sI https://wp.thefinance.ir/ | grep -i 'x-robots-tag'
 ```
 
-Add both to the ongoing invariants in `seo-safety-protocol.md`.
+Add both to the ongoing invariants in `seo-safety.md`.
 
 ---
 

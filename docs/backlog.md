@@ -1626,3 +1626,91 @@ on `/mag/health`, which already reports the real state of each dependency.
 Analytics is fail-open by design, which means its failures are invisible by
 design — a counter turns a dead collector into something noticed in a day
 rather than a quarter.
+
+---
+
+## B40 — 🟠 CI/CD exists as a file and has never run
+
+**Status:** open, folded in from the infrastructure reference 2026-09-11.
+
+A workflow was written and never pushed. Every production build is still
+manual on a laptop: `docker build`, `docker save`, `rsync`, then three pasted
+blocks on the server. `docs/infra/frontend-deploy.md` is that sequence written
+down, which makes it repeatable but not automatic.
+
+**What the manual path actually costs**, from incidents rather than principle:
+
+- an image was once built with the correct tag and the old code inside it — the
+  tag comes from the SHA and proves nothing about what was compiled
+- the three-block split exists because the whole block, rollback command
+  included, was pasted at once three separate times
+- `--platform linux/amd64` has to be remembered every time, because the build
+  laptop is ARM and the server is x86
+
+All three are the kind of mistake a pipeline cannot make.
+
+**What makes it non-trivial:** the build needs to reach `wp.thefinance.ir` to
+prerender, the artifact has to land on a host that must never build, and the
+deploy secret is an SSH key that currently lives in GitLab CI for the main
+site. So this is "a runner that can reach the CMS, build, and ship an artifact",
+not "add a workflow file".
+
+Not urgent while releases are occasional. It becomes urgent the first time
+someone other than the current operator has to ship.
+
+---
+
+## B41 — 🟢 `color-scheme: dark` is never declared
+
+**Status:** open, found 2026-09-11 while confirming the dark theme is the
+default. One line.
+
+Dark **is** the default — `layout.tsx` renders `data-theme="v1"` server-side and
+light is opt-in through the toggle. But nothing declares `color-scheme` outside
+the `@media print` block, and there is no `colorScheme` in the layout metadata.
+
+So the browser still treats the document as light-scheme:
+
+- the scrollbar renders light against the navy page
+- native form controls in the search input use light chrome
+- the canvas is white before CSS lands — a white flash on a dark site
+
+The last one is the reason this is worth doing rather than noting: it is a
+first-paint artefact on the product whose #1 priority is what the first paint
+looks like.
+
+The fix is a `color-scheme` declaration on `:root` per theme — `dark` for `v1`
+and `v2-dark`, `light` for `v2-light` — and it has to be per theme, not a blanket
+`dark`, or the light theme inherits dark browser chrome and the toggle produces
+a half-switched page.
+
+---
+
+## B42 — 🟠 Two behaviours confirmed only against controlled inputs
+
+**Status:** open, recorded 2026-09-11. Neither is known to be broken. Both are
+known to be untested where it counts.
+
+**1. A newly published article resolving with no rebuild.** This is the central
+constraint of B36 — the reason `dynamicParams = false` was refused — and it was
+verified against a controllable stub endpoint, not against WordPress. The stub
+proved the mechanism: a slug added to the set resolves on the very next request,
+200 dead URLs cost 5 queries, a downed endpoint keeps answering from cache. It
+did not prove that the live `/api/known-slugs` returns a new article promptly,
+because the build environment cannot reach the CMS.
+
+**The next article the content team publishes is the test.** Open its URL
+immediately, before any deploy. If it 404s, middleware is rejecting a real
+article — the worst failure this change can produce — and the mitigation is
+already designed: every gate fails open, so removing the `notFoundRewrite` call
+restores the previous behaviour.
+
+**2. Image upload from inside the article editor.** The media library works and
+was tested. Uploading from within a post — a different code path, the one that
+goes through `wp.ajax.settings.url`, the relative path no PHP filter can rewrite
+— was not. That path is held together by an inline script after `wp-util` plus
+an nginx rewrite on the CMS host, and if either drifts the symptom is an upload
+that silently does nothing.
+
+Both are five minutes of someone's attention at a moment that will occur anyway.
+They are here so that moment is recognised as the test rather than spent.

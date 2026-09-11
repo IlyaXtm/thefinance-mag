@@ -20,7 +20,7 @@ bottom.
 
 | File | Goes to |
 |---|---|
-| `Dockerfile` | repo root; built on the server |
+| `Dockerfile` | repo root; **built on a laptop, never on the server** — see Deploy |
 | `infra/mag/compose.yaml` | `/root/mag/compose.yaml` |
 | `infra/mag/.env.example` | copy to `/root/mag/.env` |
 | `infra/nginx/thefinance.ir.conf` | **reference only — diff against `/etc/nginx/conf.d/thefinance.ir.conf`, never copy** |
@@ -31,27 +31,137 @@ could review.
 
 ---
 
-## Deploy
+## What runs on this host — `87.247.171.97`
+
+| What | Where |
+|---|---|
+| nginx | `/etc/nginx/conf.d/thefinance.ir.conf` |
+| Magazine | container `thefinance-mag`, port 3100 |
+| Main site | container `thefinance-front`, port 7902 |
+| Paradigm | container `thefinance-paradigm-front` |
+| GitLab Runner | `/etc/gitlab-runner/config.toml` — deploys the main site |
+| Magazine rollback | container `thefinance-mag-prev`, stopped |
 
 ```bash
-# On the frontend server
-git clone -b claude/finance-mag-handoff-czder7 <repo> /root/mag-src
-mkdir -p /root/mag
-cp /root/mag-src/infra/mag/compose.yaml /root/mag/
-cp /root/mag-src/infra/mag/.env.example  /root/mag/.env
-
-# compose builds from the repo root; point it at the checkout
-cd /root/mag && sed -i 's|context: \.\.|context: /root/mag-src|' compose.yaml
-
-docker compose up -d --build
-docker compose ps            # wait for "healthy", ~40s
-curl -s localhost:3100/mag/health
-# expect: {"status":"ok","source":"wpgraphql", ...}
+ssh -i ~/.ssh/sotoon-ilya compute@87.247.171.97
 ```
 
-`"source":"mock"` means `.env` is wrong or wasn't read. It is the one thing the
+Three products share this host. That is the single fact behind most of the
+rules below — anything heavy here is felt by all three, and anything removed
+here may be load-bearing for one of the others.
+
+Safe copies of configs are kept beside the original with a
+`WORKING-<date>` suffix, so a revert is a `cp`.
+
+There is also a `deploy` user with an SSH key, which the main site's GitLab CI
+uses. **Do not delete it.** At a server move the key is regenerated, not copied.
+
+---
+
+## Deploy
+
+**The image is built on a laptop and moved as an artifact. It is never built
+here.** A `docker build` on this host took `/inchart` down once — the main site,
+the magazine and Paradigm all run on it, and a build is the heaviest thing that
+can happen to it. The production host only ever loads and runs.
+
+```bash
+# On the laptop
+cd ~/thefinance-mag && git checkout claude-main && git pull
+SHA=$(git rev-parse --short HEAD) && echo $SHA
+npx tsc --noEmit && npm run lint
+
+docker build --platform linux/amd64 \
+  --build-arg BUILD_ID=$SHA \
+  --build-arg SITE_ORIGIN=https://thefinance.ir \
+  --build-arg WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
+  --build-arg USE_MOCK=false \
+  -t thefinance-mag:$SHA . 2>&1 | tail -6
+
+docker save thefinance-mag:$SHA | gzip > /tmp/mag-$SHA.tar.gz
+rsync -avP -e "ssh -i ~/.ssh/sotoon-ilya" /tmp/mag-$SHA.tar.gz compute@87.247.171.97:~/
+```
+
+`--platform linux/amd64` is not optional — the build laptop is ARM and the
+server is x86. `rsync` rather than `scp` because it resumes; a dropped `scp`
+starts the ~82MB again from zero.
+
+### Check the image before transferring it
+
+```bash
+docker image inspect thefinance-mag:$SHA --format '{{.Architecture}}'   # amd64
+docker run --rm --entrypoint sh thefinance-mag:$SHA -c 'ls .next/server/app | head'
+```
+
+**An image was once built with the correct tag and the old code in it.** The tag
+is derived from the SHA and proves nothing about what was compiled, so if the
+round had a specific visible change, confirm it is actually inside the image
+before it goes anywhere near the server.
+
+### If the build fails
+
+| Symptom | Cause |
+|---|---|
+| `GraphQL responded 503` | Rate limit. Check `burst` on the CMS — it must be ≥ 200. |
+| Type error | The gates were skipped. `npx tsc --noEmit && npm run lint` first. |
+| Network timeout | The laptop cannot reach `wp.thefinance.ir`. |
+
+Then on the server, **as three separate blocks, pasted one at a time**:
+
+```bash
+gunzip -c ~/mag-<SHA>.tar.gz | sudo docker load
+```
+
+```bash
+sudo docker rm -f thefinance-mag-prev 2>/dev/null
+sudo docker stop thefinance-mag && sudo docker rename thefinance-mag thefinance-mag-prev
+```
+
+```bash
+sudo docker run -d --name thefinance-mag --restart unless-stopped \
+  -p 127.0.0.1:3100:3000 \
+  -e WP_PREVIEW_SECRET=<SECRET> \
+  -e WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
+  -e NEXT_PUBLIC_USE_MOCK=false \
+  -e NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
+  -e NEXT_PUBLIC_SITE_ORIGIN=https://thefinance.ir \
+  -e NODE_ENV=production -e NEXT_TELEMETRY_DISABLED=1 -e PORT=3000 \
+  thefinance-mag:<SHA>
+```
+
+**Three blocks, not one, and this is not fussiness.** It happened three times
+that a whole block — rollback command included — was pasted at once and did
+something nobody wanted. The blocks are separated at exactly the points where
+the previous one must be seen to have worked.
+
+### Verify
+
+```bash
+sleep 30
+curl -s http://127.0.0.1:3100/mag/health | python3 -m json.tool
+
+for u in "/mag/" "/mag/archive" "/mag/news" "/mag/category/education/" "/mag/market/crypto/"; do
+  printf "%-28s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' -L "https://thefinance.ir$u")"
+done
+```
+
+`buildId` must be the new SHA. If it is not, the wrong image is running and
+everything else you are about to check is about the old build.
+
+`"source":"mock"` means `.env` is wrong or was not read. It is the one thing the
 healthcheck deliberately reports, because a container serving mock data looks
 perfectly healthy otherwise.
+
+### Rollback
+
+```bash
+sudo docker stop thefinance-mag && sudo docker rm thefinance-mag
+sudo docker rename thefinance-mag-prev thefinance-mag
+sudo docker start thefinance-mag
+```
+
+The previous container is always kept as `-prev`, which is what makes this a
+rename rather than a rebuild.
 
 ### Certificate and nginx
 
@@ -317,3 +427,95 @@ The cost is that an under-returning `magRedirects` silently drops ranked URLs,
 which is why `missingKnown` exists. The two rules whose targets no longer exist
 in the database are the exception: they are code-only and always win, so a
 stale database row cannot resurrect a 404.
+
+---
+
+## Where the magazine sits
+
+```
+                    reader
+                       │
+                       ▼
+              ┌─────────────────┐
+              │   Sotoon CDN    │
+              └────────┬────────┘
+                       │
+                       ▼
+    ┌──────────────────────────────────┐
+    │  87.247.171.97  (frontend)       │
+    │  ┌────────────────────────────┐  │
+    │  │ nginx                      │  │
+    │  │  /          → :7902 site   │  │
+    │  │  /mag/      → :3100 mag    │  │
+    │  │  /mag/wp-*  → CMS          │  │
+    │  └────────────────────────────┘  │
+    │  Next.js (:3100)   ← the magazine│
+    │  main site (:7902)               │
+    │  Paradigm                        │
+    └──────────────────────────────────┘
+                       │ GraphQL
+                       ▼
+    ┌──────────────────────────────────┐
+    │  87.247.170.20  (CMS)            │
+    │  wp.thefinance.ir                │
+    │  WordPress + WPGraphQL, MariaDB  │
+    └──────────────────────────────────┘
+```
+
+**Almost every piece of infrastructure complexity comes from one tension:**
+WordPress's `siteurl` is `thefinance.ir/mag`, but WordPress runs on
+`wp.thefinance.ir`. That is deliberate — permalinks, canonicals and image URLs
+have to be public — and the consequence is that WordPress builds **every admin
+URL** on the public domain, where Next.js is listening. See `decisions.md` →
+Infrastructure for why the fix is filters rather than `WP_SITEURL`.
+
+---
+
+## When something is broken, start here
+
+```bash
+# Is the magazine alive, and which build?
+curl -s http://127.0.0.1:3100/mag/health | python3 -m json.tool
+
+# Does GraphQL return JSON, or HTML?
+curl -s -X POST https://wp.thefinance.ir/mag/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ posts(first:1){nodes{slug}} }"}' | head -c 100
+
+# Do images come from the origin?
+curl -s -o /dev/null -w '%{http_code}\n' \
+  "https://thefinance.ir/mag/wp-content/uploads/2026/09/wti-price-breaks-86-100-day-sma-1.jpg?cb=$(date +%s)"
+
+# Is the CDN serving something stale?
+curl -sI "https://thefinance.ir/mag/" | grep -i "x-zrk"
+```
+
+HTML from the GraphQL probe rather than JSON means `siteurl` has moved — the
+endpoint is registered relative to it. The magazine will keep serving from the
+ISR cache for several minutes while this is true, so a healthy-looking page is
+not evidence against it.
+
+`x-zrk-cs` is cache behaviour: `BYPASS` is correct for HTML, `HIT` for static,
+`MISS` immediately after a purge is normal. `x-zrk-us` is origin status — a 200
+there with a broken page means the problem is the cache, not the server.
+
+---
+
+## CDN
+
+Three rules, in priority order. **The order is the behaviour** — the engine
+applies the first match and stops.
+
+| Path | Behaviour | TTL |
+|---|---|---|
+| `/mag/wp-content/uploads/*` | cache | 30 days, 0 on failure |
+| `/mag/_next/static/*` | cache | 1 year, 0 on failure |
+| `/mag/*` | BYPASS | — |
+
+**A purge after deploy is not needed.** Next hashes static filenames from their
+content, so a new build has new names, and HTML is `BYPASS`. The only case that
+can need one is `uploads/*`, when an image is replaced under a name that is
+already cached.
+
+"0 on failure" is the part worth keeping: without it an origin error is cached
+like a success, which is how a transient 500 became a 30-day outage on one path.
