@@ -797,9 +797,36 @@ Gutenberg block wrappers the article-body styles do not name.
 
 ---
 
-## B22 — 🔴 Editors are logged out of the panel every few minutes
+## B22 — ✅ Editors are logged out of the panel every few minutes
 
-**Status:** open, diagnosed, **fix untried**.
+**Status:** CLOSED — fixed on the CMS, recorded 2026-09-11 when the
+infrastructure reference was folded into the repo.
+
+**The diagnosis below was right and the proposed fix was wrong in two ways**,
+which is worth keeping rather than deleting, because the wrong version sat here
+looking authoritative:
+
+- it proposed `ADMIN_COOKIE_PATH` as `'/wp-admin'`. That is the **default**, and
+  it is the value that caused the bug. It must be `'/'`. The panel is reachable
+  from two paths — `wp.thefinance.ir/wp-admin/` and `thefinance.ir/mag/wp-admin/`
+  — and the default never reaches the second, which is why an editor mid-upload
+  hit an invalid session and appeared to be logged out after a minute.
+- it listed three constants. There are **four**: `COOKIE_DOMAIN` is also
+  required, or the browser never sends the cookie to the `wp.` subdomain at all
+  and login fails with "cookies are blocked".
+
+The part it got exactly right is the one that would otherwise have wasted the
+most time: **the constants go in `wp-config.php`, never in a mu-plugin**, because
+core reads them before plugins load.
+
+All four constants, with what each one prevents, are in
+`docs/infra/wp-vps.md` → "The four cookie constants" — the only place in version
+control they exist, since `wp-config.php` holds secrets and is not committed.
+The rule is in `docs/decisions.md` → Infrastructure.
+
+Original entry follows.
+
+**Status was:** open, diagnosed, **fix untried**.
 
 The session drops after a few minutes and the editor has to sign in again. The
 diagnosis is the cookie path: WordPress sets the auth cookie on `path=/mag/`
