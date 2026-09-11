@@ -27,6 +27,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { readdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 
 const BASE = process.argv[2] ?? process.env.BASE_URL;
@@ -321,6 +322,95 @@ for (const route of ROUTES) {
   two-column layout is tightest at the width it starts, and that width was not
   being measured.
 */
+/*
+ * ── 404s MUST BE A DOCUMENT, NOT A SHELL ────────────────────────────────
+ *
+ * `notFound()` thrown at request time does not render its boundary into the
+ * initial HTML in Next 15.5: every unknown article, author and market slug
+ * served `<body><div hidden></div></body>` — 58 bytes, blank without
+ * JavaScript, on the page whose only job is to catch a reader arriving from a
+ * dead link. Middleware rewrites those to a static page now.
+ *
+ * This counts the <body> with <script> tags stripped, which is what paints
+ * before any JavaScript runs. It is the same measurement that found the bug.
+ *
+ * It exists because this project has shipped exactly this class of failure
+ * before — an `if (!mounted) return null` that made every page invisible to
+ * crawlers for months — and a page that is empty before hydration looks
+ * perfectly fine in a browser.
+ */
+const NOT_FOUND_URLS = [
+  '/mag/this-article-does-not-exist',
+  '/mag/market/not-a-market',
+  '/mag/author/not-an-author',
+  '/mag/category/not-a-category',
+];
+
+/** Under this, it is a shell rather than a page. The real pages measure ~37KB. */
+const NOT_FOUND_MIN_BYTES = 20000;
+
+async function checkNotFoundPages() {
+  for (const url of NOT_FOUND_URLS) {
+    let status = 0;
+    let painted = 0;
+    let noindex = false;
+
+    try {
+      const res = await fetch(`${BASE}${url}`);
+      status = res.status;
+      const html = await res.text();
+      const body = html.slice(html.indexOf('<body'));
+      painted = body.replace(/<script[\s\S]*?<\/script>/g, '').length;
+      noindex = /noindex/.test(html);
+    } catch (error) {
+      check(url, '404 is a real document', false, String(error));
+      continue;
+    }
+
+    check(url, '404 status', status === 404, `HTTP ${status}`);
+    check(
+      url,
+      '404 paints without JavaScript',
+      painted >= NOT_FOUND_MIN_BYTES,
+      `${painted} bytes of <body> with scripts stripped (want ≥ ${NOT_FOUND_MIN_BYTES})`,
+    );
+    check(url, '404 is noindex', noindex, noindex ? 'present' : 'missing');
+  }
+}
+
+/*
+ * ── EVERY ROUTE IS IN `RESERVED_SEGMENTS` ───────────────────────────────
+ *
+ * Middleware treats a single-segment path that is not a known route as an
+ * article slug, and rewrites it to the 404 page when the slug does not exist.
+ * A route added to `src/app` and forgotten in that list would therefore 404 in
+ * production while working perfectly in `next dev` — the worst shape of bug
+ * this project has.
+ *
+ * So the list is checked against the filesystem rather than against memory.
+ */
+async function checkReservedSegments() {
+  const appDir = new URL('../src/app/', import.meta.url);
+  const entries = await readdir(appDir, { withFileTypes: true });
+
+  const routeDirs = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith('[') || entry.name === 'api' || entry.name === 'fonts') continue;
+    routeDirs.push(entry.name);
+  }
+
+  const source = await readFile(new URL('../src/features/mag/lib/known-routes.ts', import.meta.url), 'utf8');
+  const missing = routeDirs.filter((name) => !source.includes(`'${name}'`));
+
+  check(
+    'src/app',
+    'every route segment is reserved in known-routes.ts',
+    missing.length === 0,
+    missing.length ? `missing: ${missing.join(', ')}` : `${routeDirs.length} segments`,
+  );
+}
+
 const SWEEP_WIDTHS = [320, 360, 390, 414, 768, 1024];
 
 for (const width of SWEEP_WIDTHS) {
@@ -470,6 +560,9 @@ for (const width of SWEEP_WIDTHS) {
     await page.close();
   }
 }
+
+await checkNotFoundPages();
+await checkReservedSegments();
 
 await browser.close();
 

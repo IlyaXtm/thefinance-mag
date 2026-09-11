@@ -8,6 +8,159 @@ why it was made.
 
 ---
 
+## 2026-09-11 (later) — B36: the 404 that actually happens is a real page now
+
+Closes backlog B36. `/mag/<dead-slug>` served 58 bytes — `<body><div hidden>
+</div></body>` — and now serves a 37,860-byte document with a 404 status,
+without JavaScript.
+
+```
+                        before  →  after
+/mag/nope                   58  →  37,860   404
+/mag/market/nope            58  →  37,860   404
+/mag/author/nope            58  →  37,860   404
+/mag/category/nope      37,860  →  37,860   404   unchanged
+/mag/archive/page/999      722  →     722   404   see below
+```
+
+With JavaScript disabled, all four now render the h1, the header, the footer,
+the search form and five links out. Before, all but `/category` rendered
+nothing at all.
+
+### Approach A is closed, and it was tested six ways
+
+Question 1 of B36 was whether `notFound()` can render into initial HTML at all.
+In Next 15.5.23 it cannot, and it is not our code:
+
+```
+minimal dynamic route, dynamicParams default + notFound()        58 bytes
+  … plus a segment-local not-found.tsx                           58
+  … with notFound() thrown from generateMetadata instead         58
+  … with export const dynamic = 'force-dynamic'                 722  (metadata only)
+  … with experimental.globalNotFound + global-not-found.tsx      58
+  … with dynamicParams = false                                37,860  ← the only one
+```
+
+A minimal route with no application code reproduces it, so it is a framework
+behaviour. **That also explains the 722.** `force-dynamic` flushes the
+metadata — `<title>`, `robots: noindex`, the icons — and leaves the body in an
+unresolved Suspense boundary (`<!--$?--><template id="B:0">`). It is the same
+failure with a head attached, and it is what `/mag/archive/page/999` is.
+
+I could not check upstream issues: this session's GitHub access is scoped to
+this repository, and cloning `vercel/next.js` would give source, not issue
+state. **If this is a known bug with a patch, an upgrade may be the real
+answer** — worth checking before anyone builds on the workaround below.
+
+### Approach B, with C's body
+
+Middleware rewrites a dead slug to a static page, with the status set on the
+rewrite. That was measured before being built:
+
+```
+NextResponse.rewrite(target)                    →  200, full 35,635-byte body
+NextResponse.rewrite(target, { status: 404 })   →  404, full 35,635-byte body
+```
+
+The body is **one component**, `NotFoundContent`, rendered by both
+`app/not-found.tsx` (for everything Next resolves at build time) and
+`/not-found-page` (the rewrite target). Two copies would drift and the drift
+would be invisible — nobody looks at a 404 twice.
+
+**A basePath trap cost a round.** `nextUrl.pathname` arrives with `/mag`
+stripped, and the first probe matched `'/mag/zz-rewrite'`, which never fires.
+The file already documents this for redirects; the rewrite needed the same
+care, and the target goes through the existing `absolute()` helper.
+
+### Freshness: a new article resolves on its first hit, with no rebuild
+
+The constraint was that `dynamicParams = false` stays off, so middleware has to
+know a slug is dead without a rebuild. It asks the app: `/api/known-slugs`
+returns the routable set from the service layer, so the answer comes from the
+mock or from WPGraphQL exactly as every page does — **which is why this is
+testable on a laptop at all.** A middleware querying WordPress directly is a
+middleware whose 404 handling cannot be verified locally.
+
+A background-only refresh would have re-created the trade we rejected: a new
+article invisible until the next window. So a **miss blocks** — and a miss
+spends a token from a five-token bucket refilling one a second, which keeps a
+crawler from turning a thousand dead URLs into a thousand queries. Driven
+against a controllable endpoint:
+
+```
+a published slug resolves                          true
+a dead slug is rejected                           false     1 query
+— an article is published in the CMS, no rebuild —
+the very next request for it                       true     1 query
+a crawler walks 200 dead URLs                      5 queries, then cached
+the endpoint goes down, set already cached         still answers
+```
+
+The endpoint is `revalidate = 0` deliberately: at 60 it would have put its own
+window in front of the bucket and a new article would have stayed invisible for
+up to a minute however eagerly middleware refetched.
+
+### It rejects nothing it is not sure about
+
+Three gates, any of which lets the request through: the first segment is a real
+route; the slug set is unavailable (`ok: false`, empty, or the archive
+overflowed its whole-archive fetch); or the slug is in the set. Failure
+degrades to the old blank 404 — never to a 404 on something real.
+
+**Two ways I got that wrong before the sweep caught it**, both worth recording
+because both were silent:
+
+- **The slug source was a listing.** The first version asked `getAllSummaries`,
+  the sitemap's set — 27 of the archive's routes. It 404'd `stress-rich-article`
+  and every layout fixture while reporting itself healthy. "Does this slug
+  resolve?" is now answered by `getRoutableSlugs`, a source function that
+  mirrors `getArticle` branch for branch. The second attempt still missed
+  `fundamental-analysis`, which is `FULL_ARTICLE` and belongs to neither
+  collection — reasoning about the mock rather than reading its resolver.
+- **Percent-encoding.** Most of the archive is percent-encoded Persian in the
+  URL and decoded in the route set. Comparing the raw segment matched nothing,
+  so the first build 404'd most of the archive while every Latin slug worked.
+  Middleware decodes, as `[slug]/page.tsx` already did.
+
+After both: **50 routes swept, zero regressions.**
+
+### Two guards, both negative-tested
+
+`check-invariants` now counts the `<body>` with `<script>` stripped on four
+404s and requires ≥20,000 bytes, a 404 status and `noindex`. This project has
+shipped this exact class before — an `if (!mounted) return null` that made
+every page invisible to crawlers for months — and a page that is empty before
+hydration looks perfectly fine in a browser.
+
+It also reads `src/app` and fails if a route segment is missing from
+`RESERVED_SEGMENTS`, because middleware treats an unreserved single segment as
+an article slug. A route added and forgotten there would 404 in production
+while working in `next dev`.
+
+```
+a route missing from RESERVED_SEGMENTS   →  ✗ missing: zz-newroute
+the byte floor raised to 90,000          →  ✗ 4 failures, 37,860 bytes
+```
+
+### What is still broken, and what it costs
+
+**`/mag/archive/page/999` is still 722 bytes.** It is the `force-dynamic`
+shape: correct status, correct `noindex`, correct `<title>`, blank body.
+Middleware cannot fix it, because "is page 999 beyond the end of this listing?"
+needs a per-listing count it does not have — the article set is one list; page
+counts are one per category, author and market. Nobody links to page 999, so it
+is the rarest of the shapes and the only one left. Recorded as **B37** rather
+than left to be rediscovered.
+
+**A found, unrelated defect: `category/[slug]`'s comment is wrong.** It says
+`dynamicParams = false` is fine because "New terms arrive through revalidation,
+which regenerates this list." The prerender manifest says otherwise —
+`fallback: false` with a fixed route list baked at build — so a category the
+editors add 404s until a deploy, silently. Not touched here; recorded as
+**B38**, because it is a content bug rather than a 404 bug.
+
+---
+
 ## 2026-09-11 — One rail: the contents, with «بیشتر در …» beneath it
 
 The container went to the width measured off the reference with a ruler, and

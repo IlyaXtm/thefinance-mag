@@ -440,6 +440,23 @@ const ARCHIVE_FETCH_MAX = 100;
 
 let archiveOverflowed = false;
 
+/**
+ * Every slug that resolves to an article.
+ *
+ * The counterpart of the mock's function of the same name, and here it is just
+ * the archive: WordPress has no equivalent of the mock's layout fixtures, so a
+ * post either appears in the listing or does not exist as a route.
+ *
+ * IT USES THE WHOLE-ARCHIVE FETCH, so `magArchiveOverflowed()` applies to it.
+ * If the archive ever outgrows ARCHIVE_FETCH_MAX this list is short, and a
+ * short list would 404 real articles — which is why the caller checks that
+ * flag and rejects nothing when it is set.
+ */
+export async function getRoutableSlugs(): Promise<string[]> {
+  const summaries = await getAllSummaries();
+  return summaries.map((article) => article.slug);
+}
+
 /** True when the archive outgrew ARCHIVE_FETCH_MAX — surfaced on /mag/health. */
 export function magArchiveOverflowed(): boolean {
   return archiveOverflowed;

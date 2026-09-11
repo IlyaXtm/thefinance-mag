@@ -34,6 +34,7 @@ type MagSource = {
   getArticles: typeof mock.getArticles;
   getMarketArticles: typeof mock.getMarketArticles;
   getAllSummaries: typeof mock.getAllSummaries;
+  getRoutableSlugs: typeof mock.getRoutableSlugs;
   magArchiveOverflowed: typeof mock.magArchiveOverflowed;
   magInjectedTocSurvivors: typeof mock.magInjectedTocSurvivors;
   getArticle: typeof mock.getArticle;
@@ -94,6 +95,10 @@ export const getMarketArticles: MagSource['getMarketArticles'] = (slug, page, pe
   source.getMarketArticles(slug, page, perPage);
 
 export const getAllSummaries: MagSource['getAllSummaries'] = () => source.getAllSummaries();
+
+/* Every slug that resolves to an article — not the same as every slug the
+   archive lists. Middleware's 404 check is the only caller. */
+export const getRoutableSlugs: MagSource['getRoutableSlugs'] = () => source.getRoutableSlugs();
 
 /** True when the archive outgrew the single fetch market pages rely on. */
 export const magArchiveOverflowed: MagSource['magArchiveOverflowed'] = () =>

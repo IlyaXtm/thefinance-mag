@@ -1279,10 +1279,39 @@ finished.
 
 ---
 
-## B36 — 🔴 A 404 from an on-demand route serves an empty document
+## B36 — ✅ A 404 from an on-demand route serves an empty document
 
-**Status:** open, found 2026-09-10 while measuring mobile geometry. Not fixed in
-that pass because the fix is a routing decision, not a layout one.
+**Status:** CLOSED 2026-09-11. `/mag/nope`, `/mag/market/nope` and
+`/mag/author/nope` now serve 37,860 bytes with a 404 status and no JavaScript,
+and `dynamicParams` stayed `true` on all three — a newly published article
+still resolves on its first request with no rebuild.
+
+Question 1 of the entry below is answered and the answer is *no*: in Next
+15.5.23 `notFound()` from an async server component cannot render into the
+initial HTML, a segment-local `not-found.tsx` does not change it, and neither
+does `experimental.globalNotFound`. A minimal route with no application code
+reproduces all 58 bytes, so it is framework behaviour, not ours. **If a later
+Next release fixes it, the middleware gate below becomes removable** — worth
+checking at the B10 upgrade.
+
+Question 2 is what shipped: middleware resolves the slug against
+`/api/known-slugs` and rewrites a dead one to `/not-found-page` with
+`NextResponse.rewrite(url, { status: 404 })`. The body is one component,
+`NotFoundContent`, shared with `app/not-found.tsx`. A miss blocks on the lookup
+so freshness is exact, and spends a token from a five-token bucket so a crawler
+cannot turn a thousand dead URLs into a thousand queries. Every failure mode
+degrades to the old blank 404, never to a 404 on something real. Two invariants
+guard it, both negative-tested: a ≥20,000-byte floor on four 404 documents, and
+a check that every segment under `src/app` appears in `RESERVED_SEGMENTS`.
+
+Reasoning in full: `docs/decisions.md` → Not-found handling, and the changelog
+entry for 2026-09-11. **`/mag/archive/page/999` is NOT fixed** — it is a
+different shape and is now **B37**.
+
+Original entry follows.
+
+**Status was:** open, found 2026-09-10 while measuring mobile geometry. Not
+fixed in that pass because the fix is a routing decision, not a layout one.
 
 Measured on the built app, counting the `<body>` with `<script>` tags removed —
 i.e. what paints before any JavaScript runs:
@@ -1337,3 +1366,91 @@ What to look at instead:
 Worth doing properly: SEO aside — a 404 is not indexed — a reader who follows
 an old link on a phone currently gets a white screen until the bundle lands,
 which on the 1.6 Mbps profile this project measures against is over a second.
+
+---
+
+## B37 — 🟡 `/mag/archive/page/999` is still a 722-byte blank
+
+**Status:** open, split off from B36 on 2026-09-11. It is the one 404 shape the
+middleware gate does not cover.
+
+```
+/mag/archive/page/999    404    722 bytes
+```
+
+722, not 58, because the route is `force-dynamic`: the metadata flushes —
+`<title>`, `robots: noindex`, the icons — and the body stays in an unresolved
+Suspense boundary (`<!--$?--><template id="B:0">`). Same framework behaviour as
+B36 with a head attached.
+
+**Middleware cannot answer this one.** The B36 gate works because "is this slug
+an article?" is a single set of strings it can hold and refresh cheaply. "Is
+page 999 past the end of this listing?" is a per-listing count — one for the
+archive, one for each category, each market, each author — and middleware would
+have to fetch a count per request path to know. That is a different, heavier
+mechanism for a URL nobody links to.
+
+**Cost of leaving it:** the status and the `noindex` are already correct, so
+there is no SEO exposure; a human who hand-edits a page number gets a white
+screen. That is the whole blast radius, which is why it was split off rather
+than held the fix hostage.
+
+**Two ways to fix it when someone wants to:**
+
+1. Clamp instead of 404 — a page number past the end redirects (308) to the
+   last real page. Removes the blank document and is arguably the better UX,
+   but it is a URL-shape decision and `docs/decisions.md` → Pagination should
+   rule on it first.
+2. Have the listing pages return the count in a cacheable shape the middleware
+   can read, the way `/api/known-slugs` does for articles. More machinery than
+   the problem is worth today.
+
+Check this again after the B10 Next upgrade — if `notFound()` learns to render
+into initial HTML, this disappears with no work at all.
+
+---
+
+## B38 — 🟠 `category/[slug]`'s `dynamicParams = false` comment is wrong
+
+**Status:** open, found 2026-09-11 while working B36. Not fixed there because
+it is a content-availability bug, not a 404 bug — the 404 it produces is
+correct and full.
+
+`src/app/category/[slug]/page.tsx` sets `dynamicParams = false` with this
+justification:
+
+> New terms arrive through revalidation, which regenerates this list.
+
+**They do not.** The prerender manifest built from this route carries
+`fallback: false` against a fixed route list baked at build time.
+`generateStaticParams` runs once per build; ISR revalidation refreshes the
+*content* of the routes in that list, it does not re-run the function that
+produces the list. So a content type added in WordPress after the last deploy
+**404s until the next deploy**, silently and with a perfectly correct-looking
+404 page.
+
+The same trap is why `[slug]` keeps `dynamicParams = true`, and the comment
+there records the trade correctly. This one records the opposite of what the
+framework does.
+
+**Why it has not bitten:** `contentType` is a closed set of four terms — تحلیل,
+گزارش, آموزش, اخبار — and it has not changed since the taxonomy was created.
+The bug is latent, and it will surface on the day an editor adds a fifth.
+
+**Two candidate fixes, and they are not equivalent:**
+
+1. **Fix the comment only.** Accept the constraint and state it honestly: "a
+   new term needs a deploy." Correct, one line, and reasonable while the set is
+   four fixed editorial types.
+2. **Switch to `dynamicParams = true`** and validate the slug in the component,
+   404ing an unknown one — which now means a full 404 document, because B36
+   made that path render. Costs nothing at build and removes the deploy
+   coupling entirely.
+
+Option 2 is the better engineering and option 1 is honest about a set that has
+not moved in a year.
+
+`market/[slug]` and `author/[slug]` are not affected — neither sets
+`dynamicParams`, so both keep the default `true` and a term added after the
+build still resolves. `category/[slug]` is the only route in `src/app` that
+turns it off.

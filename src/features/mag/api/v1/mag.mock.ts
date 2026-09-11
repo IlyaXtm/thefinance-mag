@@ -1099,6 +1099,36 @@ export async function getMarketArticles(
 }
 
 /** Mirrors the real API. Only used by the health probe. */
+/**
+ * Every slug `getArticle` will resolve — which is NOT the same as every slug
+ * the archive lists, and the difference is the whole reason this exists.
+ *
+ * `STRESS` articles are deliberately outside `ALL_SUMMARIES`: they are layout
+ * fixtures, reachable by URL and absent from every listing so they cannot
+ * distort a pagination or count assertion. That arrangement is invisible until
+ * something asks "does this slug exist?" — and middleware's 404 check asks
+ * exactly that. Answering from the listing 404'd every stress route on the
+ * first build of it.
+ *
+ * Production has no such split, so the real implementation returns the archive.
+ * Here the two have to be unioned, and this function is the only place that
+ * knows they differ.
+ */
+export async function getRoutableSlugs(): Promise<string[]> {
+  /*
+    THIS LIST MIRRORS `getArticle` ABOVE, BRANCH FOR BRANCH, and it has to.
+    Two attempts got it wrong by reasoning about it instead: the first asked
+    the sitemap's set and 404'd every STRESS fixture, the second added STRESS
+    and still 404'd `fundamental-analysis`, which is FULL_ARTICLE and belongs
+    to neither collection. The only correct source is the resolver itself.
+  */
+  return simulate([
+    FULL_ARTICLE.slug,
+    ...STRESS.map((a) => a.slug),
+    ...ALL_SUMMARIES.map((a) => a.slug),
+  ]);
+}
+
 export function magArchiveOverflowed(): boolean {
   return false;
 }

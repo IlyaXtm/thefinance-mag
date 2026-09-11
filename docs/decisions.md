@@ -1387,6 +1387,77 @@ bent to hide.
 
 ---
 
+## Not-found handling
+
+**A 404 is a page, and it renders without JavaScript.** Decided 2026-09-11;
+closes backlog B36.
+
+In Next 15.5.23, `notFound()` thrown from an async server component does not
+render its boundary into the initial HTML. The document is
+`<body><div hidden><!--$--><!--/$--></div></body>` — 58 bytes — and the actual
+page arrives only after React hydrates. A minimal route with no application
+code reproduces it, with or without a segment-local `not-found.tsx`, with or
+without `experimental.globalNotFound`. It is framework behaviour, and
+`/mag/<dead-slug>` is the 404 that actually happens: a stale link to an article
+that was unpublished or renamed.
+
+**The obvious fix is prohibited.** `dynamicParams = false` on `[slug]` makes
+these 404s prerender — it is the only configuration that produces a full body —
+and it also means an article published in WordPress after the last build 404s
+until the next one. **Freshness outranks the 404.** The same holds for
+`market/[slug]` and `author/[slug]`.
+
+**What ships instead: middleware resolves the slug and rewrites a dead one to a
+static page, with the status set on the rewrite.**
+`NextResponse.rewrite(url, { status: 404 })` returns the full body AND the 404
+header; the plain rewrite returns the same body with a 200, which is a soft 404
+and worse than a blank one, because Google indexes it. Verify the header, not
+the body.
+
+**The body is one component.** `NotFoundContent` is rendered by both
+`app/not-found.tsx` — everything Next resolves itself — and `/not-found-page`,
+the rewrite target. Two copies of a 404 would drift and the drift would be
+invisible; nobody looks at a 404 twice.
+
+**Middleware asks the app, not WordPress.** `/api/known-slugs` returns the
+routable set through the service layer, so the answer comes from the mock or
+from WPGraphQL exactly as every page does. A middleware querying the CMS
+directly is a middleware whose 404 handling cannot be verified on a laptop, and
+this behaviour is precisely the kind that needs a local test. The endpoint is
+`revalidate = 0` deliberately: at 60 its own window would sit in front of the
+freshness guarantee.
+
+**A cache miss blocks, and it costs a token.** A background-only refresh would
+re-create the trade that was just rejected — a new article invisible until the
+next window — so the first request for an unknown slug waits for the answer.
+To keep a crawler from turning a thousand dead URLs into a thousand queries,
+a miss spends one of five tokens refilling at one a second; with no token, the
+request passes through to the old behaviour. Measured: 200 dead URLs cost 5
+queries, and a newly published article resolves on its very next request.
+
+**It rejects nothing it is not sure about.** Three gates let a request through
+untouched: the first segment is a reserved route, the slug set is unavailable
+(`ok: false`, empty, or the archive overflowed its fetch), or the slug is in
+the set. Every failure mode degrades to the old blank 404, never to a 404 on
+something real — a false negative is a slow white screen, a false positive is a
+live article deleted from the index.
+
+**Two invariants hold the line**, because this project has shipped this class
+of bug before — an `if (!mounted) return null` that made every page invisible
+to crawlers for months. `check-invariants` counts the `<body>` with `<script>`
+stripped on four 404 URLs and requires ≥20,000 bytes plus a 404 status plus
+`noindex`; and it reads `src/app` and fails if a route segment is missing from
+`RESERVED_SEGMENTS`, since middleware treats an unreserved single segment as an
+article slug.
+
+**This is a workaround for a framework defect, and it should be removable.**
+Re-test `notFound()` against initial HTML at the Next 16 upgrade (B10); if it
+renders, the middleware gate, the endpoint and `/not-found-page` all come out
+and `app/not-found.tsx` keeps the component. `/mag/archive/page/999` is the one
+404 this does not fix — a different shape, tracked as B37.
+
+---
+
 ## Repository
 
 **Flat structure, not a monorepo.** One app; `apps/web/` would add a level for

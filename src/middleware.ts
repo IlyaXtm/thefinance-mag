@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { redirectTarget, resolveRedirect } from '@/features/mag/lib/redirects';
 import { currentRedirects } from '@/features/mag/lib/redirect-source';
+import { isKnownSlug } from '@/features/mag/lib/known-slugs';
+import { RESERVED_SEGMENTS } from '@/features/mag/lib/known-routes';
+import { MARKET_SLUGS } from '@/features/mag/types/mag.types';
 import { MAG_PATH } from '@/features/mag/lib/site';
 
 /**
@@ -134,7 +137,7 @@ function paginationRedirect(pathname: string, search: URLSearchParams): string |
   const root = pathname === '/' ? '' : pathname;
   return `${root}/page/${page}${suffix}`;
 }
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   /*
     With `basePath` configured, `nextUrl.pathname` has the basePath ALREADY
     STRIPPED — a request for /mag/foo arrives here as /foo. Matching against
@@ -169,6 +172,9 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(absolute(request, trimmed), 308);
     }
 
+    const notFound = await notFoundRewrite(request, trimmed);
+    if (notFound) return notFound;
+
     return NextResponse.next();
   }
 
@@ -181,6 +187,90 @@ export function middleware(request: NextRequest) {
     */
     rule.kind === 'permanent' ? 301 : 302,
   );
+}
+
+/**
+ * Rewrite a dead slug to the 404 page, with the status set here.
+ *
+ * ── Why middleware has to do this ───────────────────────────────────────
+ *
+ * `notFound()` thrown at REQUEST time does not render its boundary into the
+ * initial HTML in Next 15.5.23. Six variants were tested and five of them
+ * serve `<body><div hidden></div></body>` — 58 bytes, blank without
+ * JavaScript. The only one that renders is a route with
+ * `dynamicParams = false`, which resolves the 404 at build time and is exactly
+ * what these routes must not be: an article published after the build has to
+ * resolve without a rebuild. See docs/decisions.md for the full matrix.
+ *
+ * A rewrite carrying an explicit status is the remaining shape, and it works —
+ * the rewritten page's full document, under the requested URL, with a real 404.
+ *
+ * ── It rejects nothing it is not sure about ─────────────────────────────
+ *
+ * Three gates, in order, and any of them lets the request through:
+ *
+ *   1. the first segment is a real route (`/archive`, `/news`, …), or
+ *   2. the slug set is unavailable — CMS down, endpoint erroring — in which
+ *      case `isKnownSlug` returns null and nothing is rejected, or
+ *   3. the slug is in the set.
+ *
+ * Gate 1 is the dangerous one: a route added to `src/app` and missing from
+ * `RESERVED_SEGMENTS` would 404 in production while working in `next dev`.
+ * `check-invariants` reads `src/app` and fails on exactly that.
+ *
+ * ── Markets do not need the network ─────────────────────────────────────
+ *
+ * Their six slugs are registered by the mu-plugin and compiled in, so a market
+ * that is not in the constant cannot exist. Articles and authors come from the
+ * CMS and go through the set.
+ */
+async function notFoundRewrite(
+  request: NextRequest,
+  pathname: string,
+): Promise<NextResponse | null> {
+  /*
+    DECODED, because the set holds decoded slugs and the URL does not.
+
+    Most of the archive is percent-encoded Persian — `/%d8%a7%d9%86...` — and
+    Next hands the page a DECODED param, so the route set is decoded too.
+    Comparing the raw path segment against it matched nothing: the first build
+    of this check 404'd every Persian-slugged article, which is most of the
+    archive, while every Latin slug worked. `[slug]/page.tsx` does the same
+    decode for the same reason.
+  */
+  const segments = pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        return segment;
+      }
+    });
+  if (segments.length === 0) return null;
+
+  const rewrite = () =>
+    NextResponse.rewrite(absolute(request, '/not-found-page'), { status: 404 });
+
+  /* /market/<slug> — answered from the compiled list, no fetch. */
+  if (segments.length === 2 && segments[0] === 'market') {
+    return (MARKET_SLUGS as readonly string[]).includes(segments[1]) ? null : rewrite();
+  }
+
+  /* /author/<slug> */
+  if (segments.length === 2 && segments[0] === 'author') {
+    const known = await isKnownSlug(request.nextUrl.origin, 'authors', segments[1]);
+    return known === false ? rewrite() : null;
+  }
+
+  /* /<slug> — an article, unless the segment is a route. */
+  if (segments.length === 1 && !RESERVED_SEGMENTS.has(segments[0])) {
+    const known = await isKnownSlug(request.nextUrl.origin, 'articles', segments[0]);
+    return known === false ? rewrite() : null;
+  }
+
+  return null;
 }
 
 /**
