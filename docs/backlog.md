@@ -1454,3 +1454,175 @@ not moved in a year.
 `dynamicParams`, so both keep the default `true` and a term added after the
 build still resolves. `category/[slug]` is the only route in `src/app` that
 turns it off.
+
+---
+
+## B39 — 🟡 `article_viewed` analytics: parked, with two of four answers banked
+
+**Status:** parked 2026-09-11 by decision, before any code was written. **No
+route handler, no client component, no config, no env vars.** Nothing in the
+tree references analytics. This entry exists so the two settled answers are not
+re-derived and the two open ones are not answered by guessing.
+
+The spec is the Finance dashboard team's `article_viewed` event: the magazine
+fires one event per article view, carrying identity keys shared with the main
+site so a reader can be stitched to a later signup. It was parked because four
+observations it depends on all require hosts the build environment cannot
+reach, and two of those sit in the client half where a wrong value is silently
+wrong rather than visibly broken — a dashboard that populates with bad numbers
+is worse than one that stays empty.
+
+### Answered — do not re-open these
+
+**1. `category` is Rank Math's primary category, with a priority fallback.**
+
+Measured on the live CMS: **47 of 54 published articles have
+`rank_math_primary_category` set** — 87% coverage. That is the field the SEO
+team already curates, so it is the source.
+
+For the seven without one, priority order:
+
+```
+اخبار  >  تحلیل  >  آموزش  >  اینچارت
+```
+
+**`مقالات` is excluded entirely, at both steps.** It is on 40 of 54 articles
+and functions as a general label rather than a category; sending it would tell
+the dashboard nothing while looking like a real value. If an article's Rank
+Math primary IS `مقالات`, fall through to the priority order rather than
+sending it.
+
+Context for why a rule was needed at all: there are 96 category assignments
+across 54 articles — آموزش 42, مقالات 40, اخبار 10, تحلیل 2, اینچارت 2 — so
+most articles carry two or three and "the category" is not a fact the content
+model holds. **Whoever implements this must also record the rule in
+`docs/decisions.md`**, because the field will be read in Metabase as though it
+means something specific and nobody looking at a chart will know which of the
+two steps produced a given row.
+
+First term by ID was considered and rejected: deterministic and meaningless.
+
+**2. The trigger must be a client mount. This is not a preference.**
+
+The article route is ISR with `revalidate = 300`. An event fired during server
+render fires **once per regeneration, not once per view** — roughly one event
+per five minutes per article, regardless of traffic.
+
+The reason this is 🔴 rather than a performance note is that **the failure is
+invisible from the dashboard**: events arrive, charts populate, and the numbers
+are wrong by a large and variable factor that nothing downstream can detect.
+A quiet article and a viral one report nearly the same figure.
+
+So: client detects, server delivers. Neither can do the other's job.
+
+A side effect worth keeping: because the trigger is a mount, bots that do not
+execute JavaScript never fire an event. **Do not add User-Agent sniffing** —
+the architecture already does most of that job, and the spec forbids the raw UA
+in the payload.
+
+Whoever picks this up must test it: load the same article ten times inside the
+ISR window and confirm ten distinct `event_id`s; then trigger a revalidation
+through `api/revalidate` with no browser involved and confirm zero events.
+Both, or the constraint is only documented and not held.
+
+### Open — both client-side, both need a browser on the live main site
+
+**3. Do the identity keys actually exist under these exact strings?**
+
+```
+thefinance.analytics.anonymous_id   localStorage
+thefinance.analytics.session_id     sessionStorage
+```
+
+The spec names them; nobody has confirmed the main site writes them. If the
+magazine writes to a key the main site does not read, **the stitch to signup —
+the entire point of the event — silently never happens**, and it surfaces
+months later as two disconnected populations in one query.
+
+Check with a real page load on `thefinance.ir`, dumping every key under the
+`thefinance` prefix in both stores *and* in cookies — a near-miss like
+`thefinance.anon_id` is the answer, and a filter on the full
+`thefinance.analytics.` prefix would hide it.
+
+**An empty result is a real answer, not a failed check.** It means the magazine
+would be the first writer, which turns this from "match an existing key" into
+"define the key" — a decision the dashboard team owns, not the magazine.
+
+**4. What is `landing_page` when the article is not the landing page?**
+
+The spec defines it as «اولین صفحه Journey در صورت وجود» — the first page of
+the journey — but its own example payload sets `landingPage` equal to
+`pageUrl`. Those coincide only when the reader entered on the article. Copying
+`page_url` into the field would make **every** journey look like it started at
+the article, which is precisely the question the field exists to answer.
+
+Resolve by finding whether the main site already records a landing page, under
+what key and in which store — likely the same `thefinance.analytics.*`
+namespace. If it does not: send `landing_page` only when this page is genuinely
+first in the session, and `null` otherwise. A null is honest; a wrong value is
+worse than an absent one.
+
+### Settled while checking, so nobody worries about it twice
+
+**`api` is NOT in `RESERVED_SEGMENTS`, and it must not be.** The worry is
+reasonable — the B36 middleware rewrites unknown first segments to the 404 page,
+and an analytics POST rewritten to a 404 would look like a collector problem for
+as long as it takes someone to think of the middleware. It does not happen:
+
+```
+GET /mag/api/known-slugs  ->  200      ← first segment `api`, not in the list,
+                                          and it still answers
+```
+
+`config.matcher` is `['/', '/((?!_next/|api/|favicon.ico|icon.svg|apple-icon.png).*)']`.
+Next prefixes the basePath and the lookahead runs against the segment after
+`/mag/`, so `api/…` never matches and middleware does not execute on it at all.
+`check-invariants.mjs` skips `api` and `fonts` when reading `src/app` for the
+same reason — it passes by design, not by oversight.
+
+**Do not "fix" this by adding `api` to the list.** It would be harmless but it
+would assert that middleware inspects those paths and chooses to let them
+through, which is not what happens, and the next person would then have to
+re-derive which of the two mechanisms is actually protecting the endpoint.
+
+### What blocks a resumption, and what it needs
+
+The environment this was attempted from refuses all four hosts at the proxy's
+CONNECT stage — a network-policy denial, not DNS or TLS:
+
+```
+thefinance.ir:443         403      needs: identity keys, landing_page
+api.thefinance.ir:443     403      needs: does it take camelCase, does it need auth
+events.thefinance.ir:443  403      the collector, if the backend path is rejected
+wp.thefinance.ir:443      403      (Rank Math coverage — now answered, 47/54)
+```
+
+So resuming needs a machine that can reach `thefinance.ir` with a real browser,
+and the spec document itself — the version this was scoped against was never
+attached, and "validate the body before forwarding" is only safe against an
+exhaustive field list.
+
+### Two things the implementation must not lose
+
+**`docs/decisions.md` already names an analytics source of truth** — "Matomo
+self-hosted as the analytics source of truth", chosen because GTM/GA4 are
+render-blocking, Google-hosted, and unreliable from Iran. This event stream does
+not conflict with that — signup stitching is a different job from site
+analytics, and the design is a first-party POST to `/mag/api/…` forwarded
+server-side, so `CLAUDE.md`'s "no third-party scripts" holds. But two analytics
+truths is the thing that entry exists to prevent, so the resumption records
+itself **next to that paragraph**, not as a new entry that sits alongside it.
+
+**The upstream key, if the collector path is taken.** `ANALYTICS_URL`,
+`ANALYTICS_API_KEY` and `ANALYTICS_ENVIRONMENT` are server env with **no
+`NEXT_PUBLIC_` prefix** — that prefix inlines the value into the client bundle
+at build time. Preferring the Finance backend over the collector avoids holding
+a collector secret at all, which is a smaller surface than holding one
+correctly; that was the leaning, not a decision, because both preconditions for
+it are unanswered (question 4's first two lines above).
+
+Worth adding at the same time, and not in the spec: a forwarded/dropped counter
+on `/mag/health`, which already reports the real state of each dependency.
+Analytics is fail-open by design, which means its failures are invisible by
+design — a counter turns a dead collector into something noticed in a day
+rather than a quarter.
