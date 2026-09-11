@@ -241,7 +241,7 @@ add_filter('preview_post_link', static function (string $link, WP_Post $post): s
 }, 10, 2);
 
 /**
- * Fetch a post by ID regardless of status, for preview only.
+ * Fetch a post regardless of status, for preview only.
  *
  * WPGraphQL will not return an unpublished post to an unauthenticated caller —
  * correctly. The frontend's draft route holds the shared secret and passes it
@@ -250,26 +250,70 @@ add_filter('preview_post_link', static function (string $link, WP_Post $post): s
  *
  * The secret is compared with hash_equals to avoid leaking its length through
  * timing.
+ *
+ * ── Why it takes a slug as well as an ID ────────────────────────────────
+ *
+ * WordPress's Preview button knows only the post ID, so `/api/draft` is
+ * entered with an ID. But the editor is then redirected to `/mag/<slug>` —
+ * the address the piece will actually live at, which is the point of a
+ * preview — and the article route has nothing but that slug to fetch with.
+ * So both are accepted and exactly one is required.
+ *
+ * Resolving by slug searches EVERY status. That is the whole reason it exists:
+ * a published post is already reachable without a secret, so the only callers
+ * this helps are looking at drafts.
  */
 add_action('graphql_register_types', static function (): void {
     register_graphql_field('RootQuery', 'magPreview', [
         'type'        => 'Post',
         'description' => 'A post of any status, for draft preview. Requires the preview secret.',
         'args'        => [
-            'id'     => ['type' => ['non_null' => 'Int']],
+            'id'     => ['type' => 'Int'],
+            'slug'   => ['type' => 'String'],
             'secret' => ['type' => ['non_null' => 'String']],
         ],
         'resolve'     => static function ($root, array $args, $context) {
             if (!defined('TF_MAG_PREVIEW_SECRET')) { return null; }
             if (!hash_equals(TF_MAG_PREVIEW_SECRET, (string) $args['secret'])) { return null; }
 
-            $post = get_post((int) $args['id']);
+            $id   = isset($args['id']) ? (int) $args['id'] : 0;
+            $slug = isset($args['slug']) ? (string) $args['slug'] : '';
+
+            if ($id > 0) {
+                $post = get_post($id);
+            } elseif ($slug !== '') {
+                /* post_status 'any' is the point — get_page_by_path() and the
+                   default query both hide drafts, which is everything we are
+                   being asked for. */
+                $found = get_posts([
+                    'name'             => $slug,
+                    'post_type'        => 'post',
+                    'post_status'      => 'any',
+                    'numberposts'      => 1,
+                    'suppress_filters' => false,
+                ]);
+                $post = $found ? $found[0] : null;
+            } else {
+                return null;
+            }
+
             if (!$post || $post->post_type !== 'post') { return null; }
 
             /* Preview should show the newest autosave, which is what the editor
                just typed — not the last saved revision. */
             $autosave = wp_get_post_autosave($post->ID);
-            if ($autosave) { $post = $autosave; }
+            if ($autosave) {
+                /*
+                  KEEP THE PARENT'S SLUG. An autosave is a revision, and its
+                  post_name is "<parent-id>-autosave-v1" — not the article's
+                  slug. Returning that made every link the preview page builds
+                  from `slug` point at a URL that does not exist, and it made
+                  an ID-to-slug lookup return nonsense exactly when the editor
+                  had unsaved changes, which is when preview is used.
+                */
+                $autosave->post_name = $post->post_name;
+                $post = $autosave;
+            }
 
             return new \WPGraphQL\Model\Post($post);
         },

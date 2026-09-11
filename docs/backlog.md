@@ -853,9 +853,63 @@ re-read the `WP_SITEURL` entry in `decisions.md` first.
 
 ---
 
-## B23 — 🔴 Draft preview redirects to an ID, and the article route needs a slug
+## B23 — ✅ Draft preview redirects to an ID, and the article route needs a slug
 
-**Status:** open.
+**Status:** CLOSED 2026-09-11. `/api/draft` now resolves the post ID to the
+article's real slug and redirects to `/mag/<slug>`, so the editor previews the
+address the piece will publish at and there is still one URL shape per article.
+
+Verified to the rendered body rather than the status code, because the status
+code is what passed when this shipped broken:
+
+```
+no secret            401, no Location
+wrong secret         401
+correct secret       307 → /mag/fundamental-analysis     (a slug, not «/mag/1»)
+following it         200, 149,847 bytes, h1 «[پیش‌نمایش] تحلیل فاندامنتال…»,
+                     55 body paragraphs, robots noindex, nofollow, nocache
+```
+
+Three things it turned out to need beyond the redirect:
+
+**1. `magPreview` had to accept a slug.** It took `id: Int!` only, so after the
+redirect the article route had nothing it could fetch with. It now takes either
+and requires exactly one.
+
+**2. The autosave was returning the wrong slug.** `wp_get_post_autosave` returns
+a revision whose `post_name` is `<parent-id>-autosave-v1`, not the article's
+slug — so an ID-to-slug lookup returned nonsense in exactly the case preview
+exists for, an editor with unsaved changes. The resolver now keeps the parent's
+`post_name` on the substituted autosave, which also fixes every link the preview
+page was building from `slug`.
+
+**3. `ed52e59` had made it worse, and would have blocked the fix.** The B36
+middleware rewrites any unknown first segment to the 404 page, and a draft's
+slug is not in the published set — correctly, that is why `/mag/<slug>` 404s for
+an unpublished post. So the redirect would have been 404'd before the route ran.
+Middleware now returns early when the Draft Mode bypass cookie is present.
+Forging it gains nothing: it only lets the request reach the article route,
+which still needs the secret to resolve anything. Measured both ways on a slug
+outside the published set:
+
+```
+/mag/unpublished-draft-xyz   no cookie      404   91,306 bytes, «این صفحه پیدا نشد»
+/mag/unpublished-draft-xyz   draft cookie   200  149,850 bytes, the preview body
+```
+
+**Not verified against WordPress.** The build environment cannot reach
+`wp.thefinance.ir`, so everything above is against the mock, which exercises the
+same service-layer path. **The mu-plugin change has to be deployed to the CMS
+separately** — `wordpress/mu-plugins/thefinance-mag-redirects.php`, rsync to
+`/root/wp/wordpress/wp-content/mu-plugins/`. Shipping the frontend image alone
+leaves preview broken, because `magPreview` will reject the `slug` argument.
+
+The secret-hygiene note this entry carried is now a rule in `docs/decisions.md`
+→ Infrastructure.
+
+Original entry follows.
+
+**Status was:** open.
 
 The secret handshake works — no secret gives 401, a correct secret gives 307 —
 so draft mode itself is fine. The destination is wrong: it redirects to
@@ -1687,9 +1741,42 @@ someone other than the current operator has to ship.
 
 ---
 
-## B41 — 🟢 `color-scheme: dark` is never declared
+## B41 — ✅ `color-scheme: dark` is never declared — FILED IN ERROR
 
-**Status:** open, found 2026-09-11 while confirming the dark theme is the
+**Status:** CLOSED 2026-09-11. **It was already declared.** This entry was wrong
+when it was written, and the reason is worth keeping.
+
+`src/styles/tokens.css` has carried this since the themes were built:
+
+```css
+html { color-scheme: dark; }
+[data-theme='v2-light'] { color-scheme: light; }
+```
+
+That is already per-theme and already correct — `[data-theme='v2-light']` at
+(0,1,0) outranks `html` at (0,0,1), so v1 and v2-dark get dark chrome and the
+light theme gets light. Verified in a browser rather than by reading it again:
+
+```
+v1        color-scheme=dark    body=rgb(4, 12, 31)
+v2-dark   color-scheme=dark    body=rgb(10, 10, 10)
+v2-light  color-scheme=light   body=rgb(255, 255, 255)
+```
+
+**How it was missed:** the search that "found" the bug was
+`grep -rn 'color-scheme' src/ … | grep -v 'tokens.css'` — the filter excluded
+the one file the declaration lives in. The tokens file was being filtered out to
+reduce noise from `data-theme` matches, and it took the answer with it.
+
+The lesson is the project's own: **a negative result from a filtered search is
+not a negative result.** "I did not find it" and "it is not there" are different
+claims, and this entry asserted the second from the first. The same shape as the
+justify rule and the invariant sweep that passed because it only saw well-formed
+cases.
+
+Original entry follows.
+
+**Status was:** open, found 2026-09-11 while confirming the dark theme is the
 default. One line.
 
 Dark **is** the default — `layout.tsx` renders `data-theme="v1"` server-side and

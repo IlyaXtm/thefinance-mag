@@ -39,6 +39,7 @@ type MagSource = {
   magInjectedTocSurvivors: typeof mock.magInjectedTocSurvivors;
   getArticle: typeof mock.getArticle;
   getPreviewArticle: typeof mock.getPreviewArticle;
+  getPreviewSlug: typeof mock.getPreviewSlug;
   getMarkets: typeof mock.getMarkets;
   getMarket: typeof mock.getMarket;
   getCategories: typeof mock.getCategories;
@@ -66,6 +67,10 @@ export const getArticle: MagSource['getArticle'] = (slug) =>
  */
 export const getPreviewArticle: MagSource['getPreviewArticle'] = (id, secret) =>
   source.getPreviewArticle(id, secret);
+
+/** The slug behind a post ID, for any status — what `/api/draft` redirects to. */
+export const getPreviewSlug: MagSource['getPreviewSlug'] = (id, secret) =>
+  source.getPreviewSlug(id, secret);
 
 export const getMarkets: MagSource['getMarkets'] = () => source.getMarkets();
 

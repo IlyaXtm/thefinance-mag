@@ -657,7 +657,42 @@ export async function getArticle(slug: string): Promise<Article> {
 }
 
 /**
- * Fetch an article for PREVIEW, by post ID, including unpublished revisions.
+ * Which argument `magPreview` should be called with.
+ *
+ * WordPress's Preview button knows only the post ID, so the draft route is
+ * entered with one. Everything after the redirect has a slug and nothing else.
+ * A slug is never all-digits — WordPress sanitises titles, and a purely numeric
+ * one would collide with this very check, which is why the resolver requires
+ * exactly one of the two rather than guessing.
+ */
+function previewSelector(idOrSlug: string): { id: number } | { slug: string } {
+  return /^\d+$/.test(idOrSlug) ? { id: Number(idOrSlug) } : { slug: idOrSlug };
+}
+
+/**
+ * The real slug behind a post ID, for any status.
+ *
+ * Used by `/api/draft` to turn WordPress's ID into the address the article will
+ * live at. It asks for `slug` alone rather than reusing `getPreviewArticle`,
+ * because pulling a whole draft body — through `prepareBody`, heading
+ * extraction and SEO mapping — to read one field is work the redirect does not
+ * need, on the request the editor is waiting on.
+ */
+export async function getPreviewSlug(id: string, secret: string): Promise<string | null> {
+  const data = await gql<{ magPreview: { slug: string | null } | null }>(
+    `query MagPreviewSlug($id: Int, $secret: String!) {
+      magPreview(id: $id, secret: $secret) { slug }
+    }`,
+    { id: Number(id), secret },
+    false,
+  );
+
+  return data.magPreview?.slug ?? null;
+}
+
+/**
+ * Fetch an article for PREVIEW, by post ID or slug, including unpublished
+ * revisions.
  *
  * `magPreview` is exposed by the mu-plugin rather than by WPGraphQL core:
  * previewing a draft requires authentication, and the alternative is an
@@ -671,22 +706,22 @@ export async function getArticle(slug: string): Promise<Article> {
  * `revalidate: false` — never cached. A cached preview is the same defect in a
  * different place.
  */
-export async function getPreviewArticle(id: string, secret: string): Promise<Article> {
+export async function getPreviewArticle(idOrSlug: string, secret: string): Promise<Article> {
   const data = await gql<{
     magPreview: (WpSummary & { content: string | null; seo: unknown }) | null;
   }>(
-    `query MagPreview($id: ID!, $secret: String!) {
-      magPreview(id: $id, secret: $secret) {
+    `query MagPreview($id: Int, $slug: String, $secret: String!) {
+      magPreview(id: $id, slug: $slug, secret: $secret) {
         ${SUMMARY_FIELDS}
         content
         ${SEO_FIELDS}
       }
     }`,
-    { id, secret },
+    { ...previewSelector(idOrSlug), secret },
     false,
   );
 
-  if (!data.magPreview) throw new MagNotFoundError(id);
+  if (!data.magPreview) throw new MagNotFoundError(idOrSlug);
 
   const content = prepareBody(data.magPreview.content ?? '', data.magPreview.slug);
   const markets = (data.magPreview.markets?.nodes ?? []).map(mapMarket);

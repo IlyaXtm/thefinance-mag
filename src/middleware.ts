@@ -229,6 +229,24 @@ async function notFoundRewrite(
   pathname: string,
 ): Promise<NextResponse | null> {
   /*
+    DRAFT MODE IS NEVER 404'd HERE, and this is not a nicety — it is the
+    difference between preview working and not.
+
+    The set this checks against holds PUBLISHED slugs. A draft's slug is not in
+    it and must not be: that is precisely why `/mag/<slug>` correctly 404s for
+    an unpublished post. So an editor redirected from `/api/draft` to the
+    article's real address would be rewritten to the 404 page before the route
+    ever ran, and the preview would fail in a way that looks identical to the
+    bug it was supposed to fix.
+
+    Presence of the bypass cookie is enough, and forging it gains nothing: all
+    it does is let the request reach the article route, which then resolves the
+    preview through the secret it holds and 404s without one. This gate only
+    ever makes middleware MORE permissive, never less.
+  */
+  if (request.cookies.has('__prerender_bypass')) return null;
+
+  /*
     DECODED, because the set holds decoded slugs and the URL does not.
 
     Most of the archive is percent-encoded Persian — `/%d8%a7%d9%86...` — and

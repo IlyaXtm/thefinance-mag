@@ -117,9 +117,12 @@ async function fetchArticle(slug: string) {
 /**
  * The article, or the draft an editor is previewing.
  *
- * In Draft Mode the route segment is a POST ID rather than a slug — see
- * `api/draft`. `magPreview` returns the newest autosave, so the editor sees
- * what they just typed rather than the last saved revision.
+ * In Draft Mode the segment is still a SLUG — `api/draft` resolves WordPress's
+ * post ID before redirecting, so an article has one URL shape whether it is
+ * published or not, and the author previews the address the piece will live at.
+ * `magPreview` looks the slug up across every status and returns the newest
+ * autosave, so the editor sees what they just typed rather than the last saved
+ * revision.
  *
  * Reading `draftMode()` does NOT make this route dynamic. During static
  * generation `isEnabled` is false and Next does not bail out; the page only

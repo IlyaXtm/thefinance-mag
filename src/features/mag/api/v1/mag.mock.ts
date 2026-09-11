@@ -1203,6 +1203,11 @@ export async function getArticle(slug: string): Promise<Article> {
  * The secret is checked at the route, not here; this mirrors the real API,
  * where it is WordPress that validates.
  */
+export async function getPreviewSlug(id: string, _secret: string): Promise<string | null> {
+  const summary = ALL_SUMMARIES.find((a) => a.id === id || a.slug === id);
+  return simulate(summary ? summary.slug : FULL_ARTICLE.slug);
+}
+
 export async function getPreviewArticle(id: string, _secret: string): Promise<Article> {
   const summary = ALL_SUMMARIES.find((a) => a.id === id || a.slug === id);
   const base = summary ? await getArticle(summary.slug) : FULL_ARTICLE;

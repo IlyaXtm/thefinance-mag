@@ -8,6 +8,98 @@ why it was made.
 
 ---
 
+## 2026-09-11 (last) — Draft preview lands on the article, and an entry retracted
+
+Closes B23, the last 🔴. Closes B41 as filed in error. Indexes the seven
+documents added earlier today.
+
+### B23 — the preview now goes where the article will live
+
+The handshake was always right — 401 without the secret, 307 with it — and the
+editor still hit a 404, because the redirect went to `/mag/<id>` and the article
+route is keyed on slug. **A green status code on a broken feature is what
+shipped this**, which is why it was verified this time to the rendered body:
+
+```
+no secret        401, no Location
+wrong secret     401
+correct secret   307 → /mag/fundamental-analysis        (a slug, not «/mag/1»)
+following it     200, 149,847 bytes, h1 «[پیش‌نمایش] تحلیل فاندامنتال…»,
+                 55 body paragraphs, robots noindex, nofollow, nocache
+```
+
+The ID is resolved in the draft handler, which already holds the secret, rather
+than teaching the article route to accept a numeric segment. One URL shape per
+article, and the author previews the exact address the piece publishes at.
+
+**Three things it needed beyond the redirect**, none of them visible from the
+bug report:
+
+`magPreview` took `id: Int!` only, so after the redirect the article route had
+nothing to fetch with. It now takes an ID or a slug and requires exactly one —
+resolving by slug searches every status, which is the entire point, since a
+published post needs no secret.
+
+**The autosave was returning the wrong slug.** `wp_get_post_autosave` returns a
+revision whose `post_name` is `<parent-id>-autosave-v1`. So an ID-to-slug lookup
+returned nonsense in precisely the case preview exists for — an editor with
+unsaved changes — and every link the preview page built from `slug` already
+pointed at a URL that does not exist. The resolver now keeps the parent's
+`post_name` on the substituted autosave.
+
+**And `ed52e59` had made this worse.** The B36 middleware rewrites any unknown
+first segment to the 404 page, and a draft's slug is not in the published set —
+correctly so. The redirect would have been 404'd before the route ran, so the
+fix could not have worked without this:
+
+```
+/mag/unpublished-draft-xyz   no cookie      404   91,306 bytes, «این صفحه پیدا نشد»
+/mag/unpublished-draft-xyz   draft cookie   200  149,850 bytes, the preview body
+```
+
+Presence of the Draft Mode bypass cookie is the whole gate. Forging it gains
+nothing — it only lets the request reach the article route, which still needs
+the secret to resolve anything, so this can only ever make middleware more
+permissive.
+
+**The mu-plugin has to be deployed to the CMS separately.** Shipping the
+frontend image alone leaves preview broken, because `magPreview` will reject the
+`slug` argument. None of this is verified against WordPress: the build
+environment cannot reach `wp.thefinance.ir`, so it is the mock throughout,
+through the same service-layer path.
+
+### B41 — retracted, and the retraction is the useful part
+
+**`color-scheme` was already declared**, and has been since the themes were
+built: `html { color-scheme: dark }` with `[data-theme='v2-light']` overriding
+to light. That is already per-theme and already correct. Measured in a browser:
+
+```
+v1        color-scheme=dark    body=rgb(4, 12, 31)
+v2-dark   color-scheme=dark    body=rgb(10, 10, 10)
+v2-light  color-scheme=light   body=rgb(255, 255, 255)
+```
+
+The search that "found" the bug ended in `| grep -v 'tokens.css'` — filtering out
+the one file the declaration lives in, to cut noise from `data-theme` matches. It
+cut the answer.
+
+**A negative result from a filtered search is not a negative result.** "I did not
+find it" and "it is not there" are different claims, and B41 asserted the second
+from the first. Same shape as the justify rule that was never measured, and as a
+sweep that passes because it only ever saw well-formed cases.
+
+### `docs/README.md`
+
+The seven documents added earlier today are indexed: `content-state.md`,
+`content-team-guide.md`, `infra/server-move.md` and the four under `learn/`, plus
+`roadmap.md`, which had never been listed either. `learn/frontend.md` is now
+second in the reading order — ahead of `plan.md`, because knowing how the thing
+works precedes knowing what is left — and there is a pointer for anyone starting
+at a server instead.
+
+---
+
 ## 2026-09-11 (latest) — The operational documents move into the repo
 
 A set of documents maintained outside version control — an infrastructure
