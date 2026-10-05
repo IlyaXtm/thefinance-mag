@@ -47,7 +47,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
          runtime marks the card, and the stylesheet drops the media box — so a
          failed image reads exactly like an article that never had one. */
       data-hero-card=""
-      className="group relative flex flex-col overflow-hidden rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none"
+      className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none"
     >
       {image && (
         <div
@@ -57,11 +57,11 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         >
           <CardImage
             image={image}
-            /* The 1.55fr column of a 1224px container is ~730px; 62vw asked
+            /* The 2fr column of the 1224px container is ~720px; 62vw asked
                for 893px at 1440. */
             sizes="(max-width: 1023px) 100vw, 740px"
             priority
-            rounded=""
+            rounded="rounded-t-card"
           />
         </div>
       )}
@@ -96,26 +96,44 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
 }
 
 /**
- * The two stacked cards beside the hero: `150px | 1fr`.
+ * The two cards beside the lead: image on top, title under it — the lead's
+ * own shape at a smaller size.
  *
- * No dek — at 18px in a 150px-thumbnail row there is no space for one that
- * would still be readable, and the design does not draw it.
+ * ── IT WAS A ROW, AND THE ROW CROPPED THE ARTWORK INTO A SLIVER ─────────────
+ *
+ * `150px | 1fr`, with the grid stretching each card to half the lead's height
+ * (~330px). The thumbnail box became 150×330 — a portrait strip — and
+ * `object-cover` filled it by cutting away most of a landscape image, baked-in
+ * headline included. Reported 2026-10-05 with a screenshot: «عیار طلا» and
+ * «چشم‌انداز» reduced to fragments beside half a card of empty space.
+ *
+ * So the image goes on top at the ARTWORK'S OWN RATIO, like the lead's, and is
+ * never cropped; the ratio comes from `mediaDetails`, so the box is sized
+ * before the image loads. In the side column the cards are `flex-1`, and the
+ * text area absorbs any height difference between the two columns — spare
+ * height lands inside a card under its title, never as a hole between cards.
+ *
+ * No dek: at this width a title of three lines is the content.
  */
 export function HeroSideCard({ article }: { article: ArticleSummary }) {
   const category = cardCategory(article);
+  const image = article.featuredImage;
 
   return (
-    <article className="group relative grid grid-cols-[110px_1fr] gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 transition-colors duration-150 hover:border-accent motion-reduce:transition-none sm:grid-cols-[150px_1fr]">
-      <div className="min-h-[110px]">
-        <CardImage
-          image={article.featuredImage}
-          sizes="150px"
-          rounded="rounded-lg"
-          className="h-full"
-        />
-      </div>
+    /* No overflow-hidden: the image clips itself (`rounded-t-card`), so the
+       title link's focus ring is never cut by the card's corner radius. */
+    <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
+      {image && (
+        <div style={{ aspectRatio: heroAspectRatios(image).mobile }}>
+          <CardImage
+            image={image}
+            sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 400px"
+            rounded="rounded-t-card"
+          />
+        </div>
+      )}
 
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-1 flex-col gap-2 p-5">
         <span className="text-[12px] text-accent">{category.name}</span>
 
         <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
@@ -124,12 +142,12 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
           </Link>
         </h3>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12.5px] text-text-muted">
+        <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-1 text-[12.5px] text-text-muted">
           <time dateTime={toDateTimeAttr(article.publishedAt)}>
             {formatJalaliShort(article.publishedAt)}
           </time>
           <span aria-hidden="true">·</span>
-          <span>{formatReadingTime(article.readingTime)}</span>
+          <span>{formatReadingTime(article.readingTime)} مطالعه</span>
         </div>
       </div>
     </article>

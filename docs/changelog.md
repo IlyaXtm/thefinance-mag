@@ -8,6 +8,32 @@ why it was made.
 
 ---
 
+## 2026-10-05 (last) — The hero's side cards: image on top, never a sliver
+
+Reported with a screenshot within the hour of the landing round going live.
+The side cards were rows — `150px | 1fr` — and the grid stretched each to half
+the lead's height, so the thumbnail box became ~150×330: a portrait strip that
+`object-cover` filled by cutting a landscape image down to a fragment of its
+baked-in headline, beside half a card of empty space.
+
+Now all three hero cards are one family: image on top at the artwork's own
+ratio (`heroAspectRatios`, the same helper the lead uses, so nothing is
+cropped and the box is sized before the image loads), title and meta below.
+The columns went 1.55fr | 1fr → 2fr | 1fr, because an image-on-top card needs
+height rather than width; the side cards are `flex-1` and their text areas
+absorb whatever height difference is left. Measured against the live CMS:
+
+```
+1440   columns 751 | 751 px, image boxes 1.50 / 1.50 / 1.79 = their artwork
+ 768   lead full width, side cards two-up at equal height (362px)
+ 375   stacked, full width, no horizontal scroll
+```
+
+One preloaded image (the lead). The cards lost `overflow-hidden` and clip the
+image instead, so a title's focus ring is never cut by the corner radius.
+
+---
+
 ## 2026-10-05 (latest) — The landing round: eight requests from the team
 
 Sent as Telegram screenshots; six built as asked, two replaced (see

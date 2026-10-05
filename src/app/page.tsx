@@ -61,18 +61,24 @@ export default async function MagIndexPage() {
 
       <h1 className="sr-only">{MAG_NAME}</h1>
 
-      {/* Hero: 1.55fr | 1fr, stacking below lg. */}
+      {/*
+        Hero: 2fr | 1fr from lg; the side cards two-up under the lead at md,
+        stacked below that. 2fr, not the old 1.55fr, because the side cards
+        are image-on-top now and need height rather than width — at 2:1 the
+        two columns land within ~50px of each other at the archive's usual
+        ratios, and the cards' text areas absorb the rest.
+      */}
       {featured && (
         <section aria-labelledby="lead-heading" className="mt-6 lg:mt-8">
           <h2 id="lead-heading" className="sr-only">
             مطلب اصلی
           </h2>
 
-          <div className="grid gap-6 lg:grid-cols-[1.55fr_1fr]">
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <HeroFeature article={featured} />
 
             {heroSide.length > 0 && (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
+              <div className="grid gap-6 md:grid-cols-2 lg:flex lg:flex-col [&>*]:lg:flex-1">
                 {heroSide.map((article) => (
                   <HeroSideCard key={article.id} article={article} />
                 ))}
