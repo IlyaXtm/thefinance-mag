@@ -8,6 +8,35 @@ why it was made.
 
 ---
 
+## 2026-10-05 (open items) — Three dead legacy URLs, the weight rule, an nginx note
+
+**Three ranked URLs 404'd from the cutover until now:**
+`what-is-the-stochastic-indicator`, `what-is-the-ichimoku-indicator`,
+`what-is-the-obv-indicator`. `verify-redirects.sh` has flagged them on every
+run as "FINAL 404, MUST BE 200"; they were in neither `redirects.ts` nor Rank
+Math. Destinations verified published and 200. Added as CODE-ONLY rules,
+because WordPress does not have them yet and a plain compiled rule is replaced
+the moment WordPress answers — they would have worked for one window after
+each restart and then 404'd again. Health still reads `missingKnown: []`
+(code-only rules are in the live map). Rank Math copies for the SEO team's
+record: `docs/rank-math-redirects.md`.
+
+**The weight rule matched neither the font nor the code.** CLAUDE.md said
+400/600/700; IRANYekanX is one variable file with a real 100–1000 axis, and
+the codebase uses 300 and 500 in 26 places — all drawn instances, none
+synthetic. The owner left it to judgement, so the rule was amended to what is
+true and keeps what it was for: no weight outside the axis, no faked bold.
+
+**`/mag` 301s to `http://`, and the home canonical points at it.**
+`https://thefinance.ir/mag` → nginx 301 `http://…/mag/` → CDN 301
+`https://…/mag/` → 200: two hops and a downgrade, starting from the canonical
+URL. nginx's own slash redirect, built with `http` because TLS ends at the
+CDN. Not ours to change on the shared host; written up with a repro and a
+one-block fix (`location = /mag`, verified: the container answers `/mag` 200)
+in `docs/infra/nginx-mag-redirect-note.md`.
+
+---
+
 ## 2026-10-05 (review) — Masthead, one purpose per section, three surfaces, «تحلیل» retired
 
 From the team's design review, every point decided by the owner first.

@@ -69,6 +69,16 @@ export const LEGACY_REDIRECTS: readonly LegacyRedirect[] = [
   { from: 'worlds-top-10-hedge-funds', to: '10-هج-فاند-برتر-دنیا', kind: 'permanent' },
   { from: 'what-is-the-mfi-indicator', to: 'mfi-indicator', kind: 'permanent' },
   { from: 'what-is-the-atr-indicator', to: 'اندیکاتور-atr-چیست؟', kind: 'permanent' },
+  /*
+    Three that 404'd on production from the cutover until 2026-10-05: listed
+    by scripts/verify-redirects.sh among the URLs carrying /mag's search
+    traffic, but in neither this table nor Rank Math. Destinations verified as
+    published, 200, the same day. Code-only in redirect-source.ts, so they hold
+    whether or not the Rank Math copies exist yet.
+  */
+  { from: 'what-is-the-stochastic-indicator', to: '100-stochastic-indicator', kind: 'permanent' },
+  { from: 'what-is-the-ichimoku-indicator', to: 'ichimoku', kind: 'permanent' },
+  { from: 'what-is-the-obv-indicator', to: 'onbalancevolum_obv', kind: 'permanent' },
 
   /* ---- Code-only. The CMS cannot supply these; see each note. ---- */
   {

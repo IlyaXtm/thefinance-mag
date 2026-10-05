@@ -91,7 +91,14 @@ Two tokens are new system additions introduced by Mag: `--border-interactive` (i
    justified at any width — they are too short for it to be anything but cost.
    ZWNJ was the risk worth checking and is safe: «می‌پردازیم» measures 72.05px
    justified and unjustified alike, so the join is not a distribution point.
-3. Real font weights only (400/600/700) — no synthetic bold.
+3. Real font weights only — no synthetic bold. IRANYekanX ships as ONE variable
+   file with a real `wght` axis of 100–1000 (`src/app/layout.tsx`), so every
+   weight on that axis is a drawn instance, not a browser fake. The system uses
+   five: 300 (secondary long-form — card summaries, footer boilerplate), 400
+   (body), 500 (UI labels), 600, 700. The old wording, "400/600/700", predated
+   the variable file and was 27 call sites out of date when it was reconciled
+   (2026-10-05, owner's call). What stays forbidden is the thing the rule was
+   for: a weight outside the file's axis, or bold faked with stroke/shadow.
 4. ZWNJ (نیم‌فاصله) must render: «می‌شود», «نمی‌کند», «سرمایه‌گذاری». A mid-word fallback break is the fastest sign of a font failure.
 5. Line-height: body `1.9`, headings `1.5`, captions `1.7`.
 6. Body `18px` desktop / `17px` mobile. Content column `700px` (measures 70–73

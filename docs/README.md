@@ -47,6 +47,7 @@ else in version control.
 | `audit-seo-security-performance.md` | SEO, security and performance sweep before the next stage |
 | `content-team-guide.md` | What changed for editors: login, publish timing, the three rules, what is still in progress. Persian — it is sent to the content team |
 | `cta-unlinked.md` | The 21 CTA banners with no link in WordPress, with an edit link per post and a suggested target. Persian — it is sent to the content team |
+| `rank-math-redirects.md` | Three redirects to mirror in Rank Math (already live in code). Persian — it is sent to the content team |
 
 ### Design
 
@@ -65,6 +66,7 @@ else in version control.
 | `infra/seo-safety.md` | Cutover protocol: baseline, diff, reversible switch, monitoring |
 | `infra/frontend-deploy.md` | **The frontend runbook.** What runs on the host, how to build and deploy, rollback, diagnostics, CDN rules. The image is built on a laptop, never on the server |
 | `infra/server-move.md` | Moving the frontend server to another host, with the magazine-only section delimited. Persian — it is handed to whoever performs the move |
+| `infra/nginx-mag-redirect-note.md` | For the main site team: `/mag` 301s to `http://` from nginx, and the home canonical points at it. Repro and a one-block fix. Persian |
 
 ---
 

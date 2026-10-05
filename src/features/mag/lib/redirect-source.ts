@@ -43,10 +43,24 @@ const FETCH_TIMEOUT_MS = 10_000;
  * as redirect sources in the database — the posts are gone. They always win
  * over anything fetched, so a stale database row can't resurrect a 404.
  */
-const CODE_ONLY: readonly LegacyRedirect[] = LEGACY_REDIRECTS.filter(
-  (rule) =>
-    rule.from === 'low-risk-investment-funds' ||
-    rule.from === 'introduction-to-persian-tradingview-inchart',
+const CODE_ONLY_SOURCES = new Set([
+  'low-risk-investment-funds',
+  'introduction-to-persian-tradingview-inchart',
+  /*
+    Added 2026-10-05, and code-only for a different reason: WordPress does not
+    have them YET. A plain compiled rule is replaced the moment WordPress
+    answers, so these would have redirected for one five-minute window after
+    each restart and then 404'd again until the content team entered them in
+    Rank Math. Code-only, they hold from the first request; the Rank Math
+    copies, when added, become the record the SEO team can see.
+  */
+  'what-is-the-stochastic-indicator',
+  'what-is-the-ichimoku-indicator',
+  'what-is-the-obv-indicator',
+]);
+
+const CODE_ONLY: readonly LegacyRedirect[] = LEGACY_REDIRECTS.filter((rule) =>
+  CODE_ONLY_SOURCES.has(rule.from),
 );
 
 interface CacheState {
