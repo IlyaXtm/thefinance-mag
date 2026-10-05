@@ -129,7 +129,6 @@ const TYPES = {
     unimplemented for exactly that reason.
   */
   news: { slug: 'news', name: 'اخبار' },
-  analysis: { slug: 'analysis', name: 'تحلیل' },
   report: { slug: 'report', name: 'گزارش' },
   education: { slug: 'education', name: 'آموزش' },
 } as const;
@@ -335,7 +334,7 @@ const SUMMARIES: ArticleSummary[] = [
     title: 'هج فاند (Hedge Fund) چیست؟ ساختار، کارمزد و ریسک',
     featuredImage: img('gold', 'شمش طلا روی سطح تیره'),
     market: MARKETS['gold-usd'],
-    contentType: TYPES.analysis,
+    contentType: TYPES.education,
     readingTime: 7,
     publishedAt: '2026-08-17T11:30:00+03:30',
     modifiedAt: '2026-08-17T11:30:00+03:30',
@@ -382,7 +381,7 @@ const SUMMARIES: ArticleSummary[] = [
     title: 'میکر و تیکر (Maker & Taker) چه تفاوتی دارند',
     featuredImage: img('dxy', 'نمودار شاخص دلار'),
     market: MARKETS.global,
-    contentType: TYPES.analysis,
+    contentType: TYPES.education,
     readingTime: 8,
     publishedAt: '2026-08-14T10:00:00+03:30',
     modifiedAt: '2026-08-14T10:00:00+03:30',
@@ -495,7 +494,7 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     */
     featuredImage: img(n % 3 === 1 ? 'filler-missing' : 'filler', 'تصویر نمونه'),
     market: n % 2 === 0 ? MARKETS.crypto : null,
-    contentType: n % 3 === 0 ? TYPES.analysis : TYPES.education,
+    contentType: TYPES.education,
     readingTime: 4 + (n % 7),
     /* Older than every designed fixture, so they sort to the back and never
        displace a real one from the hero or the top of a list. */
@@ -962,7 +961,7 @@ const STRESS: Article[] = [
     title: 'یک تیتر، بدون فهرست',
     featuredImage: img('single', 'تصویر شاهد'),
     market: MARKETS.forex,
-    contentType: TYPES.analysis,
+    contentType: TYPES.education,
     readingTime: 4,
     publishedAt: '2026-06-01T10:00:00+03:30',
     modifiedAt: '2026-06-01T10:00:00+03:30',
@@ -1267,7 +1266,6 @@ function inMockCategory(article: ArticleSummary, slug: string): boolean {
 
 const MOCK_CATEGORY_NAMES: Record<string, string> = {
   news: 'اخبار',
-  analysis: 'تحلیل',
   report: 'گزارش',
   education: 'آموزش',
   articles: 'مقالات',

@@ -139,7 +139,7 @@ InChart. Their sidebar slots carry editorially-chosen link lists instead
 
 ## Content model — only these fields exist
 
-`market` (taxonomy) · `contentType` (taxonomy: تحلیل / گزارش / آموزش / اخبار) · `readingTime` (computed server-side in the mu-plugin) · `modifiedAt` (revision date, shown when it differs from publish date) · market `description` (taxonomy field, may be empty).
+`market` (taxonomy) · `contentType` (taxonomy: گزارش / آموزش / اخبار — «تحلیل» was retired on 2026-10-05 at the owner's request; its one post lives under the بورس ایران market and every `/category/analysis` URL 301s to `/market/tse`) · `readingTime` (computed server-side in the mu-plugin) · `modifiedAt` (revision date, shown when it differs from publish date) · market `description` (taxonomy field, may be empty).
 
 **`اخبار` is a real content type.** It was originally excluded pending the Mag/Khabarchi boundary decision, but an RSS automation publishes roughly two items a day and they are meant to be indexed. News gets `NewsArticle` schema; everything else gets `Article`, because publication date is the signal for translated news while revision date is the signal for evergreen education.
 

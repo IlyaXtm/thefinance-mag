@@ -1551,3 +1551,12 @@ reader's word for where an article is filed. The featured 2 + 4 now always
 renders: editors' picks when there are two, the newest analysis and education
 under «پیشنهاد مطالعه» until then. The price strip was asked for a second time
 and the InChart card was kept, by the owner's decision.
+
+**Review round, same day.** Owner decisions, recorded so they are not undone:
+the hero is a visible masthead plus one featured article and three beside it;
+home sections each have one purpose (latest / news / education / markets) and
+no article repeats; cards follow badge → title → two-line summary → meta with
+the title dominant and no author; the light theme has three surfaces (page
+`#F6F7F9`, cards and header white) via a new `--surface-chrome`, dark themes
+unchanged; and the «تحلیل» content type is retired, its URLs 301 to
+`/market/tse` where its single post already lives.

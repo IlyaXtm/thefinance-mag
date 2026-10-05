@@ -19,13 +19,13 @@ import type { ArticleSummary, ContentTypeSlug } from '../types/mag.types';
  * «اخبار» a day, so leading with the newest article meant the hero was almost
  * always a three-minute translated headline.
  */
-const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['analysis', 'education', 'report'];
+const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['education', 'report'];
 
 /** Wide enough to outrun the automation — about ten days of it. */
 const LEAD_WINDOW = 20;
 
-/** Four beside the lead: the 2×2 the team's Faraz reference opens with. */
-const HERO_SIDE_COUNT = 4;
+/** Three beside the lead — «یک مقاله Featured بزرگ و ۲ یا ۳ مطلب مهم کنار آن». */
+const HERO_SIDE_COUNT = 3;
 
 /**
  * Editors' picks lead the featured section from this many. One pick is not a
@@ -37,23 +37,28 @@ const FEATURED_COUNT = 6;
 
 /** Two rows of three at full width. */
 const LATEST_COUNT = 6;
-const TOPIC_COUNT = 3;
+const EDUCATION_COUNT = 6;
+/** One row of three per market. */
+const MARKET_COUNT = 3;
 
 /**
- * The Zoomit-style sections the team asked for. آموزش is a content type;
- * فارکس and کریپتو are markets — the two axes, used as what they are. اینچارت
- * is neither (a raw category), so its articles arrive separately: see the
- * `inchart` argument below.
+ * ONE PURPOSE PER SECTION (team review, 2026-10-05: «هر سکشن باید هدف مستقل
+ * داشته باشد»). The overlap they saw was in the data, not the code: «مقالات»
+ * holds every non-news post and «آموزش» holds the same 57, so «تازه‌ترین
+ * مقالات» and «آموزش» were two windows on one pool. Now:
+ *
+ *   تازه‌ترین‌ها   everything, by date — the only chronological section
+ *   اخبار         news only
+ *   آموزش         education only
+ *   بازارها        one block per market — the only section cut by market
+ *
+ * and the shared `taken` set still guarantees no article twice.
  */
-const TOPICS: ReadonlyArray<{
-  key: string;
-  title: string;
-  href: string;
-  match: (a: ArticleSummary) => boolean;
-}> = [
-  { key: 'education', title: 'آموزش', href: '/category/education', match: (a) => a.contentType.slug === 'education' },
-  { key: 'forex', title: 'فارکس', href: '/market/forex', match: (a) => a.market?.slug === 'forex' },
-  { key: 'crypto', title: 'کریپتو', href: '/market/crypto', match: (a) => a.market?.slug === 'crypto' },
+const MARKETS: ReadonlyArray<{ key: string; title: string; href: string; slug: string }> = [
+  { key: 'forex', title: 'فارکس', href: '/market/forex', slug: 'forex' },
+  { key: 'crypto', title: 'کریپتو', href: '/market/crypto', slug: 'crypto' },
+  { key: 'gold-usd', title: 'طلا و دلار', href: '/market/gold-usd', slug: 'gold-usd' },
+  { key: 'tse', title: 'بورس ایران', href: '/market/tse', slug: 'tse' },
 ];
 
 export interface TopicBlock {
@@ -73,22 +78,14 @@ export interface Landing {
    * a person chose these, and it is only made when one did.
    */
   picksSource: 'editors' | 'recent';
-  latestArticles: ArticleSummary[];
-  latestNews: ArticleSummary[];
-  topics: TopicBlock[];
+  latest: ArticleSummary[];
+  news: ArticleSummary[];
+  education: ArticleSummary[];
+  markets: TopicBlock[];
 }
 
-/**
- * @param archive  the newest summaries, any order (sorted here)
- * @param inchart  the «اینچارت» category's articles. Fetched on their own
- *                 because the category is not on the summary, and because the
- *                 archive fetch is capped at the newest 100 — three older
- *                 InChart pieces would otherwise never be found.
- */
-export function buildLanding(
-  archive: ReadonlyArray<ArticleSummary>,
-  inchart: ReadonlyArray<ArticleSummary>,
-): Landing {
+/** @param archive  the newest summaries, any order (sorted here) */
+export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
   const pool = [...archive].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
   const taken = new Set<string>();
 
@@ -114,7 +111,7 @@ export function buildLanding(
 
     With no sticky posts the section used to hide, and the team — who had
     asked for exactly this shape — never saw it. Hiding was honest and it was
-    also invisible. So below the threshold it shows the newest analysis and
+    also invisible. So below the threshold it shows the newest education and
     education instead, which are the archive's own «worth reading» pieces, and
     `picksSource` makes the heading stop saying «سردبیر».
   */
@@ -129,32 +126,25 @@ export function buildLanding(
           FEATURED_COUNT,
         );
 
-  const latestArticles = take(
-    pool.filter((a) => a.contentType.slug !== 'news'),
-    LATEST_COUNT,
-  );
-  const latestNews = take(
+  const latest = take(pool, LATEST_COUNT);
+  const news = take(
     pool.filter((a) => a.contentType.slug === 'news'),
     LATEST_COUNT,
   );
+  const education = take(
+    pool.filter((a) => a.contentType.slug === 'education'),
+    EDUCATION_COUNT,
+  );
 
-  const topics: TopicBlock[] = [
-    ...TOPICS.map(({ key, title, href, match }) => ({
-      key,
-      title,
-      href,
-      items: take(pool.filter(match), TOPIC_COUNT),
-    })),
-    {
-      key: 'inchart',
-      title: 'اینچارت',
-      href: '/category/inchart',
-      items: take(
-        [...inchart].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
-        TOPIC_COUNT,
-      ),
-    },
-  ].filter((topic) => topic.items.length > 0);
+  const markets: TopicBlock[] = MARKETS.map(({ key, title, href, slug }) => ({
+    key,
+    title,
+    href,
+    items: take(
+      pool.filter((a) => a.market?.slug === slug),
+      MARKET_COUNT,
+    ),
+  })).filter((block) => block.items.length > 0);
 
-  return { featured, heroSide, picks, picksSource, latestArticles, latestNews, topics };
+  return { featured, heroSide, picks, picksSource, latest, news, education, markets };
 }

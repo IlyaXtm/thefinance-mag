@@ -75,7 +75,6 @@ export const HEADER_LINKS: NavLink[] = [
 export const SECTION_NAV: NavLink[] = [
   { label: 'اخبار', href: '/news' },
   { label: 'آموزش', href: '/category/education' },
-  { label: 'تحلیل', href: '/category/analysis' },
 ];
 
 /**

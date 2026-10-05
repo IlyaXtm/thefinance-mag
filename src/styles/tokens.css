@@ -83,6 +83,9 @@
    * and exists as a design reference.
    */
   --surface: #040c1f;
+  /* The header's ground. Same as the page in the dark themes; the light theme
+     sets it white, a step above its #F6F7F9 page. */
+  --surface-chrome: var(--surface);
   --surface-raised: #0a1a3d; /* 1.14 vs surface — was #071331 at 1.06 */
   --surface-hover: #14275a; /* 1.36 vs surface — see the note below */
 
@@ -177,6 +180,7 @@
 
 [data-theme='v2-dark'] {
   --surface: #0a0a0a;
+  --surface-chrome: var(--surface);
   --surface-raised: #171717;
   --surface-hover: #1f1f1f;
 
@@ -205,15 +209,29 @@
 }
 
 [data-theme='v2-light'] {
-  --surface: #ffffff;
-  --surface-raised: #f2f4f7;
+  /*
+   * THREE LEVELS, AND THE ORDER WAS INVERTED (2026-10-05).
+   *
+   * The page was #fff and cards were #f2f4f7 — grey cards on a white page —
+   * and the team reported the result exactly: «اگر کل صفحه سفید باشد،
+   * سکشن‌ها در هم می‌روند و صفحه تخت دیده می‌شود». Their spec: page #F6F7F9,
+   * cards white, header white. So the page is the lowest level, cards and
+   * the header (--surface-chrome) sit on it in white, and --surface-hover
+   * stays the third, darkest step for hover and empty slots.
+   *
+   * Measured after the swap: --border-interactive is 3.95 on the page and
+   * 4.23 on a card (3:1 floor); every text pair is in check-contrast.mjs.
+   */
+  --surface: #f6f7f9;
+  --surface-raised: #ffffff;
   --surface-hover: #e8ebf1;
+  --surface-chrome: #ffffff;
 
   --border-subtle: #e0e3eb;
   --border-strong: #c2c8d6;
   /* Shorter and lighter: on a near-white page a heavy shadow reads as grime. */
   --shadow-panel: 0 10px 28px -10px rgba(11, 17, 32, 0.28);
-  --border-interactive: #737b8f; /* 4.23 vs surface · 3.84 vs raised */
+  --border-interactive: #737b8f; /* 3.95 vs surface · 4.23 vs raised */
 
   --text-primary: #101219;
   --text-secondary: #3a4359;

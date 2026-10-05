@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
-import { CardByline, CardDate } from './CardMeta';
+import { CardBody, CardByline, CardDate } from './CardMeta';
 import { CategoryChip } from './CategoryChip';
 import { cardCategory, cardDek } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
@@ -23,12 +23,11 @@ import { bidiTitle } from '../lib/bidi-title';
  * itself instead.
  */
 export function PostCard({ article }: { article: ArticleSummary }) {
-  const category = cardCategory(article);
-  const dek = cardDek(article);
-
   return (
     <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
-      <div className="h-[190px]">
+      {/* 16:10, like every other image-on-top card: a fixed box, so a
+          wrong-aspect upload crops instead of reflowing the row. */}
+      <div className="aspect-[16/10]">
         <CardImage
           image={article.featuredImage}
           sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
@@ -36,30 +35,7 @@ export function PostCard({ article }: { article: ArticleSummary }) {
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-5">
-        <div className="flex items-center gap-2.5 text-[12px]">
-          <CategoryChip name={category.name} />
-          <CardDate iso={article.publishedAt} />
-        </div>
-
-        <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
-          <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {bidiTitle(article.title)}
-          </Link>
-        </h3>
-
-        {dek && (
-          <p className="text-[14.5px] font-light leading-[1.85] text-text-secondary [text-wrap:pretty]">
-            {dek}
-          </p>
-        )}
-
-        <CardByline
-          author={article.author}
-          readingTime={article.readingTime}
-          className="mt-auto pt-3"
-        />
-      </div>
+      <CardBody article={article} />
     </article>
   );
 }

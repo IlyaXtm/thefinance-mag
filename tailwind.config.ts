@@ -16,6 +16,7 @@ const config: Config = {
         surface: 'var(--surface)',
         'surface-raised': 'var(--surface-raised)',
         'surface-hover': 'var(--surface-hover)',
+        'surface-chrome': 'var(--surface-chrome)',
         'border-subtle': 'var(--border-subtle)',
         'border-strong': 'var(--border-strong)',
         'border-interactive': 'var(--border-interactive)',

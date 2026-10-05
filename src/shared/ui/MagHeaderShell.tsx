@@ -102,7 +102,7 @@ export function MagHeaderShell({ children }: { children: ReactNode }) {
       */
       data-condensed={condensed ? '' : undefined}
       className={[
-        'sticky top-0 z-40 border-b border-border-subtle bg-surface',
+        'sticky top-0 z-40 border-b border-border-subtle bg-surface-chrome',
         'transition-shadow duration-150 motion-reduce:transition-none',
         /* A shadow only once it is over content. At the top of the page the
            header is part of the page; past the fold it is above it, and the

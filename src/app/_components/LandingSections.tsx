@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { CompactCard, PostCard } from '@/features/mag/components';
 import type { TopicBlock } from '@/features/mag/lib/landing';
-import { toPersianDigits } from '@/features/mag/lib/format';
-import type { ArticleSummary, Market } from '@/features/mag/types/mag.types';
+import type { ArticleSummary } from '@/features/mag/types/mag.types';
 
 /**
  * The home page's sections, in the shape of the team's reference (faraz.io/blog,
@@ -12,8 +11,8 @@ import type { ArticleSummary, Market } from '@/features/mag/types/mag.types';
  * سه ردیف میتونه بشه؟» The card grids sat in a `1fr | 320px` body and could
  * only ever be two-up; at full width they are the system grid exactly
  * (1 / 2 / 3 columns at <768 / 768 / 1280), and what the sidebar carried
- * moved into the page — categories as a chip row near the top, InChart and the
- * newsletter into a closing row.
+ * moved into the page — the markets as their own blocks, InChart and the
+ * social channels into a closing row.
  */
 
 /**
@@ -60,7 +59,7 @@ export function LandingSectionHeader({
  * That reference was a «پربازدیدترین» ranking with a view count on every card;
  * both are on CLAUDE.md's never-build list, and WordPress records no views.
  * The shape is kept, the ranking is not: editors' picks when there are any,
- * the newest analysis and education until then — and the heading says which.
+ * the newest education pieces until then — and the heading says which.
  *
  * Four across at `xl`, against the three-column card grid, to keep the 2 + 4
  * the team sent: the row runs the full container, so a small card is ~260px.
@@ -108,43 +107,7 @@ export function FeaturedSection({
   );
 }
 
-/**
- * «دسته‌بندی مطالب» — the markets as a row of links, where the sidebar list
- * used to be. Navigation, not a client-side filter: each chip is a real
- * archive page a crawler can follow.
- *
- * Renamed from «بازارها» at the team's request. `decisions.md` once renamed it
- * the other way, because the list holds markets and the categories taxonomy is
- * something else; the team reads «دسته‌بندی» as the everyday word for "where
- * an article is filed", which is what a reader means by it too.
- */
-export function CategoryChips({ markets }: { markets: Market[] }) {
-  const populated = markets.filter((m) => (m.count ?? 0) > 0);
-  if (populated.length === 0) return null;
-
-  return (
-    <nav aria-labelledby="categories-heading">
-      <LandingSectionHeader id="categories-heading" title="دسته‌بندی مطالب" />
-      <ul className="flex flex-wrap gap-2">
-        {populated.map((market) => (
-          <li key={market.slug}>
-            <Link
-              href={`/market/${market.slug}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-interactive px-4 text-[14px] text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-text-primary"
-            >
-              {market.name}
-              <span className="text-[12px] tabular-nums text-text-muted">
-                {toPersianDigits(market.count ?? 0)}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
-/** A «تازه‌ترین …» block: two rows of three at full width. */
+/** A two-rows-of-three block: «تازه‌ترین‌ها», «اخبار», «آموزش». */
 export function LatestSection({
   id,
   title,

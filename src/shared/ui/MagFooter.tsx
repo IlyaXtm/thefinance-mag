@@ -75,7 +75,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
         padding that is symmetric is internal padding nobody has to think
         about.
       */}
-      <div className="mx-auto max-w-[1440px] px-5 py-10 lg:px-10 lg:py-16">
+      <div className="mag-gutter py-10 lg:py-16">
         {/*
           TWO COLUMNS ON A PHONE, NOT ONE.
 

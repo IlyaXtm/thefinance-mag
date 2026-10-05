@@ -1,10 +1,5 @@
-import Link from 'next/link';
 import { CardImage } from './CardImage';
-import { CardDate } from './CardMeta';
-import { CategoryChip } from './CategoryChip';
-import { cardCategory, cardDek } from '../lib/card';
-import { formatReadingTime } from '../lib/format';
-import { bidiTitle } from '../lib/bidi-title';
+import { CardBody } from './CardMeta';
 import type { ArticleSummary } from '../types/mag.types';
 
 /**
@@ -21,8 +16,9 @@ import type { ArticleSummary } from '../types/mag.types';
  * than reflowing the row. 16:10 sits between the archive's two shapes (1.79
  * and 1.50), cropping each by under 12%.
  *
- * `lg` is the editor's-pick size: larger title and a dek. `sm` is title and
- * meta only — at four across there is no width for a readable dek.
+ * The text half is CardBody — the team's badge → title → summary → meta
+ * order, shared with PostCard so the two cannot drift. `lg` sets the title at
+ * heading size for the featured row; `sm` at 16px for four-across.
  *
  * Hover is the border colour and nothing else: no lift, no shadow, no scale.
  */
@@ -36,41 +32,13 @@ export function CompactCard({
   /** The `sizes` hint for this placement — it differs per grid. */
   sizes: string;
 }) {
-  const category = cardCategory(article);
-  const dek = size === 'lg' ? cardDek(article, 1) : null;
-
   return (
     <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
       <div className="aspect-[16/10]">
         <CardImage image={article.featuredImage} sizes={sizes} rounded="rounded-t-card" />
       </div>
 
-      <div className={`flex flex-1 flex-col gap-2 ${size === 'lg' ? 'p-5' : 'p-4'}`}>
-        <div className="flex items-center gap-2.5 text-[12px]">
-          <CategoryChip name={category.name} />
-          <CardDate iso={article.publishedAt} />
-        </div>
-
-        <h3
-          className={`font-semibold text-text-primary [text-wrap:pretty] ${
-            size === 'lg' ? 'text-h3 leading-[1.6]' : 'text-[15px] leading-[1.7]'
-          }`}
-        >
-          <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
-            {bidiTitle(article.title)}
-          </Link>
-        </h3>
-
-        {dek && (
-          <p className="text-[14.5px] font-light leading-[1.85] text-text-secondary [text-wrap:pretty]">
-            {dek}
-          </p>
-        )}
-
-        <span className="mt-auto pt-1 text-[12.5px] text-text-muted">
-          {formatReadingTime(article.readingTime)} مطالعه
-        </span>
-      </div>
+      <CardBody article={article} size={size === 'lg' ? 'lg' : 'sm'} />
     </article>
   );
 }

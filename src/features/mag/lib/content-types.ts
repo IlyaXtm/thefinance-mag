@@ -16,7 +16,6 @@ import type { ContentType, ContentTypeSlug } from '../types/mag.types';
  */
 export const CONTENT_TYPES: ContentType[] = [
   { slug: 'news', name: 'اخبار' },
-  { slug: 'analysis', name: 'تحلیل' },
   { slug: 'report', name: 'گزارش' },
   { slug: 'education', name: 'آموزش' },
 ];
@@ -41,7 +40,10 @@ export const CONTENT_TYPES: ContentType[] = [
  */
 const CATEGORY_TO_TYPE: Record<string, ContentTypeSlug | null> = {
   news: 'news',
-  analysis: 'analysis',
+  /* RETIRED 2026-10-05 at the owner's request. One post, re-filed under the
+     بورس ایران market; old URLs 301 there (middleware). Mapped to null so the
+     category, if it lingers in WordPress, can never make a type again. */
+  analysis: null,
   report: 'report',
   education: 'education',
   articles: null,

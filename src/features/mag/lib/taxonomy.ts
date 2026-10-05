@@ -59,6 +59,9 @@ export function isThinArchive(count: number | null | undefined): boolean {
  * been through a rename and either may be what the API returns.
  */
 export const EXCLUDED_CATEGORY_SLUGS: readonly string[] = [
+  /* «تحلیل», retired 2026-10-05 — no route and no sitemap entry even while
+     the term still exists in WordPress. Its URLs 301 in middleware. */
+  'analysis',
   'uncategorized',
   'دسته-بندی-نشده',
   'دسته‌بندی-نشده',

@@ -54,7 +54,8 @@ export interface Market {
  *     date-sorted feed buries the human-written educational archive within
  *     about two months.
  */
-export const CONTENT_TYPE_SLUGS = ['analysis', 'report', 'education', 'news'] as const;
+/* «تحلیل» (analysis) was removed 2026-10-05 — see CATEGORY_TO_TYPE. */
+export const CONTENT_TYPE_SLUGS = ['report', 'education', 'news'] as const;
 
 export type ContentTypeSlug = (typeof CONTENT_TYPE_SLUGS)[number];
 

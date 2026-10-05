@@ -137,6 +137,27 @@ function paginationRedirect(pathname: string, search: URLSearchParams): string |
   const root = pathname === '/' ? '' : pathname;
   return `${root}/page/${page}${suffix}`;
 }
+/**
+ * A SECTION THAT WAS RETIRED, AND WHERE ITS CONTENT WENT.
+ *
+ * «تحلیل» was removed as a content type on 2026-10-05 at the owner's request
+ * («we don't want this category»). It held one post — «پیش‌بینی بورس ایران در
+ * سال ۱۴۰۵» — which was re-filed under the بورس ایران market, so that is where
+ * the old URLs go. Not a 404: `/category/analysis` was indexed with
+ * impressions (scripts/verify-redirects.sh lists it), and a 301 hands its
+ * equity to the page that now has the content.
+ *
+ * Checked BEFORE the legacy-slug map and the trailing-slash rule, so every
+ * shape of the old URL — slash, paginated, the `?type=` archive form — lands
+ * in one hop.
+ */
+function retiredSectionRedirect(pathname: string, search: URLSearchParams): string | null {
+  const path = pathname.replace(/\/+$/, '');
+  if (/^\/category\/analysis(\/page\/\d+)?$/.test(path)) return '/market/tse';
+  if (path === '/archive' && search.get('type') === 'analysis') return '/market/tse';
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   /*
     With `basePath` configured, `nextUrl.pathname` has the basePath ALREADY
@@ -145,6 +166,10 @@ export async function middleware(request: NextRequest) {
     while every page still renders. Verified by test rather than assumed.
   */
   const { pathname, searchParams } = request.nextUrl;
+
+  const retired = retiredSectionRedirect(pathname, searchParams);
+  if (retired) return NextResponse.redirect(absolute(request, retired), 301);
+
   const rule = resolveRedirect(currentRedirects(), pathname);
 
   if (!rule) {

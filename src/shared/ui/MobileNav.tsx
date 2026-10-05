@@ -197,7 +197,7 @@ export function MobileNav({ markets }: { markets: Market[] }) {
         */
         className={[
           'fixed inset-x-0 top-[var(--mag-header-h)] z-50 max-h-[calc(100dvh-var(--mag-header-h))] overflow-y-auto',
-          'border-b border-border-subtle bg-surface px-5 pb-6 pt-2',
+          'border-b border-border-subtle bg-surface-chrome px-5 pb-6 pt-2',
           'transition-[opacity,transform] duration-[180ms] ease-out motion-reduce:transition-none',
           open
             ? 'visible translate-y-0 opacity-100'

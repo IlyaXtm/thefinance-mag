@@ -38,7 +38,7 @@ import { heroAspectRatios } from '../lib/hero-ratio';
  */
 export function HeroFeature({ article }: { article: ArticleSummary }) {
   const category = cardCategory(article);
-  const dek = cardDek(article, 1);
+  const dek = cardDek(article, 2);
   const image = article.featuredImage;
 
   return (
@@ -57,15 +57,17 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         >
           <CardImage
             image={image}
-            /* Half the 1224px container is ~540px; 62vw asked for 893px at
-               1440. */
-            sizes="(max-width: 1023px) 100vw, 560px"
+            /* The 1.45fr column of the 1224px container is ~650px. */
+            sizes="(max-width: 1023px) 100vw, 660px"
             priority
             rounded="rounded-t-card"
           />
         </div>
       )}
 
+      {/* The team's card order (2026-10-05): badge → title → two-line
+          summary → date · reading time, the title the only bold, heading-size
+          thing on the card. No author on cards; it is on the article. */}
       <div className="flex flex-1 flex-col gap-3 p-6 md:p-8">
         <CategoryChip name={category.name} variant="solid" className="self-start" />
 
@@ -76,14 +78,12 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         </h2>
 
         {dek && (
-          <p className="max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary md:text-[17px]">
+          <p className="line-clamp-2 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary md:text-[17px]">
             {dek}
           </p>
         )}
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[13px] text-text-muted">
-          <span className="text-text-secondary">{article.author.name}</span>
-          <span aria-hidden="true">·</span>
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-meta text-text-muted">
           <time dateTime={toDateTimeAttr(article.publishedAt)}>
             {formatJalaliShort(article.publishedAt)}
           </time>
@@ -96,55 +96,48 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
 }
 
 /**
- * The four cards beside the lead, as a 2×2: image on top, title under it —
- * the lead's own shape at a smaller size. Four, not two, since the team's
- * Faraz reference (2026-10-05): five image articles above the fold.
+ * The three cards beside the lead: a thumbnail and the title, as a row.
  *
- * ── IT WAS A ROW, AND THE ROW CROPPED THE ARTWORK INTO A SLIVER ─────────────
+ * Three, per the team's masthead brief (2026-10-05): «یک مقاله Featured بزرگ و
+ * ۲ یا ۳ مطلب مهم کنار آن».
  *
- * `150px | 1fr`, with the grid stretching each card to half the lead's height
- * (~330px). The thumbnail box became 150×330 — a portrait strip — and
- * `object-cover` filled it by cutting away most of a landscape image, baked-in
- * headline included. Reported 2026-10-05 with a screenshot: «عیار طلا» and
- * «چشم‌انداز» reduced to fragments beside half a card of empty space.
+ * ── A ROW AGAIN, AND NOT THE ROW THAT BROKE ─────────────────────────────────
  *
- * So the image goes on top at the ARTWORK'S OWN RATIO, like the lead's, and is
- * never cropped; the ratio comes from `mediaDetails`, so the box is sized
- * before the image loads. In the side column the cards are `flex-1`, and the
- * text area absorbs any height difference between the two columns — spare
- * height lands inside a card under its title, never as a hole between cards.
- *
- * No dek: at this width a title of three lines is the content.
+ * The first row version cropped the artwork into a sliver: its thumbnail was
+ * a fixed WIDTH stretched to the card's full HEIGHT, so a 150px-wide box went
+ * 330px tall and `object-cover` cut the landscape image to a strip. Here the
+ * thumbnail has a fixed width and the ARTWORK'S OWN RATIO for its height
+ * (`heroAspectRatios`), and it is centred in the card rather than stretched
+ * by it. A taller card gains space around the thumbnail, never inside it, so
+ * the baked-in headline is never cut.
  */
 export function HeroSideCard({ article }: { article: ArticleSummary }) {
   const category = cardCategory(article);
   const image = article.featuredImage;
 
   return (
-    /* No overflow-hidden: the image clips itself (`rounded-t-card`), so the
-       title link's focus ring is never cut by the card's corner radius. */
-    <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
+    /* No overflow-hidden: the image clips itself, so the title link's focus
+       ring is never cut by the card's corner radius. */
+    <article className="group relative flex items-center gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
       {image && (
-        <div style={{ aspectRatio: heroAspectRatios(image).mobile }}>
-          <CardImage
-            image={image}
-            sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 280px"
-            rounded="rounded-t-card"
-          />
+        <div
+          className="w-[120px] shrink-0 sm:w-[168px]"
+          style={{ aspectRatio: heroAspectRatios(image).mobile }}
+        >
+          <CardImage image={image} sizes="168px" rounded="rounded-lg" />
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <span className="text-[12px] text-accent">{category.name}</span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <CategoryChip name={category.name} className="self-start" />
 
-        {/* 16px, not the h3 scale: a 2×2 cell is ~260px wide on desktop. */}
-        <h3 className="text-[16px] font-semibold leading-[1.7] text-text-primary [text-wrap:pretty]">
+        <h3 className="text-[16px] font-bold leading-[1.65] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
         </h3>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-1 text-[12.5px] text-text-muted">
+        <div className="flex flex-wrap items-center gap-x-2 text-meta text-text-muted">
           <time dateTime={toDateTimeAttr(article.publishedAt)}>
             {formatJalaliShort(article.publishedAt)}
           </time>

@@ -8,6 +8,52 @@ why it was made.
 
 ---
 
+## 2026-10-05 (review) — Masthead, one purpose per section, three surfaces, «تحلیل» retired
+
+From the team's design review, every point decided by the owner first.
+
+**"Not centred" was the header, not the page.** Measured at 1440: the page
+container sat 168px from each edge, the header and footer 40px — they used
+their own `max-w-1440` with a 40px inset, so the logo hung 128px outside the
+content edge and the whole page read as shifted. Both now use `.mag-gutter`;
+header, page and footer all measure 168 | 168.
+
+**A masthead.** The h1 «مجله فایننس» was `sr-only`; it is now visible, with
+the one-line description the metadata already uses. Beneath it: one featured
+article and three beside it («یک مقاله Featured بزرگ و ۲ یا ۳ مطلب مهم کنار
+آن»), as thumbnail rows. The thumbnail has a fixed width and the artwork's own
+height and is centred, never stretched — the sliver bug cannot come back.
+Columns measured level (753 | 753).
+
+**One purpose per section.** The overlap was in the data: «مقالات» holds
+every non-news post and «آموزش» the same 57, so «تازه‌ترین مقالات» and
+«آموزش» were one pool twice. Now: «تازه‌ترین‌ها» (everything, by date),
+«اخبار», «آموزش», and one block per market (فارکس، کریپتو، طلا و دلار،
+بورس ایران). The InChart topic and the category chip row went; the market
+blocks do their job. 39 cards, zero duplicates.
+
+**Card hierarchy, the team's order.** Badge → title → two-line summary → date
+· reading time, in one shared `CardBody`. The title is the only bold,
+heading-size text; the summary is clamped to two lines; the author left the
+cards (it is on the article). PostCard moved to the 16:10 box every other
+card uses.
+
+**Three surfaces in the light theme.** Page `#F6F7F9`, cards and header
+white, `--surface-hover` the third step — the order was inverted before (white
+page, grey cards). A new `--surface-chrome` paints the header and mobile
+drawer: white in light, equal to the page in both dark themes, which are
+unchanged (measured). Contrast: all 33 text pairs still pass, lowest in light
+4.73; the control border is 3.95 on the page and 4.23 on a card.
+
+**«تحلیل» retired.** One post, already tagged بورس ایران, so no CMS write was
+needed: the type is gone from the model, the nav and the filter row; the
+`analysis` category maps to nothing and is excluded from routes and the
+sitemap; middleware 301s `/category/analysis`, its `/page/N` and
+`/archive?type=analysis` to `/market/tse` in one hop (verified). The empty
+WordPress term can be deleted at leisure.
+
+---
+
 ## 2026-10-05 (final) — The landing takes the structure of the team's reference
 
 The team sent four screenshots and one link — «our team really like

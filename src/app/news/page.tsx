@@ -45,7 +45,8 @@ export default async function NewsPage() {
     /* «پرونده‌های مرتبط» — longer pieces that give a news reader somewhere to
        go. Editorially adjacent rather than ranked: this is the slot the design
        gave a most-read list, which the brand rules exclude. */
-    getArticles({ page: 1, perPage: 4, contentType: 'analysis' }),
+    /* Education since «تحلیل» was retired (2026-10-05); it held one post. */
+    getArticles({ page: 1, perPage: 4, contentType: 'education' }),
   ]);
 
   const days = groupByDay(news.items);
