@@ -31,7 +31,12 @@ could review.
 
 ---
 
-## What runs on this host — `87.247.171.97`
+## What runs on this host — `87.247.171.97` (BEFORE the server move)
+
+> **The frontend server moved around 2026-09/10.** On 2026-10-05 the old
+> address answered neither SSH nor HTTP, and `/mag` was serving from a new
+> host whose address and login are not recorded here yet. The layout below is
+> the old host's; replace the address when the new one is known.
 
 | What | Where |
 |---|---|
@@ -106,58 +111,67 @@ before it goes anywhere near the server.
 | Type error | The gates were skipped. `npx tsc --noEmit && npm run lint` first. |
 | Network timeout | The laptop cannot reach `wp.thefinance.ir`. |
 
-Then on the server, **as three separate blocks, pasted one at a time**:
+Then on the server — **one script, in the repo: `infra/mag/deploy.sh`**:
 
 ```bash
-gunzip -c ~/mag-<SHA>.tar.gz | sudo docker load
+rsync -avP infra/mag/deploy.sh <user>@<frontend-host>:~/      # once per change to it
+ssh <user>@<frontend-host> 'sudo ~/deploy.sh <SHA>'
 ```
+
+It replaced the three pasted blocks on 2026-10-05. Those blocks were separated
+because a whole block, rollback included, was pasted at once three times; a
+script removes the pasting instead of managing it. What it does, in order:
+loads `~/mag-<SHA>.tar.gz` if the image is not loaded, refuses a non-amd64
+image, keeps the running container as `thefinance-mag-prev`, starts the new one
+on **`127.0.0.1:3100`**, and waits up to 90s for `/mag/health` to report
+`buildId=<SHA>` **and** `source=wpgraphql` — rolling back by itself if not.
+
+**The binding is the reason it exists.** Production was reported running on
+`0.0.0.0:3100` after the server move: the magazine served straight from the
+host, around the CDN and nginx, with no security headers and no rate limit. A
+run command that lives in a document drifts; one in the repo is reviewed.
+
+### One-time: the env file
+
+Configuration, including the preview secret, comes from `/root/mag/.env`
+(mode 600; template `infra/mag/.env.example`), never from the command line.
+On a host where the container already runs with `-e` flags, create it FROM the
+running container — the values go straight into the file and are never
+printed, which is the rule after the secret leaked twice through a debugging
+command:
 
 ```bash
-sudo docker rm -f thefinance-mag-prev 2>/dev/null
-sudo docker stop thefinance-mag && sudo docker rename thefinance-mag thefinance-mag-prev
+sudo mkdir -p /root/mag && sudo docker inspect thefinance-mag \
+  --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep -E '^(WP_PREVIEW_SECRET|TF_MAG_PREVIEW_SECRET|WP_GRAPHQL_ENDPOINT|SITE_ORIGIN|USE_MOCK|NEXT_PUBLIC_[A-Z_]+)=' \
+  | sudo tee /root/mag/.env >/dev/null && sudo chmod 600 /root/mag/.env
+sudo grep -c '' /root/mag/.env          # a line count, not the contents
 ```
 
-```bash
-sudo docker run -d --name thefinance-mag --restart unless-stopped \
-  -p 127.0.0.1:3100:3000 \
-  -e WP_PREVIEW_SECRET=<SECRET> \
-  -e WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
-  -e NEXT_PUBLIC_USE_MOCK=false \
-  -e NEXT_PUBLIC_WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
-  -e NEXT_PUBLIC_SITE_ORIGIN=https://thefinance.ir \
-  -e NODE_ENV=production -e NEXT_TELEMETRY_DISABLED=1 -e PORT=3000 \
-  thefinance-mag:<SHA>
-```
-
-**Three blocks, not one, and this is not fussiness.** It happened three times
-that a whole block — rollback command included — was pasted at once and did
-something nobody wanted. The blocks are separated at exactly the points where
-the previous one must be seen to have worked.
+`--env-file` keeps the secret out of shell history and out of this repo. It
+does NOT keep it out of `docker inspect`, which shows a container's
+environment however it was set — so the inspect-and-print habit is still the
+thing to avoid.
 
 ### Verify
 
-```bash
-sleep 30
-curl -s http://127.0.0.1:3100/mag/health | python3 -m json.tool
+`deploy.sh` has already checked the build id and the data source from inside
+the container. What it cannot see is the public path through the CDN:
 
-for u in "/mag/" "/mag/archive" "/mag/news" "/mag/category/education/" "/mag/market/crypto/"; do
-  printf "%-28s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' -L "https://thefinance.ir$u")"
+```bash
+for u in "/mag/" "/mag/archive" "/mag/news" "/mag/category/education" "/mag/market/crypto"; do
+  printf "%-28s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://thefinance.ir$u?cb=$RANDOM")"
 done
+curl -s -m 5 -o /dev/null -w 'direct :3100 from outside → %{http_code} (must be 000)\n' http://<frontend-host>:3100/mag/health
 ```
 
-`buildId` must be the new SHA. If it is not, the wrong image is running and
-everything else you are about to check is about the old build.
-
-`"source":"mock"` means `.env` is wrong or was not read. It is the one thing the
-healthcheck deliberately reports, because a container serving mock data looks
-perfectly healthy otherwise.
+The last line is run from the laptop, not the server. Anything but `000`
+means the port is published publicly again.
 
 ### Rollback
 
 ```bash
-sudo docker stop thefinance-mag && sudo docker rm thefinance-mag
-sudo docker rename thefinance-mag-prev thefinance-mag
-sudo docker start thefinance-mag
+ssh <user>@<frontend-host> 'sudo ~/deploy.sh --rollback'
 ```
 
 The previous container is always kept as `-prev`, which is what makes this a

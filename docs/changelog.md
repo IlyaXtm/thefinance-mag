@@ -8,6 +8,30 @@ why it was made.
 
 ---
 
+## 2026-10-05 (later) — The run command moves into the repo: `infra/mag/deploy.sh`
+
+Production was reported running with its port on `0.0.0.0:3100` after the
+server move — the magazine reachable straight from the host, around the CDN
+and nginx. The run command lived in three pasted blocks in the runbook, and a
+pasted command drifts. It is now a script, reviewed like code:
+`127.0.0.1:3100`, configuration from `/root/mag/.env` (no secret on the
+command line), the old container kept as `-prev`, and a health gate that wants
+THIS build id and `source: wpgraphql` before it lets the deploy stand.
+
+Exercised locally against the real image `b8ca209` before any server saw it:
+
+```
+fresh deploy          exit 0, healthy in ~5s, port 127.0.0.1:3100 only
+wrong build (tagged)  exit 1, rolled back to b8ca209 by itself
+--rollback            previous container back up
+bad sha / no env file exit 1, nothing touched
+```
+
+Not yet run on production: the new frontend host's address and login are not
+recorded anywhere this repo can see. See `docs/infra/frontend-deploy.md`.
+
+---
+
 ## 2026-10-05 — B43: the live redirect map froze for two weeks, silently
 
 Found by reading production's `/mag/health`, not by a symptom.
