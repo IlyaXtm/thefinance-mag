@@ -1541,3 +1541,13 @@ timestamp.
 sections set titles over photos. This archive cannot: most featured images
 have the headline baked into the artwork — the same collision reported on the
 old hero that day — so every new card puts the title under its image.
+
+**Follow-up, same day: the reference becomes the structure.** The team named
+faraz.io/blog as the model. Two earlier decisions were reversed for it, both
+by the owner and both recorded here so they are not "fixed" back: the landing
+sidebar is gone (it capped every card grid at two-up — the whitespace the team
+objected to), and the market list is titled «دسته‌بندی مطالب» again, the
+reader's word for where an article is filed. The featured 2 + 4 now always
+renders: editors' picks when there are two, the newest analysis and education
+under «پیشنهاد مطالعه» until then. The price strip was asked for a second time
+and the InChart card was kept, by the owner's decision.

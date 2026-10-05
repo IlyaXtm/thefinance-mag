@@ -36,5 +36,6 @@ export { ArticleRow, SectionHeading } from './ArticleRow';
 export { FeaturedArticle } from './FeaturedArticle';
 export { TopicList } from './TopicList';
 export { TelegramChannelLink } from './TelegramChannelLink';
-export { CompactCard, WideCard } from './CompactCard';
+export { CompactCard } from './CompactCard';
 export { InchartPricesCard } from './InchartPricesCard';
+export { SocialChannelsCard } from './SocialChannelsCard';

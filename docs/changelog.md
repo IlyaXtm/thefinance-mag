@@ -8,6 +8,48 @@ why it was made.
 
 ---
 
+## 2026-10-05 (final) — The landing takes the structure of the team's reference
+
+The team sent four screenshots and one link — «our team really like
+faraz.io/blog». The page now follows it, top to bottom:
+
+| Section | Was | Now |
+|---|---|---|
+| Hero | lead + 2 side cards | lead \| 2×2 — five image articles above the fold |
+| Featured | hidden (no sticky posts) | 2 large + 4 small, always on the page |
+| Categories | sidebar list «بازارها» | chip row «دسته‌بندی مطالب» |
+| Latest articles / news | 4 each, two-up beside a sidebar | 6 each, three-up at full width |
+| Topics | 1 wide + 2 compact | 3 compact, three-up |
+| Sidebar | categories, InChart, newsletter | gone; InChart and social channels close the page |
+
+**«فضای سفید خیلی زیاده — سه ردیف؟»** The card grids sat in a `1fr | 320px`
+body, so two-up was the most they could be. At full width they are the
+system grid exactly — 1 / 2 / 3 columns at <768 / 768 / 1280 — and nothing
+has to break a rule to get there.
+
+**The featured section shows in production now.** Editors' picks lead it from
+two; until then it shows the newest analysis and education under
+«پیشنهاد مطالعه», and only says «سردبیر» when an editor chose. The team's
+reference was a «پربازدیدترین» ranking with view counts; the shape is kept,
+the ranking is not (`decisions.md`).
+
+**Two requests not built, again.** The live price strip (second request) —
+the InChart card stays, by the owner's decision. And the view counts.
+
+**No empty slots.** A topic left with two articles goes two-up instead of
+leaving a third column empty; the closing row is three-up only when the
+newsletter is enabled (it is not — no storage yet). The third card of a
+topic hides between 768 and 1280, where the grid is two-up.
+
+**Labels:** «بازار» / «بازارها» → «دسته‌بندی مطالب» on the filter row and
+the category card; «همه‌ی …» → «مشاهده همه» on every section link.
+
+Measured on the live CMS at 1440 / 768 / 375: 34 cards, zero duplicates, hero
+halves 655 \| 655, no horizontal scroll. The phone page is long — ~16,000px —
+which is the honest cost of an image-led page with no sidebar to fold into.
+
+---
+
 ## 2026-10-05 (last) — The hero's side cards: image on top, never a sliver
 
 Reported with a screenshot within the hour of the landing round going live.

@@ -24,15 +24,19 @@ const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['analysis', 'education', 're
 /** Wide enough to outrun the automation — about ten days of it. */
 const LEAD_WINDOW = 20;
 
+/** Four beside the lead: the 2×2 the team's Faraz reference opens with. */
+const HERO_SIDE_COUNT = 4;
+
 /**
- * «پیشنهاد سردبیر» renders only from this many picks. One pick is not a
- * selection, it is a second hero — and a section at half its drawn size reads
- * as broken, which is the empty-section failure in a milder form.
+ * Editors' picks lead the featured section from this many. One pick is not a
+ * selection, it is a second hero.
  */
 const PICKS_MIN = 2;
-const PICKS_MAX = 6;
+/** The 2 large + 4 small shape of the reference the team sent. */
+const FEATURED_COUNT = 6;
 
-const LATEST_COUNT = 4;
+/** Two rows of three at full width. */
+const LATEST_COUNT = 6;
 const TOPIC_COUNT = 3;
 
 /**
@@ -62,7 +66,13 @@ export interface TopicBlock {
 export interface Landing {
   featured: ArticleSummary | null;
   heroSide: ArticleSummary[];
+  /** The 2 + 4 section — editors' picks, or the stand-in below. */
   picks: ArticleSummary[];
+  /**
+   * Who chose `picks`. The title follows it: «پیشنهاد سردبیر» is a claim that
+   * a person chose these, and it is only made when one did.
+   */
+  picksSource: 'editors' | 'recent';
   latestArticles: ArticleSummary[];
   latestNews: ArticleSummary[];
   topics: TopicBlock[];
@@ -97,12 +107,27 @@ export function buildLanding(
     pool.slice(0, LEAD_WINDOW).find((a) => LEAD_TYPES.includes(a.contentType.slug)) ?? null;
   if (featured) taken.add(featured.slug);
 
-  const heroSide = take(pool, 2);
+  const heroSide = take(pool, HERO_SIDE_COUNT);
 
-  /* Below the threshold nothing is taken, so the articles stay available to
-     the sections underneath instead of vanishing with an unrendered block. */
+  /*
+    EDITORS FIRST, A STAND-IN UNTIL THEY PICK (decided 2026-10-05).
+
+    With no sticky posts the section used to hide, and the team — who had
+    asked for exactly this shape — never saw it. Hiding was honest and it was
+    also invisible. So below the threshold it shows the newest analysis and
+    education instead, which are the archive's own «worth reading» pieces, and
+    `picksSource` makes the heading stop saying «سردبیر».
+  */
   const pickCandidates = pool.filter((a) => a.editorsPick && !taken.has(a.slug));
-  const picks = pickCandidates.length >= PICKS_MIN ? take(pickCandidates, PICKS_MAX) : [];
+  const picksSource: Landing['picksSource'] =
+    pickCandidates.length >= PICKS_MIN ? 'editors' : 'recent';
+  const picks =
+    picksSource === 'editors'
+      ? take(pickCandidates, FEATURED_COUNT)
+      : take(
+          pool.filter((a) => LEAD_TYPES.includes(a.contentType.slug)),
+          FEATURED_COUNT,
+        );
 
   const latestArticles = take(
     pool.filter((a) => a.contentType.slug !== 'news'),
@@ -131,5 +156,5 @@ export function buildLanding(
     },
   ].filter((topic) => topic.items.length > 0);
 
-  return { featured, heroSide, picks, latestArticles, latestNews, topics };
+  return { featured, heroSide, picks, picksSource, latestArticles, latestNews, topics };
 }

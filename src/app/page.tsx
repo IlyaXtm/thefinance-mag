@@ -1,18 +1,23 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { getAllSummaries, getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
 import { buildLanding } from '@/features/mag/lib/landing';
+import { NEWSLETTER_ENABLED } from '@/features/mag/lib/newsletter';
 import {
-  CategoryListCard,
   HeroFeature,
   HeroSideCard,
   InchartPricesCard,
   NewsletterCta,
+  SocialChannelsCard,
 } from '@/features/mag/components';
-import { EditorsPicks, LatestSection, TopicSection } from './_components/LandingSections';
+import {
+  CategoryChips,
+  FeaturedSection,
+  LatestSection,
+  TopicSection,
+} from './_components/LandingSections';
 
 /**
  * thefinance.ir/mag — the home page.
@@ -50,10 +55,8 @@ export default async function MagIndexPage() {
       .catch(() => []),
   ]);
 
-  const { featured, heroSide, picks, latestArticles, latestNews, topics } = buildLanding(
-    archive,
-    inchart,
-  );
+  const { featured, heroSide, picks, picksSource, latestArticles, latestNews, topics } =
+    buildLanding(archive, inchart);
 
   return (
     <main id="main-content" tabIndex={-1} className="mag-gutter">
@@ -62,11 +65,10 @@ export default async function MagIndexPage() {
       <h1 className="sr-only">{MAG_NAME}</h1>
 
       {/*
-        Hero: 2fr | 1fr from lg; the side cards two-up under the lead at md,
-        stacked below that. 2fr, not the old 1.55fr, because the side cards
-        are image-on-top now and need height rather than width — at 2:1 the
-        two columns land within ~50px of each other at the archive's usual
-        ratios, and the cards' text areas absorb the rest.
+        THE PAGE FOLLOWS THE TEAM'S REFERENCE (faraz.io/blog, 2026-10-05):
+        hero → featured → categories → latest articles → latest news → topics
+        → a closing row. Full width throughout; see LandingSections for why the
+        sidebar went. Section rhythm is the system's 60 / 96.
       */}
       {featured && (
         <section aria-labelledby="lead-heading" className="mt-6 lg:mt-8">
@@ -74,11 +76,16 @@ export default async function MagIndexPage() {
             مطلب اصلی
           </h2>
 
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          {/*
+            Lead | 2×2 — five image articles above the fold. Equal halves: the
+            2×2 cells are image-on-top cards and need the width. The rows
+            stretch to the lead's height and the cards' text areas absorb it.
+          */}
+          <div className="grid gap-6 lg:grid-cols-2">
             <HeroFeature article={featured} />
 
             {heroSide.length > 0 && (
-              <div className="grid gap-6 md:grid-cols-2 lg:flex lg:flex-col [&>*]:lg:flex-1">
+              <div className="grid gap-6 md:grid-cols-2">
                 {heroSide.map((article) => (
                   <HeroSideCard key={article.id} article={article} />
                 ))}
@@ -88,58 +95,48 @@ export default async function MagIndexPage() {
         </section>
       )}
 
-      {picks.length > 0 && <EditorsPicks items={picks} />}
+      <div className="mt-[60px] flex flex-col gap-[60px] lg:mt-24 lg:gap-24">
+        <FeaturedSection items={picks} source={picksSource} />
 
-      {/* Body: 1fr | 320px, 56px column gap. */}
-      {/* Section rhythm is the system's 60 / 96 — between every block below. */}
-      <div className="mt-[60px] grid items-start gap-[60px] lg:mt-24 lg:grid-cols-[1fr_320px] lg:gap-14">
-        <div className="flex min-w-0 flex-col gap-[60px] lg:gap-24">
-          {/*
-            TWO «تازه‌ترین», NOT ONE. A single list let the RSS automation's
-            two items a day push every analysis and lesson off the page within
-            a week; the team asked for news and articles to have a list each.
-          */}
-          <LatestSection
-            id="latest-articles-heading"
-            title="تازه‌ترین مقالات"
-            href="/archive"
-            linkLabel="همه‌ی مطالب"
-            items={latestArticles}
-          />
-          <LatestSection
-            id="latest-news-heading"
-            title="تازه‌ترین اخبار"
-            href="/news"
-            linkLabel="همه‌ی اخبار"
-            items={latestNews}
-          />
-
-          {topics.map((topic) => (
-            <TopicSection key={topic.key} topic={topic} />
-          ))}
-
-          <div className="flex justify-center">
-            <Link
-              href="/archive"
-              className="inline-flex h-[46px] items-center rounded-full border border-border-interactive px-6 text-[15px] text-text-primary transition-colors hover:border-accent hover:bg-accent-soft"
-            >
-              مطالب بیشتر
-            </Link>
-          </div>
-        </div>
+        <CategoryChips markets={markets} />
 
         {/*
-          NOT STICKY ANY MORE. With the InChart card added the column is taller
-          than a laptop viewport, and a sticky box taller than the viewport
-          holds its TOP edge until the page bottom arrives — the newsletter
-          form at its foot would be unreachable for the whole of a body that is
-          now several screens long.
+          TWO «تازه‌ترین», NOT ONE. A single list let the RSS automation's two
+          items a day push every analysis and lesson off the page within a
+          week; the team asked for news and articles to have a list each.
         */}
-        <aside className="flex flex-col gap-6">
-          <CategoryListCard markets={markets} />
+        <LatestSection
+          id="latest-articles-heading"
+          title="تازه‌ترین مقالات"
+          href="/archive"
+          items={latestArticles}
+        />
+        <LatestSection
+          id="latest-news-heading"
+          title="تازه‌ترین اخبار"
+          href="/news"
+          items={latestNews}
+        />
+
+        {topics.map((topic) => (
+          <TopicSection key={topic.key} topic={topic} />
+        ))}
+
+        {/*
+          What the sidebar carried, as a row. InChart first: it stands where
+          the team asked for a live price strip, which Mag does not print —
+          see InchartPricesCard.
+        */}
+        {/* Three-up only with the newsletter on: it renders nothing while
+            NEWSLETTER_ENABLED is false, and two cards in a three-column row
+            leave the empty slot the team called wasteful. */}
+        <div
+          className={`grid gap-4 md:grid-cols-2 lg:gap-6 ${NEWSLETTER_ENABLED ? 'xl:grid-cols-3' : ''}`}
+        >
           <InchartPricesCard />
           <NewsletterCta />
-        </aside>
+          <SocialChannelsCard />
+        </div>
       </div>
     </main>
   );

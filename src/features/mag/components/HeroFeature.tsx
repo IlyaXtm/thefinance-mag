@@ -57,9 +57,9 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         >
           <CardImage
             image={image}
-            /* The 2fr column of the 1224px container is ~720px; 62vw asked
-               for 893px at 1440. */
-            sizes="(max-width: 1023px) 100vw, 740px"
+            /* Half the 1224px container is ~540px; 62vw asked for 893px at
+               1440. */
+            sizes="(max-width: 1023px) 100vw, 560px"
             priority
             rounded="rounded-t-card"
           />
@@ -96,8 +96,9 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
 }
 
 /**
- * The two cards beside the lead: image on top, title under it — the lead's
- * own shape at a smaller size.
+ * The four cards beside the lead, as a 2×2: image on top, title under it —
+ * the lead's own shape at a smaller size. Four, not two, since the team's
+ * Faraz reference (2026-10-05): five image articles above the fold.
  *
  * ── IT WAS A ROW, AND THE ROW CROPPED THE ARTWORK INTO A SLIVER ─────────────
  *
@@ -127,16 +128,17 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
         <div style={{ aspectRatio: heroAspectRatios(image).mobile }}>
           <CardImage
             image={image}
-            sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 400px"
+            sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 280px"
             rounded="rounded-t-card"
           />
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-2 p-5">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <span className="text-[12px] text-accent">{category.name}</span>
 
-        <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
+        {/* 16px, not the h3 scale: a 2×2 cell is ~260px wide on desktop. */}
+        <h3 className="text-[16px] font-semibold leading-[1.7] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>

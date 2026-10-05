@@ -1,28 +1,37 @@
 import Link from 'next/link';
-import { CompactCard, PostCard, WideCard } from '@/features/mag/components';
+import { CompactCard, PostCard } from '@/features/mag/components';
 import type { TopicBlock } from '@/features/mag/lib/landing';
-import type { ArticleSummary } from '@/features/mag/types/mag.types';
+import { toPersianDigits } from '@/features/mag/lib/format';
+import type { ArticleSummary, Market } from '@/features/mag/types/mag.types';
 
 /**
- * The home page's section heading: h2, a hairline, and an onward link.
+ * The home page's sections, in the shape of the team's reference (faraz.io/blog,
+ * 2026-10-05): full width, three across, no sidebar.
  *
- * It was written inline once, for «تازه‌ترین مطالب». The landing now has up to
- * eight sections, and eight copies of one row is eight places for the touch
- * target or the chevron direction to drift.
+ * THE SIDEBAR WENT BECAUSE OF THE WHITESPACE. «فضای سفید صفحه مگ خیلی زیاده —
+ * سه ردیف میتونه بشه؟» The card grids sat in a `1fr | 320px` body and could
+ * only ever be two-up; at full width they are the system grid exactly
+ * (1 / 2 / 3 columns at <768 / 768 / 1280), and what the sidebar carried
+ * moved into the page — categories as a chip row near the top, InChart and the
+ * newsletter into a closing row.
+ */
+
+/**
+ * h2, a hairline, and «مشاهده همه». The label was «همه‌ی کریپتو»; the team
+ * circled it and the reference reads «مشاهده همه», which also stops seven
+ * section links each restating their own heading.
  *
- * The link is `min-h-11` — 44px — because it is a control, not a label. The
- * chevron points left: forward, in RTL.
+ * The link is `min-h-11` — 44px — because it is a control. The chevron points
+ * left, forward in RTL, and is kept out of the accessible name.
  */
 export function LandingSectionHeader({
   id,
   title,
   href,
-  linkLabel,
 }: {
   id: string;
   title: string;
   href?: string;
-  linkLabel?: string;
 }) {
   return (
     <div className="mb-6 flex items-center gap-4">
@@ -30,14 +39,12 @@ export function LandingSectionHeader({
         {title}
       </h2>
       <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
-      {href && linkLabel && (
+      {href && (
         <Link
           href={href}
           className="inline-flex min-h-11 shrink-0 items-center text-[14px] text-accent transition-colors hover:text-text-primary"
         >
-          {linkLabel}
-          {/* Hidden from the accessible name: the label is the destination, the
-              arrow only says "forward" — and in RTL forward points left. */}
+          مشاهده همه
           <span aria-hidden="true" className="ms-1">
             ←
           </span>
@@ -48,25 +55,32 @@ export function LandingSectionHeader({
 }
 
 /**
- * «پیشنهاد سردبیر» — two large, then up to four small.
+ * Two large, then up to four small — the 2 + 4 of the team's reference.
  *
- * The slot the team asked to fill with «پربازدیدترین مطالب». A popularity
- * ranking is on CLAUDE.md's never-build list and WordPress records no view
- * counts to rank by, so the team chose an editor's selection instead: the
- * posts with WordPress's «چسباندن به بالای وبلاگ» ticked. Same layout as the
- * reference, no counts anywhere on it.
+ * That reference was a «پربازدیدترین» ranking with a view count on every card;
+ * both are on CLAUDE.md's never-build list, and WordPress records no views.
+ * The shape is kept, the ranking is not: editors' picks when there are any,
+ * the newest analysis and education until then — and the heading says which.
  *
- * Four across at `xl`, against the system's three-column card grid, to match
- * the 2 + 4 shape the team sent: this row runs the full 1224px container, so
- * the small cards are still ~290px — wider than a three-up card inside the
- * 1fr | 320px body below it.
+ * Four across at `xl`, against the three-column card grid, to keep the 2 + 4
+ * the team sent: the row runs the full container, so a small card is ~260px.
  */
-export function EditorsPicks({ items }: { items: ArticleSummary[] }) {
+export function FeaturedSection({
+  items,
+  source,
+}: {
+  items: ArticleSummary[];
+  source: 'editors' | 'recent';
+}) {
+  if (items.length === 0) return null;
   const [large, small] = [items.slice(0, 2), items.slice(2)];
 
   return (
-    <section aria-labelledby="picks-heading" className="mt-[60px] lg:mt-24">
-      <LandingSectionHeader id="picks-heading" title="پیشنهاد سردبیر" />
+    <section aria-labelledby="featured-heading">
+      <LandingSectionHeader
+        id="featured-heading"
+        title={source === 'editors' ? 'پیشنهاد سردبیر' : 'پیشنهاد مطالعه'}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:gap-6">
         {large.map((article) => (
@@ -94,26 +108,60 @@ export function EditorsPicks({ items }: { items: ArticleSummary[] }) {
   );
 }
 
-/** A «تازه‌ترین …» block: four cards, two across, and a link to the rest. */
+/**
+ * «دسته‌بندی مطالب» — the markets as a row of links, where the sidebar list
+ * used to be. Navigation, not a client-side filter: each chip is a real
+ * archive page a crawler can follow.
+ *
+ * Renamed from «بازارها» at the team's request. `decisions.md` once renamed it
+ * the other way, because the list holds markets and the categories taxonomy is
+ * something else; the team reads «دسته‌بندی» as the everyday word for "where
+ * an article is filed", which is what a reader means by it too.
+ */
+export function CategoryChips({ markets }: { markets: Market[] }) {
+  const populated = markets.filter((m) => (m.count ?? 0) > 0);
+  if (populated.length === 0) return null;
+
+  return (
+    <nav aria-labelledby="categories-heading">
+      <LandingSectionHeader id="categories-heading" title="دسته‌بندی مطالب" />
+      <ul className="flex flex-wrap gap-2">
+        {populated.map((market) => (
+          <li key={market.slug}>
+            <Link
+              href={`/market/${market.slug}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-interactive px-4 text-[14px] text-text-secondary transition-colors hover:border-accent hover:bg-accent-soft hover:text-text-primary"
+            >
+              {market.name}
+              <span className="text-[12px] tabular-nums text-text-muted">
+                {toPersianDigits(market.count ?? 0)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** A «تازه‌ترین …» block: two rows of three at full width. */
 export function LatestSection({
   id,
   title,
   href,
-  linkLabel,
   items,
 }: {
   id: string;
   title: string;
   href: string;
-  linkLabel: string;
   items: ArticleSummary[];
 }) {
   if (items.length === 0) return null;
 
   return (
     <section aria-labelledby={id}>
-      <LandingSectionHeader id={id} title={title} href={href} linkLabel={linkLabel} />
-      <div className="grid gap-4 md:grid-cols-2 lg:gap-6">
+      <LandingSectionHeader id={id} title={title} href={href} />
+      <div className="grid gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-3">
         {items.map((article) => (
           <PostCard key={article.id} article={article} />
         ))}
@@ -123,36 +171,30 @@ export function LatestSection({
 }
 
 /**
- * One topic: a wide lead card, then two compact ones. The «1 big + 2 small»
- * shape of the Zoomit reference, with the titles off the images — see
- * CompactCard for why that part of the reference could not be followed.
+ * One topic: three cards, three across. The third hides between md and xl,
+ * where the grid is two-up and it would sit alone on a row.
+ *
+ * A topic left with two — اینچارت has three articles in all, and one may
+ * already be on the page above — stays two-up at every width rather than
+ * leaving an empty third column, which is the whitespace the team objected to.
  */
 export function TopicSection({ topic }: { topic: TopicBlock }) {
-  const [lead, ...rest] = topic.items;
   const id = `topic-${topic.key}-heading`;
+  const threeUp = topic.items.length >= 3;
 
   return (
     <section aria-labelledby={id}>
-      <LandingSectionHeader
-        id={id}
-        title={topic.title}
-        href={topic.href}
-        linkLabel={`همه‌ی ${topic.title}`}
-      />
-
-      <WideCard article={lead} />
-
-      {rest.length > 0 && (
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:mt-6 lg:gap-6">
-          {rest.map((article) => (
+      <LandingSectionHeader id={id} title={topic.title} href={topic.href} />
+      <div className={`grid gap-4 md:grid-cols-2 lg:gap-6 ${threeUp ? 'xl:grid-cols-3' : ''}`}>
+        {topic.items.map((article, i) => (
+          <div key={article.id} className={i === 2 ? 'contents md:max-xl:hidden' : 'contents'}>
             <CompactCard
-              key={article.id}
               article={article}
-              sizes="(max-width: 639px) 100vw, 360px"
+              sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
             />
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

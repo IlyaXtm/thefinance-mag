@@ -67,7 +67,10 @@ export function CategoryListCard({
       header now names both axes explicitly, which is what made this
       contradiction worth fixing rather than tolerable.
     */
-    <SidebarCard title="بازارها">
+    /* Renamed again, 2026-10-05, at the team's request: «دسته‌بندی مطالب»
+       is the reader's word for where an article is filed. The note above
+       records why it once said «بازارها»; the list itself is unchanged. */
+    <SidebarCard title="دسته‌بندی مطالب">
       <ul className="flex flex-col">
         {populated.map((market) => {
           const isActive = market.slug === activeSlug;

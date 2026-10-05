@@ -173,5 +173,7 @@ export function MarketFilterBar({
       .map((m) => ({ slug: m.slug, name: m.name, href: `/market/${m.slug}` })),
   ];
 
-  return <Bar items={items} activeSlug={activeSlug ?? 'all'} label="بازار" />;
+  /* «دسته‌بندی مطالب», not «بازار» — the team's word, circled in review
+     2026-10-05. The row's links and data are unchanged. */
+  return <Bar items={items} activeSlug={activeSlug ?? 'all'} label="دسته‌بندی مطالب" />;
 }
