@@ -152,6 +152,20 @@ export interface ArticleSummary {
    */
   editorsPick: boolean;
   /**
+   * Rank Math's meta description — written by a person, for a reader deciding
+   * whether to click, which is exactly what a card's summary is for. Every one
+   * of the 56 education posts had one on 2026-10-05; none had an excerpt. It
+   * replaced the old fallback of joining the article's H2s, which the team
+   * read correctly as a table of contents, not a description.
+   */
+  seoDescription: string | null;
+  /**
+   * The post's WordPress tag slugs, decoded. Core WPGraphQL, no plugin. What
+   * the education page reads from them — guides, topics, level — lives in
+   * lib/education.ts, so the tag names are agreed in one place.
+   */
+  tags: string[];
+  /**
    * The article's own H2 headings, server-derived.
    * Feeds both the featured card's «در این مقاله» block and the article ToC —
    * one source, two consumers, so they can never disagree.
@@ -250,6 +264,11 @@ export interface SearchParams {
   query: string;
   page?: number;
   perPage?: number;
+  /**
+   * Limit to one content type — «جستجو در آموزش‌ها» on the education page.
+   * The same `categoryName` argument the listings use.
+   */
+  contentType?: ContentTypeSlug;
 }
 
 export interface SearchResult extends Paginated<ArticleSummary> {

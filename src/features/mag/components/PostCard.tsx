@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
-import { CardBody, CardByline, CardDate } from './CardMeta';
-import { CategoryChip } from './CategoryChip';
-import { cardCategory, cardDek } from '../lib/card';
+import { CardBody, CardFootMeta, CardKicker } from './CardMeta';
+import { cardDek } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 
@@ -67,7 +66,6 @@ export function ArchiveCard({
   article: ArticleSummary;
   priority?: boolean;
 }) {
-  const category = cardCategory(article);
   const dek = cardDek(article);
 
   return (
@@ -83,10 +81,7 @@ export function ArchiveCard({
       </div>
 
       <div className="flex min-w-0 flex-col gap-2.5">
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px]">
-          <CategoryChip name={category.name} />
-          <CardDate iso={article.publishedAt} />
-        </div>
+        <CardKicker article={article} />
 
         <h3 className="text-h3 font-semibold leading-[1.6] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
@@ -95,16 +90,13 @@ export function ArchiveCard({
         </h3>
 
         {dek && (
-          <p className="text-[15px] font-light leading-[1.85] text-text-secondary [text-wrap:pretty]">
+          <p className="line-clamp-2 text-[15px] font-light leading-[1.85] text-text-secondary">
             {dek}
           </p>
         )}
 
-        <CardByline
-          author={article.author}
-          readingTime={article.readingTime}
-          className="mt-auto pt-3"
-        />
+        {/* The team's card rule: no author on cards, date only on news. */}
+        <CardFootMeta article={article} className="mt-auto pt-3" />
       </div>
     </article>
   );

@@ -1,3 +1,6 @@
+import { EDUCATION_DESCRIPTION, EDUCATION_TITLE } from './education';
+import type { Category } from '../types/mag.types';
+import { MAG_NAME } from './site';
 /**
  * When a taxonomy archive is worth putting in front of Google.
  *
@@ -69,4 +72,24 @@ export const EXCLUDED_CATEGORY_SLUGS: readonly string[] = [
 
 export function isExcludedCategory(slug: string): boolean {
   return EXCLUDED_CATEGORY_SLUGS.includes(decodeURIComponent(slug));
+}
+
+/**
+ * A category's visible title and description — one source for the page
+ * header, `<title>` and the meta description, so the three cannot disagree.
+ *
+ * «آموزش» carries the team's copy (2026-10-05); every other category reads
+ * its own name and taxonomy description from WordPress, as before.
+ */
+export function categoryCopy(category: Pick<Category, 'slug' | 'name' | 'description'>): {
+  title: string;
+  description: string;
+} {
+  if (category.slug === 'education') {
+    return { title: EDUCATION_TITLE, description: EDUCATION_DESCRIPTION };
+  }
+  return {
+    title: category.name,
+    description: category.description ?? `همه‌ی مطالب دسته‌ی ${category.name} در ${MAG_NAME}`,
+  };
 }

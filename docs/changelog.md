@@ -8,6 +8,36 @@ why it was made.
 
 ---
 
+## 2026-10-05 (education) — «آموزش بازارهای مالی», real descriptions, quieter cards
+
+**Card summaries come from Rank Math now.** They used to fall back to the
+article's first H2s joined with « · » — the team read that, correctly, as a
+table of contents. Every one of the 56 education posts has a Rank Math
+description; 46 are written for readers, 10 are Rank Math's auto-copy of the
+opening paragraph (listed for the content team). `seo { description }` is
+requested ALONE — verified 200; the openGraph/fullHead fields are what trigger
+Rank Math's redirect.
+
+**Cards say less.** The team's rule for evergreen content: reading time, not
+date or author. Every non-news card now shows category (+ level when tagged),
+title, a two-line summary and reading time; news keeps its date, because for
+news the date is the point. `CardByline` and `CardDate` had no callers left
+and were deleted.
+
+**The education page** has the team's title and promise, «میخواهی چه چیزی یاد
+بگیری؟» as the label of a search box that searches lessons only
+(`/search?type=education`, verified: «طلا» 65 → 53), topic chips in the team's
+exact order, and no article count. Chips lead to
+`/category/education/<topic>` — prerendered for known topics, on demand for new
+ones (so a newly tagged topic never links to a 404), `noindex, follow`.
+
+**Tags, not new taxonomies,** for the three things with no field: guides
+(`راهنمای-جامع`, large cards at the top), topics (`شروع-از-صفر`, `آپشن`) and
+level (`مقدماتی` / `متوسط` / `پیشرفته`). Each appears only once a post is
+tagged; nothing renders empty. The agreed slugs: `docs/content-team-tags.md`.
+
+---
+
 ## 2026-10-05 (khabarchi) — A Khabarchi banner in the news feed; Aparat removed
 
 **«خبرچی؛ اخبار لحظه‌ای بازارهای مالی از منابع معتبر جهانی — مشاهده خبرچی ←»**

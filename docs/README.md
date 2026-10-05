@@ -48,6 +48,7 @@ else in version control.
 | `content-team-guide.md` | What changed for editors: login, publish timing, the three rules, what is still in progress. Persian — it is sent to the content team |
 | `cta-unlinked.md` | The 21 CTA banners with no link in WordPress, with an edit link per post and a suggested target. Persian — it is sent to the content team |
 | `rank-math-redirects.md` | Three redirects to mirror in Rank Math (already live in code). Persian — it is sent to the content team |
+| `content-team-tags.md` | The WordPress tags that switch on the education page's guides, topic chips and levels; the options-article retitle; the 10 lessons with no real description. Persian — it is sent to the content team |
 
 ### Design
 

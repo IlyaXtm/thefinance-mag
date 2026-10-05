@@ -1,60 +1,10 @@
 import Link from 'next/link';
 import { CategoryChip } from './CategoryChip';
 import { formatJalaliShort, formatReadingTime, toDateTimeAttr } from '../lib/format';
-import { authorInitial, cardCategory, cardDek } from '../lib/card';
+import { cardCategory, cardDek } from '../lib/card';
+import { levelOf } from '../lib/education';
 import { bidiTitle } from '../lib/bidi-title';
-import type { ArticleSummary, Author } from '../types/mag.types';
-
-/**
- * The byline strip under a card: avatar, author, reading time.
- *
- * The avatar is an INITIAL, never Gravatar — a third-party request per author
- * that leaks a hash of their email abroad and is unreliable from Iran
- * (`decisions.md`). It is `aria-hidden`: the author's name is right beside it,
- * so announcing a letter adds nothing.
- *
- * Reading time is stored, never computed at render — the mu-plugin owns it.
- */
-export function CardByline({
-  author,
-  readingTime,
-  className = '',
-}: {
-  author: Author;
-  readingTime: number;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`flex items-center gap-2.5 border-t border-border-subtle pt-3 text-[12.5px] text-text-muted ${className}`}
-    >
-      <span
-        aria-hidden="true"
-        className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-hover text-[11px] text-text-secondary"
-      >
-        {authorInitial(author.name)}
-      </span>
-      <span className="truncate">{author.name}</span>
-      <span aria-hidden="true">·</span>
-      <span className="shrink-0">{formatReadingTime(readingTime)} مطالعه</span>
-    </span>
-  );
-}
-
-/**
- * Category + date, the strip above a card title.
- *
- * The date is a real `<time>` with a machine-readable `dateTime`, and renders
- * as an absolute Jalali date. Not «۲ روز قبل»: much of this archive is
- * evergreen, and a relative date makes a still-valid explainer look stale.
- */
-export function CardDate({ iso, className = '' }: { iso: string; className?: string }) {
-  return (
-    <time dateTime={toDateTimeAttr(iso)} className={`text-text-muted ${className}`}>
-      {formatJalaliShort(iso)}
-    </time>
-  );
-}
+import type { ArticleSummary } from '../types/mag.types';
 
 /**
  * The text half of an image-on-top card, in the order the team specified
@@ -67,8 +17,7 @@ export function CardDate({ iso, className = '' }: { iso: string; className?: str
  * heading size; the summary is clamped to two lines so card heights in a row
  * stay close; the meta is the smallest, quietest text and sits at the foot.
  *
- * No author on cards — the spec does not include it, and it stays on the
- * article page where it belongs.
+ * No author on cards, and the date only on news — see CardFootMeta.
  */
 export function CardBody({
   article,
@@ -79,12 +28,11 @@ export function CardBody({
   size?: 'sm' | 'md' | 'lg';
   showSummary?: boolean;
 }) {
-  const category = cardCategory(article);
-  const summary = showSummary ? cardDek(article, 2) : null;
+  const summary = showSummary ? cardDek(article) : null;
 
   return (
     <div className={`flex flex-1 flex-col gap-2.5 ${size === 'sm' ? 'p-4' : 'p-5'}`}>
-      <CategoryChip name={category.name} className="self-start" />
+      <CardKicker article={article} />
 
       <h3
         className={`font-bold text-text-primary [text-wrap:pretty] ${
@@ -102,13 +50,60 @@ export function CardBody({
         </p>
       )}
 
-      <div className="mt-auto flex flex-wrap items-center gap-x-2 pt-2 text-meta text-text-muted">
-        <time dateTime={toDateTimeAttr(article.publishedAt)}>
-          {formatJalaliShort(article.publishedAt)}
-        </time>
-        <span aria-hidden="true">·</span>
-        <span>{formatReadingTime(article.readingTime)} مطالعه</span>
-      </div>
+      <CardFootMeta article={article} className="mt-auto pt-2" />
+    </div>
+  );
+}
+
+/**
+ * The foot of a card: reading time, and the date ONLY for news.
+ *
+ * The team's rule (2026-10-05): «در محتوای Evergreen آموزشی، سطح آموزش و مدت
+ * مطالعه مهم‌تر از تاریخ انتشار و نام نویسنده است». A lesson from last year is
+ * not stale, and a date on it says it might be. News is the opposite — its
+ * date is the point — so news keeps it. The author is on the article page.
+ */
+export function CardFootMeta({
+  article,
+  className = '',
+}: {
+  article: ArticleSummary;
+  className?: string;
+}) {
+  const isNews = article.contentType.slug === 'news';
+
+  return (
+    <div className={`flex flex-wrap items-center gap-x-2 text-meta text-text-muted ${className}`}>
+      {isNews && (
+        <>
+          <time dateTime={toDateTimeAttr(article.publishedAt)}>
+            {formatJalaliShort(article.publishedAt)}
+          </time>
+          <span aria-hidden="true">·</span>
+        </>
+      )}
+      <span>{formatReadingTime(article.readingTime)} مطالعه</span>
+    </div>
+  );
+}
+
+/**
+ * The category badge, with the level beside it when the post is tagged with
+ * one — «اقتصاد جهانی · مقدماتی», the team's example. No level, no trace.
+ */
+export function CardKicker({
+  article,
+  variant = 'soft',
+}: {
+  article: ArticleSummary;
+  variant?: 'soft' | 'solid';
+}) {
+  const level = levelOf(article);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[12px]">
+      <CategoryChip name={cardCategory(article).name} variant={variant} />
+      {level && <span className="text-text-muted">{level}</span>}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { ArticleSummary } from '../types/mag.types';
 import { MarketChip } from './MarketChip';
 import { ContentTypeLabel } from './ContentTypeLabel';
-import { ArticleMeta } from './ArticleMeta';
+import { CardFootMeta } from './CardMeta';
 import { imageSrc } from '../lib/site';
 import { bidiTitle } from '../lib/bidi-title';
 
@@ -36,7 +36,7 @@ export function ArticleCard({
   /** Set on the LCP card only — the first card above the fold. */
   priority?: boolean;
 }) {
-  const { slug, title, featuredImage, market, contentType, readingTime, publishedAt } = article;
+  const { slug, title, featuredImage, market, contentType } = article;
 
   return (
     /* `mag-card-ring`: this card's `overflow-hidden` was clipping the link's
@@ -90,7 +90,8 @@ export function ArticleCard({
           </h3>
 
           <div className="mt-auto pt-3">
-            <ArticleMeta readingTime={readingTime} publishedAt={publishedAt} />
+            {/* Date only on news — the team's evergreen rule; see CardFootMeta. */}
+            <CardFootMeta article={article} />
           </div>
         </div>
       </Link>

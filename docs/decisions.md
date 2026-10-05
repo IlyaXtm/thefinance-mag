@@ -1560,3 +1560,10 @@ the title dominant and no author; the light theme has three surfaces (page
 `#F6F7F9`, cards and header white) via a new `--surface-chrome`, dark themes
 unchanged; and the «تحلیل» content type is retired, its URLs 301 to
 `/market/tse` where its single post already lives.
+
+**Education round, same day.** Card summaries read the editor's excerpt, then
+Rank Math's description, never the article's headings. Evergreen cards drop
+date and author (news keeps its date). Guides, education topics and levels
+are WordPress tags with a fixed vocabulary (`lib/education.ts`) — chosen over
+new taxonomies because the content team can apply them today with no plugin.
+Filtered education and news views are `noindex, follow`.

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { searchArticles } from '@/features/mag/api/v1/mag.service';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
 import { feedAlternate, magPath, magUrl } from '@/features/mag/lib/site';
@@ -36,14 +37,20 @@ export const metadata: Metadata = {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; type?: string }>;
 }) {
-  const { q, page } = await searchParams;
+  const { q, page, type } = await searchParams;
   const query = (q ?? '').trim();
   const currentPage = Number(page) || 1;
+  /* «جستجو در آموزش‌ها» — the education page's search box sends type=education.
+     Only a type the model knows narrows anything; any other value is ignored
+     rather than producing an empty "no results" for a typo in a URL. */
+  const scope = CONTENT_TYPES.find((t) => t.slug === type) ?? null;
 
   const [results, markets] = await Promise.all([
-    query ? searchArticles({ query, page: currentPage, perPage: 9 }) : null,
+    query
+      ? searchArticles({ query, page: currentPage, perPage: 9, contentType: scope?.slug })
+      : null,
     getMarkets(),
   ]);
 
@@ -54,15 +61,16 @@ export default async function SearchPage({
 
         <form action={magPath('/search')} method="get" className="mt-6 max-w-prose">
           <label htmlFor="search-input" className="sr-only">
-            جستجو در مجله
+            {scope ? `جستجو در ${scope.name}` : 'جستجو در مجله'}
           </label>
+          {scope && <input type="hidden" name="type" value={scope.slug} />}
           <div className="flex items-center gap-2">
             <input
               id="search-input"
               name="q"
               type="search"
               defaultValue={query}
-              placeholder="جستجو در مجله"
+              placeholder={scope ? `جستجو در ${scope.name}` : 'جستجو در مجله'}
               /* `min-w-0` with `flex-1`, not `flex-1` alone. A flex item's
                  default `min-width: auto` refuses to shrink below the input's
                  intrinsic width, so at 320px the field held its ground and
@@ -88,7 +96,7 @@ export default async function SearchPage({
         ) : results && results.items.length > 0 ? (
           <>
             <p className="mb-6 text-text-secondary">
-              {toPersianDigits(results.total)} نتیجه برای{' '}
+              {toPersianDigits(results.total)} نتیجه{scope ? ` در ${scope.name}` : ''} برای{' '}
               {/*
                 The query renders through LTR isolation: people search for P/E,
                 Bitcoin, S&P 500, and an unisolated Latin fragment scrambles the
@@ -120,7 +128,7 @@ export default async function SearchPage({
             <Pagination
               page={results.page}
               totalPages={results.totalPages}
-              hrefFor={pageParamHref('/search', { q: query })}
+              hrefFor={pageParamHref('/search', { q: query, type: scope?.slug })}
             />
           </>
         ) : (

@@ -209,3 +209,35 @@ export function MarketFilterBar({
     />
   );
 }
+
+/**
+ * Chips that are neither content types nor only markets — the education
+ * page's «شروع از صفر · بورس ایران · … · آپشن», where topics come from tags.
+ * Same Bar, so the shape, the 44px targets and the mobile scroller are the
+ * ones every other filter row has.
+ */
+export function ChipFilterBar({
+  items,
+  activeKey = null,
+  allHref,
+  label,
+  showLabel = true,
+}: {
+  items: Array<{ key: string; name: string; href: string }>;
+  activeKey?: string | null;
+  allHref: string;
+  label: string;
+  showLabel?: boolean;
+}) {
+  return (
+    <Bar
+      items={[
+        { slug: 'all', name: 'همه', href: allHref },
+        ...items.map((i) => ({ slug: i.key, name: i.name, href: i.href })),
+      ]}
+      activeSlug={activeKey ?? 'all'}
+      label={label}
+      showLabel={showLabel}
+    />
+  );
+}

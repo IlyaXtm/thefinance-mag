@@ -230,6 +230,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T14:10:00+03:30',
     modifiedAt: '2026-08-19T14:10:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: ['تصمیم نشست', 'واکنش بازارها'],
@@ -245,6 +247,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T16:40:00+03:30',
     modifiedAt: '2026-08-19T16:40:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -260,6 +264,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-19T11:05:00+03:30',
     modifiedAt: '2026-08-19T11:05:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -275,6 +281,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T15:20:00+03:30',
     modifiedAt: '2026-08-18T15:20:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -290,6 +298,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T09:30:00+03:30',
     modifiedAt: '2026-08-18T09:30:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -305,6 +315,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-17T13:15:00+03:30',
     modifiedAt: '2026-08-17T13:15:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -320,6 +332,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-18T09:00:00+03:30',
     modifiedAt: '2026-08-18T09:00:00+03:30',
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [
@@ -339,6 +353,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-17T11:30:00+03:30',
     modifiedAt: '2026-08-17T11:30:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: [],
     editorsPick: true,
     excerpt: 'رابطه‌ی نرخ بهره آمریکا با قیمت طلای داخلی مستقیم نیست؛ از مسیر دلار و انتظارات تورمی می‌گذرد.',
     outline: ['کانال اثرگذاری نرخ بهره', 'نقش نرخ ارز', 'محدودیت‌های این رابطه'],
@@ -354,6 +370,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-16T08:15:00+03:30',
     modifiedAt: '2026-08-16T08:15:00+03:30',
     author: AUTHOR,
+    seoDescription: 'با مفهوم این مطلب، تفاوت‌ها و کاربردهایش در بازار آشنا شوید.',
+    tags: ['راهنمای-جامع', 'مقدماتی'],
     editorsPick: true,
     excerpt: null,
     outline: ['نات کوین چگونه کار می‌کند', 'مکانیزم توزیع توکن', 'ریسک‌های پروژه'],
@@ -371,6 +389,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-15T14:00:00+03:30',
     modifiedAt: '2026-08-15T14:00:00+03:30',
     author: AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: ['شروع-از-صفر', 'متوسط'],
     editorsPick: false,
     excerpt: null,
     outline: ['تعریف اندیکاتور', 'تنظیم درصد بازگشت'],
@@ -397,6 +417,8 @@ const SUMMARIES: ArticleSummary[] = [
       high, this is the field the dek should rely on and `outlineHeadings` can
       leave the listing query entirely.
     */
+    seoDescription: null,
+    tags: [],
     editorsPick: true,
     excerpt: 'دلار قوی‌تر پول را از بازارهای نوظهور بیرون می‌کشد. این گزارش سه دوره‌ی تاریخی را کنار هم می‌گذارد.',
     outline: [
@@ -424,6 +446,8 @@ const SUMMARIES: ArticleSummary[] = [
     modifiedAt: '2026-08-13T09:45:00+03:30',
     author: AUTHOR,
     // Single-entry outline — consumers must omit the block, not render one item.
+    seoDescription: null,
+    tags: [],
     editorsPick: true,
     excerpt: null,
     outline: ['روش‌شناسی داده‌ها'],
@@ -453,6 +477,8 @@ const SUMMARIES: ArticleSummary[] = [
     publishedAt: '2026-08-12T08:30:00+03:30',
     modifiedAt: '2026-08-12T08:30:00+03:30',
     author: AUTHOR_NO_BIO,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: ['چه چیزی اندازه‌گیری شد', 'محدودیت‌های داده'],
@@ -501,6 +527,8 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     publishedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
     modifiedAt: `2026-0${1 + (n % 3)}-${String(10 + (n % 18)).padStart(2, '0')}T09:00:00+03:30`,
     author: n % 2 === 0 ? AUTHOR : AUTHOR_NO_AVATAR,
+    seoDescription: null,
+    tags: n % 4 === 0 ? ['آپشن'] : [],
     editorsPick: n <= 2,
     excerpt: null,
     outline: ['بخش نخست', 'بخش دوم'],
@@ -527,6 +555,8 @@ const FULL_ARTICLE: Article = {
   publishedAt: '2024-11-02T08:00:00+03:30',
   modifiedAt: '2026-08-18T16:20:00+03:30',
   author: AUTHOR,
+  seoDescription: null,
+  tags: [],
   editorsPick: false,
   excerpt: null,
   outline: [
@@ -645,6 +675,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-06T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -707,6 +739,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-04T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -748,6 +782,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-05T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -770,6 +806,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-01T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -790,6 +828,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-02T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -811,6 +851,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-03T10:00:00+03:30',
     modifiedAt: null,
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -831,6 +873,8 @@ const STRESS: Article[] = [
     publishedAt: '2025-03-11T10:00:00+03:30',
     modifiedAt: '2026-07-02T09:15:00+03:30',
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -879,6 +923,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-08-19T10:00:00+03:30',
     modifiedAt: '2026-09-02T09:00:00+03:30',
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt:
       'انتخاب پلتفرم نمودار به سه چیز برمی‌گردد: پوشش داده‌ی بورس تهران، هزینه‌ی واقعی اشتراک، و اینکه قالب‌هایتان روی موبایل باز شود. هر چهار ابزار را روی یک وظیفه‌ی مشخص آزمودیم.',
@@ -947,6 +993,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-05-04T10:00:00+03:30',
     modifiedAt: '2026-05-04T10:00:00+03:30',
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -966,6 +1014,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-06-01T10:00:00+03:30',
     modifiedAt: '2026-06-01T10:00:00+03:30',
     author: AUTHOR,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -986,6 +1036,8 @@ const STRESS: Article[] = [
     publishedAt: '2026-06-02T10:00:00+03:30',
     modifiedAt: '2026-06-02T10:00:00+03:30',
     author: AUTHOR_NO_BIO,
+    seoDescription: null,
+    tags: [],
     editorsPick: false,
     excerpt: null,
     outline: [],
@@ -1340,11 +1392,15 @@ export async function getReports(page = 1, perPage = 12): Promise<Paginated<Repo
 }
 
 export async function searchArticles(params: SearchParams): Promise<SearchResult> {
-  const { query, page = 1, perPage = 9 } = params;
+  const { query, page = 1, perPage = 9, contentType } = params;
   const q = query.trim();
 
   const matched = q
-    ? SUMMARIES.filter((a) => a.title.includes(q) || Boolean(a.market?.name.includes(q)))
+    ? SUMMARIES.filter(
+        (a) =>
+          (a.title.includes(q) || Boolean(a.market?.name.includes(q))) &&
+          (!contentType || a.contentType.slug === contentType),
+      )
     : [];
 
   return simulate({ ...paginate(matched, page, perPage), query: q });

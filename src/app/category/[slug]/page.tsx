@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { getCategories, getCategory } from '@/features/mag/api/v1/mag.service';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_NAME } from '@/features/mag/lib/site';
-import { isExcludedCategory, isThinArchive } from '@/features/mag/lib/taxonomy';
+import { categoryCopy, isExcludedCategory, isThinArchive } from '@/features/mag/lib/taxonomy';
 import { MagNotFoundError } from '@/features/mag/types/mag.types';
 import { CategoryArchiveView } from './_components/CategoryArchiveView';
 
@@ -74,13 +74,14 @@ export async function generateMetadata({
 
   if (!category) return { title: 'دسته پیدا نشد' };
 
+  const copy = categoryCopy(category);
+
   return toMetadata({
     seo: null,
     path: `/category/${category.slug}`,
-    fallbackTitle: category.name,
-    fallbackDescription:
-      category.description ?? `همه‌ی مطالب دسته‌ی ${category.name} در ${MAG_NAME}`,
-    ogTitle: `${category.name} | ${MAG_NAME}`,
+    fallbackTitle: copy.title,
+    fallbackDescription: copy.description,
+    ogTitle: `${copy.title} | ${MAG_NAME}`,
     /* Below the floor the archive still renders and is still linked; it just
        stops asking to be indexed. See lib/taxonomy.ts for where 8 comes from
        and why the sitemap and this flag have to move together. */

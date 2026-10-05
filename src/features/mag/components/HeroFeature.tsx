@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
-import { CategoryChip } from './CategoryChip';
-import { cardCategory, cardDek } from '../lib/card';
-import { formatJalaliShort, formatReadingTime, toDateTimeAttr } from '../lib/format';
+import { CardFootMeta, CardKicker } from './CardMeta';
+import { cardDek } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 import { heroAspectRatios } from '../lib/hero-ratio';
@@ -37,8 +36,7 @@ import { heroAspectRatios } from '../lib/hero-ratio';
  * `aria-label` duplicating it, and the chip is a plain span, not a nested link.
  */
 export function HeroFeature({ article }: { article: ArticleSummary }) {
-  const category = cardCategory(article);
-  const dek = cardDek(article, 1);
+  const dek = cardDek(article);
   const image = article.featuredImage;
 
   return (
@@ -77,7 +75,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         cards, which stretch to the lead, come down with it.
       */}
       <div className="flex flex-1 flex-col gap-2.5 p-5 md:p-6">
-        <CategoryChip name={category.name} variant="solid" className="self-start" />
+        <CardKicker article={article} variant="solid" />
 
         <h2 className="text-h1 font-bold tracking-[-0.3px] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
@@ -91,13 +89,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
           </p>
         )}
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-meta text-text-muted">
-          <time dateTime={toDateTimeAttr(article.publishedAt)}>
-            {formatJalaliShort(article.publishedAt)}
-          </time>
-          <span aria-hidden="true">·</span>
-          <span>{formatReadingTime(article.readingTime)} مطالعه</span>
-        </div>
+        <CardFootMeta article={article} className="mt-auto pt-1" />
       </div>
     </article>
   );
@@ -120,7 +112,6 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
  * the baked-in headline is never cut.
  */
 export function HeroSideCard({ article }: { article: ArticleSummary }) {
-  const category = cardCategory(article);
   const image = article.featuredImage;
 
   return (
@@ -137,7 +128,7 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <CategoryChip name={category.name} className="self-start" />
+        <CardKicker article={article} />
 
         <h3 className="text-[16px] font-bold leading-[1.65] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
@@ -145,13 +136,7 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
           </Link>
         </h3>
 
-        <div className="flex flex-wrap items-center gap-x-2 text-meta text-text-muted">
-          <time dateTime={toDateTimeAttr(article.publishedAt)}>
-            {formatJalaliShort(article.publishedAt)}
-          </time>
-          <span aria-hidden="true">·</span>
-          <span>{formatReadingTime(article.readingTime)} مطالعه</span>
-        </div>
+        <CardFootMeta article={article} />
       </div>
     </article>
   );

@@ -139,6 +139,11 @@ const SUMMARY_FIELDS = `
   # Core WPGraphQL: WordPress's «stick to the top» flag, used as the
   # editor's pick. Verified in the live schema 2026-10-05.
   isSticky
+  # Rank Math's description ALONE. Asking for seo.openGraph or seo.fullHead
+  # makes Rank Math build the head and run its redirect check (the 301 that
+  # broke the build on 2026-10-05); description does not — verified 200.
+  seo { description }
+  tags { nodes { slug } }
   outlineHeadings
   categories { nodes { slug name } }
   markets { nodes { slug name } }
@@ -170,6 +175,8 @@ interface WpSummary {
   modifiedAtIso: string | null;
   excerpt: string | null;
   isSticky: boolean | null;
+  seo: { description: string | null } | null;
+  tags: { nodes: Array<{ slug: string }> } | null;
   outlineHeadings: string[] | null;
   categories: { nodes: WpTerm[] } | null;
   markets: { nodes: WpTerm[] } | null;
@@ -265,6 +272,15 @@ function mapMarket(term: WpTerm): Market {
   return { slug: term.slug as MarketSlug, name: term.name, description: null, count: null };
 }
 
+/** WordPress percent-encodes non-Latin slugs; a malformed one stays as is. */
+function safeDecode(slug: string): string {
+  try {
+    return decodeURIComponent(slug);
+  } catch {
+    return slug;
+  }
+}
+
 function mapSummary(node: WpSummary): ArticleSummary {
   const marketNodes = node.markets?.nodes ?? [];
 
@@ -297,6 +313,8 @@ function mapSummary(node: WpSummary): ArticleSummary {
        string would read as "present" at every call site. */
     excerpt: node.excerpt?.trim() || null,
     editorsPick: node.isSticky === true,
+    seoDescription: node.seo?.description?.trim() || null,
+    tags: (node.tags?.nodes ?? []).map((t) => safeDecode(t.slug)),
   };
 }
 
@@ -947,21 +965,22 @@ export async function getReports(page = 1, perPage = 12): Promise<Paginated<Repo
 }
 
 export async function searchArticles(params: SearchParams): Promise<SearchResult> {
-  const { query, page = 1, perPage = 9 } = params;
+  const { query, page = 1, perPage = 9, contentType } = params;
 
-  const filters = { category: null, author: null, search: query };
+  const filters = { category: contentType ?? null, author: null, search: query };
   const after = await cursorForPage(page, perPage, filters);
 
   const data = await gql<{ posts: { nodes: WpSummary[] } }>(
-    `query Search($search: String!, $size: Int!, $after: String) {
+    `query Search($search: String!, $size: Int!, $after: String, $category: String) {
       posts(first: $size, after: $after, where: {
         search: $search
         status: PUBLISH
+        categoryName: $category
       }) {
         nodes { ${SUMMARY_FIELDS} }
       }
     }`,
-    { search: query, size: perPage, after },
+    { search: query, size: perPage, after, category: filters.category },
     /* Search results are per-query and shouldn't be cached. */
     false,
   );
