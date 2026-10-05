@@ -28,6 +28,16 @@ const ENDPOINT =
 /** Five minutes: new redirects go live quickly, at one query per window. */
 const TTL_MS = 5 * 60 * 1000;
 
+/*
+  A fetch with no timeout can hang forever, and a hung one never settles — so
+  `inFlight` is never cleared and no refresh is attempted again for the life of
+  the process. That is not hypothetical: production reported `ageMs` of 14.5
+  days on 2026-10-05, a map frozen since about 21 September while `reachable`
+  still read true. Generous because this is off the request path; the bound is
+  what matters, not its size.
+*/
+const FETCH_TIMEOUT_MS = 10_000;
+
 /**
  * The two rules WordPress cannot supply, because their targets no longer exist
  * as redirect sources in the database — the posts are gone. They always win
@@ -68,21 +78,31 @@ interface WpRedirect {
 async function fetchRules(): Promise<readonly LegacyRedirect[]> {
   if (!ENDPOINT) throw new Error('WP_GRAPHQL_ENDPOINT is not configured.');
 
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: '{ magRedirects { from to status } }' }),
-    /* This module does its own caching, and Next's fetch cache is not
-       available to middleware anyway. */
-    cache: 'no-store',
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  if (!res.ok) throw new Error(`magRedirects responded ${res.status}`);
-
-  const json = (await res.json()) as {
+  let json: {
     data?: { magRedirects?: WpRedirect[] | null };
     errors?: Array<{ message: string }>;
   };
+  try {
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '{ magRedirects { from to status } }' }),
+      /* This module does its own caching, and Next's fetch cache is not
+         available to middleware anyway. */
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    if (!res.ok) throw new Error(`magRedirects responded ${res.status}`);
+
+    /* Inside the try: a body that stalls mid-stream hangs just as well. */
+    json = (await res.json()) as typeof json;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (json.errors?.length) throw new Error(json.errors[0].message);
 

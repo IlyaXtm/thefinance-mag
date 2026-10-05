@@ -67,11 +67,33 @@ async function gql<T>(
       */
       next: revalidate === false ? undefined : { revalidate },
       ...(revalidate === false ? { cache: 'no-store' as const } : {}),
+      /*
+        Never follow. Rank Math runs its redirect check while resolving
+        `seo.openGraph`, so a post that is still published while a redirect
+        points away from its slug turns this POST into a 301 to the PUBLIC
+        page. Followed, that returned the article's HTML with a 200, Next
+        cached it for five minutes, and the failure read as «Unexpected token
+        '<'» at prerender — the whole build, over one editorial state.
+      */
+      redirect: 'manual',
     });
   } catch (cause) {
     throw new MagFetchError(`GraphQL request failed: ${String(cause)}`);
   }
 
+  if (res.status >= 300 && res.status < 400) {
+    const raw = res.headers.get('location') ?? 'unknown';
+    let to = raw;
+    try {
+      to = decodeURI(raw);
+    } catch {
+      /* A malformed Location stays encoded rather than masking this error. */
+    }
+    throw new MagFetchError(
+      `GraphQL was redirected (${res.status} → ${to}). Usually a Rank Math ` +
+        `redirect on a post that is still published: unpublish the old post.`,
+    );
+  }
   if (!res.ok) throw new MagFetchError(`GraphQL responded ${res.status}`);
 
   const json = (await res.json()) as { data?: T; errors?: Array<{ message: string }> };

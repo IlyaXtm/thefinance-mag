@@ -1828,3 +1828,56 @@ that silently does nothing.
 
 Both are five minutes of someone's attention at a moment that will occur anyway.
 They are here so that moment is recognised as the test rather than spent.
+
+---
+
+## B43 — 🟠 `/mag/health` cannot tell a stalled redirect refresh from a healthy one
+
+**Status:** open, recorded 2026-10-05. The hang itself is fixed (changelog,
+same date); this is the monitoring gap that let it run for two weeks.
+
+`reachable` means "a fetch succeeded at least once in this process", so a map
+frozen for 14.5 days still read green. The number that showed the problem,
+`ageMs`, is there but nothing judges it. A `stale: ageMs > 2 × TTL` field — or
+folding that into `status` — would have made this a red health check on
+22 September instead of something found by reading raw JSON.
+
+The same blind spot is worth checking in `mag.api.ts:59`, whose `fetch` also
+carries no timeout. It is on the render path rather than in the background, so
+a hang there shows up as a slow page, not a silent freeze — but it is
+unbounded.
+
+
+---
+
+## B44 — ✅ A replaced article was still published, and it blocked every deploy
+
+**Status:** CLOSED 2026-10-05, the same day. The old post (ID 1285) was moved
+to draft; the redirect-vs-published conflict check then returned nothing, and
+`next build` against the live CMS generated 133/133 pages. The open question
+at the end still stands.
+
+`/چگونه-بودجه-بندی-شخصی-داشته-باشیم؟` was replaced by
+`/112-creating-a-personal-budget` and a Rank Math 301 was added between them —
+but the old post was left **published**. Three consequences:
+
+1. **No build can succeed.** The old slug is in `generateStaticParams`, its
+   article query resolves `seo.openGraph`, and Rank Math answers that with a
+   301 (changelog 2026-10-05). Every deploy, including any fix, is blocked.
+2. **The live sitemap lists both URLs**, one of which 301s — verified
+   2026-10-05. A sitemap entry that redirects is a crawl-budget leak and a
+   mixed canonical signal.
+3. The listing shows two budgeting articles where the team meant one.
+
+Readers are unaffected: middleware applies the redirect before any page renders.
+
+**Fix:** in wp-admin, move the old post to draft (or trash — the redirect keeps
+its URL alive either way). Then rebuild; the trace that found this is in the
+changelog.
+
+**The pattern will recur** — replace-and-redirect is how the team updates an
+article. Worth deciding, not assuming: should `getRoutableSlugs` and the
+sitemap drop any slug that is a `magRedirects` source? Middleware already says
+the redirect wins, so prerendering and listing such a slug is never right; the
+open question is whether code should paper over an editorial mistake or keep
+failing loudly so it gets fixed at the source.

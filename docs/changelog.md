@@ -8,6 +8,64 @@ why it was made.
 
 ---
 
+## 2026-10-05 — B43: the live redirect map froze for two weeks, silently
+
+Found by reading production's `/mag/health`, not by a symptom.
+`redirectSource.ageMs` was 1,255,202,281 — **14.5 days**. The refresh window is
+five minutes, and a *failed* attempt also resets that clock, so a number that
+large means no attempt had finished since about 21 September. `reachable` still
+read `true`, because it only records that a fetch once succeeded.
+
+**Cause:** `fetchRules()` in `redirect-source.ts` called `fetch` with no
+timeout. One request that never answered — plausible around the frontend
+server move — left `inFlight` holding a promise that never settles, and
+`refreshInBackground()` returns early while `inFlight` is set. So the process
+never tried again. Redirects kept working off the last map, which is why nothing
+looked wrong; any redirect the SEO team added in Rank Math since then has not
+reached the site.
+
+**Fix:** a 10-second `AbortController` timeout, the same pattern
+`known-slugs.ts` already uses, wrapping the body read as well as the request —
+a body that stalls mid-stream hangs just as completely.
+
+**Verified against the failure, not just the types.** A local server that
+accepts every connection and never answers, the module pointed at it, the clock
+moved past the TTL:
+
+```
+old code   1 request, ageMs -1, never retried         FAIL
+new code   timed out at 10s, ageMs reset, 2nd request PASS
+```
+
+**Not fixed by the code alone:** the running container is still stuck until it
+restarts. Deploying this restarts it; until then `docker restart
+thefinance-mag` clears it, and `ageMs` dropping under 300,000 confirms it.
+
+### Found while verifying it: every production build fails today (B44)
+
+`next build` against the real CMS dies prerendering
+`/چگونه-بودجه-بندی-شخصی-داشته-باشیم؟` with «Unexpected token '<'». Not this
+change — the failure is in `mag.api.ts`'s article query, which the timeout fix
+does not touch. Traced, not guessed:
+
+```
+magRedirects     /چگونه-بودجه-بندی-شخصی-داشته-باشیم؟ → /112-creating-a-personal-budget  301
+both posts       status: publish
+post { seo { openGraph } }   → 301, x-redirect-by: Rank Math
+post { seo { fullHead } }    → 301
+post { content } / seo { title, canonicalUrl, robots, jsonLd }  → 200
+```
+
+Resolving `openGraph` makes Rank Math build the head, and its redirect check
+runs there. `gql()` followed the 301 to the public page, got the live
+article's HTML with a 200, and Next cached that for five minutes.
+
+**Code:** `gql()` now uses `redirect: 'manual'` and throws a `MagFetchError`
+naming the redirect and the fix. The build still fails — correctly — but says
+why. **Content:** the old post has to be unpublished; see B44.
+
+---
+
 ## 2026-09-11 (last) — Draft preview lands on the article, and an entry retracted
 
 Closes B23, the last 🔴. Closes B41 as filed in error. Indexes the seven
