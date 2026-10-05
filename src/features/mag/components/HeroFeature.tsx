@@ -38,7 +38,7 @@ import { heroAspectRatios } from '../lib/hero-ratio';
  */
 export function HeroFeature({ article }: { article: ArticleSummary }) {
   const category = cardCategory(article);
-  const dek = cardDek(article, 2);
+  const dek = cardDek(article, 1);
   const image = article.featuredImage;
 
   return (
@@ -68,17 +68,25 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
       {/* The team's card order (2026-10-05): badge → title → two-line
           summary → date · reading time, the title the only bold, heading-size
           thing on the card. No author on cards; it is on the article. */}
-      <div className="flex flex-1 flex-col gap-3 p-6 md:p-8">
+      {/*
+        TIGHTER, AT THE TEAM'S REQUEST (2026-10-05): «ارتفاع اینو کم کن —
+        بخشی که نوشته‌ها اومده کوچیکتر بشه». The text block was ~360px under
+        the image — a 27px title over three lines, a two-line summary at 17px,
+        32px padding. Now 24px (the h1 step, still the card's largest text),
+        one summary line, 24px padding: about 130px shorter, and the side
+        cards, which stretch to the lead, come down with it.
+      */}
+      <div className="flex flex-1 flex-col gap-2.5 p-5 md:p-6">
         <CategoryChip name={category.name} variant="solid" className="self-start" />
 
-        <h2 className="text-display font-bold tracking-[-0.4px] text-text-primary [text-wrap:pretty]">
+        <h2 className="text-h1 font-bold tracking-[-0.3px] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
         </h2>
 
         {dek && (
-          <p className="line-clamp-2 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary md:text-[17px]">
+          <p className="line-clamp-1 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary">
             {dek}
           </p>
         )}

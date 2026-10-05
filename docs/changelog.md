@@ -8,6 +8,33 @@ why it was made.
 
 ---
 
+## 2026-10-05 (news + hero) — «آخرین اخبار بازارهای مالی», market chips, a shorter hero
+
+**The news page carries the team's copy.** h1 «آخرین اخبار بازارهای مالی»,
+the line «مهم‌ترین اخبار بورس، ارز، طلا، فارکس، کریپتو و اقتصاد جهانی؛ سریع،
+خلاصه و به‌روز.», and the same two as `<title>` and meta description — the
+link preview the team pasted was still showing «اخبار» and the old line.
+
+**Market chips under it, as sketched** — [همه] [اقتصاد جهانی] [بورس ایران]
+[طلا و دلار] [فارکس] [کریپتو] 🔍. Filtering is navigation, so each chip is a
+real page: `/news/<market>`, prerendered, built from the cached archive fetch
+(`lib/news.ts`). A market with no news gets no chip and its URL 404s. The
+pages are `noindex, follow`: every item is also on `/news` and the market
+archive, and three of five markets have under eight news items. The search
+button links to `/search`, 44px. MarketFilterBar learned `hrefFor`,
+`allHref`, a hideable label and a trailing slot rather than being copied.
+
+**Khabarchi.** «مشاهده خبرهای لحظه‌ای در خبرچی ←», a quiet text link beside the
+header — the team's product-funnel suggestion, URL supplied by the owner and
+verified 200 (`https://thefinance.ir/khabarchi`).
+
+**The hero is shorter** («ارتفاع اینو کم کن — بخشی که نوشته‌ها اومده کوچیکتر
+بشه»): lead title 27 → 24px, summary two lines → one, padding 32 → 24. Hero
+753 → 659px at 1440, the text block ~330 → 234; the image is untouched, so
+nothing is cropped, and the side cards come down with the lead.
+
+---
+
 ## 2026-10-05 (open items) — Three dead legacy URLs, the weight rule, an nginx note
 
 **Three ranked URLs 404'd from the cutover until now:**

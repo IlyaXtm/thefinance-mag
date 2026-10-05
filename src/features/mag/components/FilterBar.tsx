@@ -65,17 +65,25 @@ function Bar({
   items,
   activeSlug,
   label,
+  showLabel = true,
+  trailing,
 }: {
   items: FilterItem[];
   activeSlug: string | null;
   label: string;
+  /** The visible label; the nav keeps it as its accessible name either way. */
+  showLabel?: boolean;
+  /** A control after the chips — the news page's search link. */
+  trailing?: React.ReactNode;
 }) {
   return (
     <nav
       aria-label={label}
       className="flex items-center gap-3"
     >
-      <span className="hidden shrink-0 text-[13px] text-text-muted sm:inline">{label}</span>
+      {showLabel && (
+        <span className="hidden shrink-0 text-[13px] text-text-muted sm:inline">{label}</span>
+      )}
 
       <div
         /*
@@ -89,6 +97,7 @@ function Bar({
           <Chip key={item.slug} item={item} isActive={item.slug === activeSlug} />
         ))}
       </div>
+      {trailing}
     </nav>
   );
 }
@@ -157,9 +166,24 @@ export function ContentTypeFilterBar({
 export function MarketFilterBar({
   markets,
   activeSlug = null,
+  hrefFor = (slug) => `/market/${slug}`,
+  allHref = '/',
+  label = 'دسته‌بندی مطالب',
+  showLabel = true,
+  trailing,
 }: {
   markets: Market[];
   activeSlug?: string | null;
+  /**
+   * Where a chip goes. Market archives by default; the news page points them
+   * at `/news/<market>` so the chips filter NEWS, not the whole archive.
+   */
+  hrefFor?: (slug: string) => string;
+  /** Where «همه» goes. */
+  allHref?: string;
+  label?: string;
+  showLabel?: boolean;
+  trailing?: React.ReactNode;
 }) {
   /*
     Only markets with published articles appear.
@@ -167,13 +191,21 @@ export function MarketFilterBar({
     archive, which is the same failure as rendering an empty section.
   */
   const items: FilterItem[] = [
-    { slug: 'all', name: 'همه', href: '/' },
+    { slug: 'all', name: 'همه', href: allHref },
     ...markets
       .filter((m) => (m.count ?? 0) > 0)
-      .map((m) => ({ slug: m.slug, name: m.name, href: `/market/${m.slug}` })),
+      .map((m) => ({ slug: m.slug, name: m.name, href: hrefFor(m.slug) })),
   ];
 
   /* «دسته‌بندی مطالب», not «بازار» — the team's word, circled in review
      2026-10-05. The row's links and data are unchanged. */
-  return <Bar items={items} activeSlug={activeSlug ?? 'all'} label="دسته‌بندی مطالب" />;
+  return (
+    <Bar
+      items={items}
+      activeSlug={activeSlug ?? 'all'}
+      label={label}
+      showLabel={showLabel}
+      trailing={trailing}
+    />
+  );
 }
