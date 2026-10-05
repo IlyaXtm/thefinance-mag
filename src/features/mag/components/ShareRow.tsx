@@ -1,3 +1,4 @@
+import { SocialMark } from '@/shared/ui/SocialMark';
 import { magUrl } from '../lib/site';
 
 /**
@@ -44,11 +45,7 @@ import { magUrl } from '../lib/site';
 const ICON = 'h-[18px] w-[18px]';
 
 function TelegramMark() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={ICON}>
-      <path d="M21.9 4.3 18.8 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9L18.4 6c.4-.3-.1-.5-.6-.2L7.7 12.2 3.1 10.7c-1-.3-1-1 .2-1.5l17.3-6.7c.8-.3 1.5.2 1.3 1.8Z" />
-    </svg>
-  );
+  return <SocialMark icon="telegram" className={ICON} />;
 }
 
 function WhatsappMark() {

@@ -5,116 +5,83 @@ import { cardCategory, cardDek } from '../lib/card';
 import { formatJalaliShort, formatReadingTime, toDateTimeAttr } from '../lib/format';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
+import { heroAspectRatios } from '../lib/hero-ratio';
 
 /**
- * The lead card: full-bleed image, gradient, content bottom-aligned.
+ * The lead card: image on top at the artwork's own proportions, text below.
  *
- * THE LCP ELEMENT on the home page, so its image is the one `priority` request
- * — the design allows exactly one eager image per page.
+ * ── THE TEXT USED TO SIT ON THE IMAGE, and the team asked for it off ────────
  *
- * The gradient is `pointer-events:none` and `aria-hidden`: it is a scrim for
- * legibility, not content. Text sits on the darkest end of it
- * (--scrim-from, .94), which is where white clears 4.5:1 comfortably even over
- * a bright photograph.
+ * Bottom-aligned over a scrim, which is a fine pattern for photography and the
+ * wrong one for this archive: most featured images carry their headline baked
+ * into the artwork, so the card printed the title twice, one on top of the
+ * other, and the two collided (reported 2026-10-05 with a screenshot of
+ * «توصیه‌های وارن بافت»). No scrim strength fixes two texts in one place.
+ *
+ * So the image gets its own box and the text gets the card surface. That also
+ * retires the on-media token swap — the text is on the theme's own surface in
+ * every theme now.
+ *
+ * ── The box takes the IMAGE'S ratio, not a chosen one ───────────────────────
+ *
+ * With nothing overlaid, cropping is the only way to lose the baked-in
+ * headline, and the archive is two shapes — 1376×768 (1.79) and 1200×800
+ * (1.50), 76 of 100 measured. Any fixed box crops one of them. The ratio comes
+ * from `mediaDetails`, so it is known at render and CLS stays 0 — the same
+ * guarantee the article hero gets from the same helper, with its mobile floor
+ * (1.5) because this column is never the 1360px full-bleed that floor guards.
+ *
+ * THE LCP ELEMENT on the home page, so its image is the one `priority` request.
  *
  * One link wrapping the whole card, whose accessible name is the title. No
- * `aria-label` duplicating it — a duplicate drifts out of sync with the
- * visible text — and the chip inside is a plain span rather than a nested
- * anchor.
+ * `aria-label` duplicating it, and the chip is a plain span, not a nested link.
  */
 export function HeroFeature({ article }: { article: ArticleSummary }) {
   const category = cardCategory(article);
   const dek = cardDek(article, 1);
-
-  /*
-    NO ARTWORK MEANS NO OVERLAY TREATMENT — not a smaller one.
-
-    A visual audit reported the lead card as "only a gradient" and proposed
-    shrinking it. The gradient IS the no-image state, and shrinking a thing
-    that should not be there is the wrong end of the problem: measured with
-    every image 404ing, the card rendered an 812×472 block of scrim over an
-    empty `--surface-hover` panel. `575f922`'s rule is that a missing image
-    leaves NO TRACE, and 472px of gradient is a large trace.
-
-    CardImage's own placeholder is deliberate and stays — but its recorded
-    reason is the GRID: "its neighbours in the grid have images, and a card
-    that loses its box makes the row reflow." The lead card has no such
-    neighbour and the slot is the entire card, so that reason does not reach
-    here and the placeholder was arriving by default rather than by decision.
-
-    So with no image this renders as a text card on the theme's own surface:
-    no image layer, no scrim, no `data-on-media`. The last part is the one
-    that matters — the on-media tokens are white and deliberately DO NOT flip
-    with the theme, so keeping them over a light card surface would be white
-    text on #f2f4f7 at about 1.1:1. Removing the scrim without removing them
-    is how this fix becomes a worse bug than the one it fixes.
-  */
-  const hasMedia = Boolean(article.featuredImage);
+  const image = article.featuredImage;
 
   return (
-    <article /*
-        Shorter on a phone. The design specifies a 220px hero image below
-        768, but its mobile hero is a stacked block with the text UNDER the
-        image; here the text is overlaid, and 220px cannot hold a three-line
-        Persian headline plus dek and meta without the scrim swallowing them.
-        380 is the measured floor for that content at 26px.
-      */
-      /* `data-hero-card`: the hook MediaErrorGuard needs to strip this
-         treatment at RUNTIME too — an image that 404s produces the same empty
-         card as one that was never uploaded, and it must look the same. */
+    <article
+      /* `data-hero-card`: MediaErrorGuard's hook. An image that 404s at
+         runtime marks the card, and the stylesheet drops the media box — so a
+         failed image reads exactly like an article that never had one. */
       data-hero-card=""
-      data-media-missing={hasMedia ? undefined : ''}
-      className="group relative overflow-hidden rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none data-[media-missing]:min-h-0 md:min-h-[380px] lg:min-h-[470px]">
-      {hasMedia && (
-        <>
-          <div className="absolute inset-0" data-hero-media="">
-            <CardImage
-              image={article.featuredImage}
-              sizes="(max-width: 767px) 100vw, (max-width: 1279px) 100vw, 62vw"
-              priority
-              rounded=""
-            />
-          </div>
-
-          <div
-            aria-hidden="true"
-            data-hero-scrim=""
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to top, var(--scrim-from) 0%, var(--scrim-mid) 38%, var(--scrim-to) 72%)',
-            }}
+      className="group relative flex flex-col overflow-hidden rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none"
+    >
+      {image && (
+        <div
+          data-hero-media=""
+          className="relative"
+          style={{ aspectRatio: heroAspectRatios(image).mobile }}
+        >
+          <CardImage
+            image={image}
+            /* The 1.55fr column of a 1224px container is ~730px; 62vw asked
+               for 893px at 1440. */
+            sizes="(max-width: 1023px) 100vw, 740px"
+            priority
+            rounded=""
           />
-        </>
+        </div>
       )}
 
-      {/* data-on-media re-points the text tokens for anything nested here that
-          does not name a colour itself — see tokens.css. The elements below
-          name --on-media* directly as well; both resolve to the same values,
-          so they cannot drift apart. */}
-      <div
-        /* Present only over media. The guard REMOVES this attribute when the
-           image fails, rather than the stylesheet trying to restore the theme
-           values inside it — those are three tokens per theme and re-stating
-           them is how the two copies drift. */
-        {...(hasMedia ? { 'data-on-media': '' } : {})}
-        className="relative flex h-full flex-col justify-end gap-3.5 p-6 data-[media-missing]:min-h-0 md:min-h-[380px] md:p-9 lg:min-h-[470px]"
-      >
+      <div className="flex flex-1 flex-col gap-3 p-6 md:p-8">
         <CategoryChip name={category.name} variant="solid" className="self-start" />
 
-        <h2 className="max-w-[20ch] text-display font-bold tracking-[-0.4px] text-text-primary [text-wrap:pretty]">
+        <h2 className="text-display font-bold tracking-[-0.4px] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
         </h2>
 
         {dek && (
-          <p className="max-w-[52ch] text-[15px] font-light leading-[1.85] text-text-secondary md:text-[17px]">
+          <p className="max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary md:text-[17px]">
             {dek}
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text-muted">
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[13px] text-text-muted">
           <span className="text-text-secondary">{article.author.name}</span>
           <span aria-hidden="true">·</span>
           <time dateTime={toDateTimeAttr(article.publishedAt)}>

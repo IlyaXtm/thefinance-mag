@@ -48,7 +48,7 @@ export async function ArchiveView({
         <ContentTypeFilterBar
           contentTypes={CONTENT_TYPES}
           activeSlug={contentType?.slug}
-          routedSlugs={categories.map((c) => c.slug)}
+          categories={categories}
         />
       }
       headingId="archive-list-heading"

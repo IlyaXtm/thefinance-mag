@@ -8,6 +8,56 @@ why it was made.
 
 ---
 
+## 2026-10-05 (latest) — The landing round: eight requests from the team
+
+Sent as Telegram screenshots; six built as asked, two replaced (see
+`decisions.md`, «Landing round»). Verified against the live CMS at 1440, 1280
+and 375: 22 cards and zero duplicates on the home page, one h1, no horizontal
+scroll, the article rail still inside an 800px viewport.
+
+- **Hero text below the image.** It sat on a scrim over artwork that already
+  carries its headline, so two titles collided. The image box now takes the
+  artwork's own ratio (`heroAspectRatios`, mobile floor 1.5), so the baked-in
+  headline is never cropped either. The three lead-card scrim tokens and the
+  guard's on-media branch went with the overlay.
+- **«تازه‌ترین مقالات» and «تازه‌ترین اخبار»**, four each, instead of one list
+  the RSS automation flooded with news.
+- **Topic sections — آموزش, فارکس, کریپتو, اینچارت** — one wide card and two
+  compact ones each. Titles under the images, never on them. Wide-card images
+  hold 16:10 rather than stretching to the text, which cropped headlines.
+- **«پیشنهاد سردبیر»** from `isSticky` — new `editorsPick` on the summary,
+  mapped in the API and given to every mock fixture (six are picks).
+- **InChart card** in the landing aside, in place of a price strip. The aside
+  is no longer sticky: with the card it is taller than a laptop screen, and a
+  sticky box that tall strands its own bottom.
+- **«گزارش» is no longer offered** in the filter row while it has no articles.
+  The row now takes the categories with their counts; it comes back by itself
+  when a report is published.
+- **Footer: Telegram, Instagram, Aparat, پشتیبانی**, each with an inline icon
+  beside its label. Telegram and Aparat now reach JSON-LD `sameAs`; the support
+  handle deliberately does not.
+- **«کانال تلگرام فایننس»** as a closing row of «بیشتر در …» in the article
+  rail; the ToC reservation grew 37rem → 41rem for it. Measured at 1280×800:
+  rail bottom 749px, Telegram row visible, contents list scrolling at 144px.
+- **«CTAها کار نمی‌کنند» was a content problem**, not code: 21 of 65 banners
+  in 102 posts have no link in WordPress. The list, with edit links, is
+  `docs/cta-unlinked.md` (Persian, for the content team). It also flags the
+  «کانال VIP پارادایم» banner's «فرصت معاملاتی» wording for a compliance look.
+
+- **From the review pass:** section rhythm on the landing is the system's
+  60/96 (it was 56/64, now repeated across eight blocks); card grids go two-up
+  at 768, not 640; the «همه‌ی …» arrows are out of the links' accessible
+  names; the hero asks for a 740px image, not 62vw; and `PostCard` lost its
+  2px hover lift, which CLAUDE.md rules out and the landing now showed twice.
+  Not changed, and open: new cards use `font-light` (300) like every existing
+  card's dek, against CLAUDE.md's 400/600/700 — a system-level call.
+
+Selection logic lives in `lib/landing.ts` as one pure function that fills
+slots in page order against a shared `taken` set — which is what keeps eight
+sections drawing from one archive from repeating an article.
+
+---
+
 ## 2026-10-05 (later) — The run command moves into the repo: `infra/mag/deploy.sh`
 
 Production was reported running with its port on `0.0.0.0:3100` after the

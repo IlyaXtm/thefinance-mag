@@ -136,6 +136,9 @@ const SUMMARY_FIELDS = `
   # auto-truncated summary. Standard WPGraphQL — no plugin dependency, so
   # this line is safe to deploy ahead of the mu-plugin.
   excerpt(format: RAW)
+  # Core WPGraphQL: WordPress's «stick to the top» flag, used as the
+  # editor's pick. Verified in the live schema 2026-10-05.
+  isSticky
   outlineHeadings
   categories { nodes { slug name } }
   markets { nodes { slug name } }
@@ -166,6 +169,7 @@ interface WpSummary {
   readingTime: number | null;
   modifiedAtIso: string | null;
   excerpt: string | null;
+  isSticky: boolean | null;
   outlineHeadings: string[] | null;
   categories: { nodes: WpTerm[] } | null;
   markets: { nodes: WpTerm[] } | null;
@@ -292,6 +296,7 @@ function mapSummary(node: WpSummary): ArticleSummary {
     /* Trimmed to null: WordPress returns '' for an unset excerpt, and an empty
        string would read as "present" at every call site. */
     excerpt: node.excerpt?.trim() || null,
+    editorsPick: node.isSticky === true,
   };
 }
 

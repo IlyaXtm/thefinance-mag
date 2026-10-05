@@ -290,7 +290,9 @@
  * THESE DELIBERATELY DO NOT FLIP WITH THE THEME, and that is the whole point
  * of putting them here rather than in each theme block.
  *
- * The lead card and the category cover set text directly on a featured image.
+ * The category cover sets text directly on a featured image. (The lead card
+ * did too until 2026-10-05; its text now sits below the image — see
+ * HeroFeature — and its three scrim tokens went with the overlay.)
  * What sits behind that text is a photograph, not a theme surface, so the
  * readable choice is the same in every theme: a dark scrim and light text.
  * Flipping them would mean a white scrim in the light theme, which washes an
@@ -302,17 +304,13 @@
  * headline turned near-black on a dark navy scrim and vanished. Nothing
  * errored; the lead story was simply unreadable.
  *
- * The scrim bottoms out at .94, which is where white clears 4.5:1 comfortably
- * even over a fully white image — the worst case, since the image is arbitrary
- * and uncontrolled.
+ * The scrim bottoms out at .94 or higher, which is where white clears 4.5:1
+ * comfortably even over a fully white image — the worst case, since the image
+ * is arbitrary and uncontrolled.
  */
 :root {
-  --scrim-from: rgba(4, 12, 31, 0.94);
-  --scrim-mid: rgba(4, 12, 31, 0.72);
-  --scrim-to: rgba(4, 12, 31, 0.1);
-
-  /* The category cover is shorter (210px), so its scrim is flatter and
-     stronger at the base — there is less height to fade across. */
+  /* The category cover is short (210px), so its scrim is flat and strong at
+     the base — there is little height to fade across. */
   --scrim-cover-from: rgba(7, 19, 49, 0.96);
   --scrim-cover-to: rgba(7, 19, 49, 0.35);
 

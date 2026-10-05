@@ -361,8 +361,14 @@ export function ArticleAside({ headings }: { headings: string[] }) {
           scrolling at a 1280×800 window, which is an everyday laptop. The lever
           in the other direction, if the contents are judged too short, is the
           same one: each item is roughly 80px.
+
+          AND IT GREW AGAIN, by the Telegram row under «بیشتر در …» (2026-10-05,
+          asked for by the team): 12 margin + 1 rule + 8 padding + the 44px
+          touch target = 65px on top of the 37rem it was. 592 + 65 = 657, so
+          41rem (656) — the same number this note once arrived at for the
+          four-item panel, for a different reason.
         */}
-        <ul ref={listRef} className="max-h-[calc(100vh-37rem)] space-y-0.5 overflow-y-auto">
+        <ul ref={listRef} className="max-h-[calc(100vh-41rem)] space-y-0.5 overflow-y-auto">
           {links}
         </ul>
       </nav>

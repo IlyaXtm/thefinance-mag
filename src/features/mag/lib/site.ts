@@ -1,3 +1,5 @@
+import type { SocialIcon } from '@/shared/ui/SocialMark';
+
 /**
  * Site-level constants used by metadata and structured data.
  *
@@ -50,21 +52,35 @@ export const MAG_DESCRIPTION = 'تحلیل، گزارش و آموزش برای �
  * publisher. So entries are added only from a URL somebody has confirmed, and
  * `SOCIAL_CHANNELS` below carries empty slots rather than plausible guesses.
  */
-export const SOCIAL_CHANNELS: Array<{ label: string; url: string }> = [
-  { label: 'اینستاگرام', url: 'https://www.instagram.com/thefinance.ir/' },
-  /*
-    ASKED FOR AND NOT YET SUPPLIED. The SEO review asked for the other channels
-    to be added and named Telegram and LinkedIn; the URLs were not given, and
-    both have several plausible shapes for a brand called «فایننس»
-    (t.me/thefinance, t.me/thefinance_ir, linkedin.com/company/thefinance…).
+export type { SocialIcon };
 
-    Paste the real address between the quotes and it appears in the footer and
-    in the JSON-LD `sameAs` at once. Empty entries render nothing, so this
-    costs nothing while it waits.
+export const SOCIAL_CHANNELS: Array<{ label: string; url: string; icon: SocialIcon | null }> = [
+  /*
+    Telegram and Aparat CONFIRMED BY THE TEAM on 2026-10-05, in the same
+    message that asked for them in the footer — not inferred. Note the handle
+    is «thefinancee», double e, exactly as supplied; the obvious-looking
+    `t.me/thefinance` would be someone else's channel asserted in `sameAs`.
   */
-  { label: 'تلگرام', url: '' },
-  { label: 'لینکدین', url: '' },
+  { label: 'تلگرام', url: 'https://t.me/thefinancee', icon: 'telegram' },
+  { label: 'اینستاگرام', url: 'https://www.instagram.com/thefinance.ir/', icon: 'instagram' },
+  { label: 'آپارات', url: 'https://www.aparat.com/THEFINANCE', icon: 'aparat' },
+  /*
+    ASKED FOR AND NOT YET SUPPLIED. The SEO review named LinkedIn; the URL was
+    not given and «فایننس» has several plausible shapes there. Paste the real
+    address between the quotes and it appears in the footer and in the JSON-LD
+    `sameAs` at once. Empty entries render nothing.
+  */
+  { label: 'لینکدین', url: '', icon: null },
 ];
+
+/**
+ * The support account. NOT a `SOCIAL_CHANNELS` entry: it is a person-staffed
+ * contact handle, not the publisher's profile, so it must not reach `sameAs`.
+ */
+export const SUPPORT_TELEGRAM_URL = 'https://t.me/TheFinance_Support';
+
+/** The channel the article rail points readers to. */
+export const TELEGRAM_CHANNEL_URL = 'https://t.me/thefinancee';
 
 export const ORGANIZATION = {
   name: 'فایننس',

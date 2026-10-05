@@ -46,6 +46,7 @@ else in version control.
 | `audit-2026-08-20-pass2.md` | Second pass: adversarial content, interaction, theme switching and print |
 | `audit-seo-security-performance.md` | SEO, security and performance sweep before the next stage |
 | `content-team-guide.md` | What changed for editors: login, publish timing, the three rules, what is still in progress. Persian — it is sent to the content team |
+| `cta-unlinked.md` | The 21 CTA banners with no link in WordPress, with an edit link per post and a suggested target. Persian — it is sent to the content team |
 
 ### Design
 

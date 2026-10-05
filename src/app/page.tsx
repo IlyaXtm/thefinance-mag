@@ -1,17 +1,18 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
+import { getAllSummaries, getArticles, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
-import type { ContentTypeSlug } from '@/features/mag/types/mag.types';
+import { buildLanding } from '@/features/mag/lib/landing';
 import {
   CategoryListCard,
   HeroFeature,
   HeroSideCard,
+  InchartPricesCard,
   NewsletterCta,
-  PostCard,
 } from '@/features/mag/components';
+import { EditorsPicks, LatestSection, TopicSection } from './_components/LandingSections';
 
 /**
  * thefinance.ir/mag — the home page.
@@ -34,35 +35,29 @@ export const metadata: Metadata = toMetadata({
   fallbackDescription: MAG_DESCRIPTION,
 });
 
-/**
- * The lead slot never carries news.
- *
- * An RSS automation files roughly two «اخبار» a day, so leading with the
- * newest article meant the hero was almost always a three-minute translated
- * headline — a publication whose identity is analysis and education would
- * never show either in the largest editorial statement on its front page.
- */
-const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['analysis', 'education', 'report'];
-
-/** Wide enough to outrun the automation — about ten days of it. */
-const LEAD_WINDOW = 20;
-
 export default async function MagIndexPage() {
-  const [pool, markets] = await Promise.all([
-    getArticles({ page: 1, perPage: LEAD_WINDOW }),
+  const [archive, markets, inchart] = await Promise.all([
+    getAllSummaries(),
     getMarkets(),
+    /*
+      The one section that can fail on its own without taking the page down:
+      it is the last block of the body, and a home page that 500s because a
+      three-article category did not answer is a worse outcome than a home
+      page without that block. Everything above it still throws.
+    */
+    getArticles({ page: 1, perPage: 3, category: 'inchart' })
+      .then((r) => r.items)
+      .catch(() => []),
   ]);
 
-  const featured = pool.items.find((a) => LEAD_TYPES.includes(a.contentType.slug));
-  const rest = pool.items.filter((a) => a.slug !== featured?.slug);
-
-  /* Two beside the hero, six in the grid below, nothing repeated. */
-  const heroSide = rest.slice(0, 2);
-  const grid = rest.slice(2, 8);
+  const { featured, heroSide, picks, latestArticles, latestNews, topics } = buildLanding(
+    archive,
+    inchart,
+  );
 
   return (
     <main id="main-content" tabIndex={-1} className="mag-gutter">
-      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(pool.items.slice(0, 8))]} />
+      <JsonLdScript data={[organizationJsonLd(), magBlogJsonLd(archive.slice(0, 8))]} />
 
       <h1 className="sr-only">{MAG_NAME}</h1>
 
@@ -87,32 +82,37 @@ export default async function MagIndexPage() {
         </section>
       )}
 
-      {/* Body: 1fr | 320px, 56px gap. */}
-      <div className="mt-14 grid items-start gap-10 lg:mt-16 lg:grid-cols-[1fr_320px] lg:gap-14">
-        <section aria-labelledby="latest-heading">
-          <div className="mb-6 flex items-center gap-4">
-            <h2
-              id="latest-heading"
-              className="text-h2 font-bold tracking-[-0.2px] text-text-primary"
-            >
-              تازه‌ترین مطالب
-            </h2>
-            <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
-            <Link
-              href="/archive"
-              className="inline-flex min-h-11 shrink-0 items-center text-[14px] text-accent transition-colors hover:text-text-primary"
-            >
-              همه‌ی مطالب ←
-            </Link>
-          </div>
+      {picks.length > 0 && <EditorsPicks items={picks} />}
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:gap-7">
-            {grid.map((article) => (
-              <PostCard key={article.id} article={article} />
-            ))}
-          </div>
+      {/* Body: 1fr | 320px, 56px column gap. */}
+      {/* Section rhythm is the system's 60 / 96 — between every block below. */}
+      <div className="mt-[60px] grid items-start gap-[60px] lg:mt-24 lg:grid-cols-[1fr_320px] lg:gap-14">
+        <div className="flex min-w-0 flex-col gap-[60px] lg:gap-24">
+          {/*
+            TWO «تازه‌ترین», NOT ONE. A single list let the RSS automation's
+            two items a day push every analysis and lesson off the page within
+            a week; the team asked for news and articles to have a list each.
+          */}
+          <LatestSection
+            id="latest-articles-heading"
+            title="تازه‌ترین مقالات"
+            href="/archive"
+            linkLabel="همه‌ی مطالب"
+            items={latestArticles}
+          />
+          <LatestSection
+            id="latest-news-heading"
+            title="تازه‌ترین اخبار"
+            href="/news"
+            linkLabel="همه‌ی اخبار"
+            items={latestNews}
+          />
 
-          <div className="mt-9 flex justify-center">
+          {topics.map((topic) => (
+            <TopicSection key={topic.key} topic={topic} />
+          ))}
+
+          <div className="flex justify-center">
             <Link
               href="/archive"
               className="inline-flex h-[46px] items-center rounded-full border border-border-interactive px-6 text-[15px] text-text-primary transition-colors hover:border-accent hover:bg-accent-soft"
@@ -120,10 +120,18 @@ export default async function MagIndexPage() {
               مطالب بیشتر
             </Link>
           </div>
-        </section>
+        </div>
 
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-[76px]">
+        {/*
+          NOT STICKY ANY MORE. With the InChart card added the column is taller
+          than a laptop viewport, and a sticky box taller than the viewport
+          holds its TOP edge until the page bottom arrives — the newsletter
+          form at its foot would be unreachable for the whole of a body that is
+          now several screens long.
+        */}
+        <aside className="flex flex-col gap-6">
           <CategoryListCard markets={markets} />
+          <InchartPricesCard />
           <NewsletterCta />
         </aside>
       </div>

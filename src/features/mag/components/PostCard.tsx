@@ -14,8 +14,9 @@ import { bidiTitle } from '../lib/bidi-title';
  * with a single tab stop, rather than the three or four a naively linked card
  * produces.
  *
- * Hover is `border-color` plus a 2px lift and nothing else — no shadow growth,
- * no scale. `motion-reduce` drops both.
+ * Hover is `border-color` and nothing else — no lift, no shadow growth, no
+ * scale, per CLAUDE.md. (A 2px lift lived here until 2026-10-05; the reviewer
+ * caught it once the landing showed these cards in two sections.)
  *
  * The focus ring lands on the link, and the card must NOT clip it: `rounded`
  * without `overflow-hidden` on the outer element, with the image clipping
@@ -26,7 +27,7 @@ export function PostCard({ article }: { article: ArticleSummary }) {
   const dek = cardDek(article);
 
   return (
-    <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-[border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-accent motion-reduce:transform-none motion-reduce:transition-none">
+    <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
       <div className="h-[190px]">
         <CardImage
           image={article.featuredImage}
@@ -94,7 +95,7 @@ export function ArchiveCard({
   const dek = cardDek(article);
 
   return (
-    <article className="group relative grid gap-4 rounded-card border border-border-subtle bg-surface-raised p-[18px] transition-[border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-accent motion-reduce:transform-none motion-reduce:transition-none sm:grid-cols-[220px_1fr] lg:grid-cols-[270px_1fr]">
+    <article className="group relative grid gap-4 rounded-card border border-border-subtle bg-surface-raised p-[18px] transition-colors duration-150 hover:border-accent motion-reduce:transition-none sm:grid-cols-[220px_1fr] lg:grid-cols-[270px_1fr]">
       <div className="h-[180px] sm:h-[170px]">
         <CardImage
           image={article.featuredImage}

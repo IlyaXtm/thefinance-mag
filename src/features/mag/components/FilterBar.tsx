@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ContentType, Market } from '../types/mag.types';
+import type { Category, ContentType, Market } from '../types/mag.types';
 
 /**
  * Filter bar.
@@ -96,15 +96,16 @@ function Bar({
 export function ContentTypeFilterBar({
   contentTypes,
   activeSlug = null,
-  routedSlugs = [],
+  categories,
 }: {
   contentTypes: ContentType[];
   activeSlug?: string | null;
   /**
-   * Slugs that have a real `/category/<slug>` route — i.e. the categories the
-   * CMS actually holds. Everything else keeps `?type=`.
+   * The categories the CMS actually holds, with their counts. A type with a
+   * category gets the `/category/<slug>` route; a type with none, or with an
+   * empty one, is not offered at all.
    */
-  routedSlugs?: string[];
+  categories: ReadonlyArray<Pick<Category, 'slug' | 'count'>>;
 }) {
   /*
     THIS ROW USED TO BE ALL QUERY STRINGS, and the note said one canonical
@@ -121,17 +122,32 @@ export function ContentTypeFilterBar({
     `noindex` and out of the sitemap (see lib/taxonomy.ts), rather than the
     substantial ones being unindexable.
 
-    «گزارش» has no category in the taxonomy yet, so its chip keeps `?type=` and
-    keeps working. This is why the set is passed in rather than assumed.
+    A type is DERIVED from categories (see `resolveContentType`), so a type
+    with no category has no articles and is not offered — the `?type=` form
+    below only survives for the active type, reached from an old link.
   */
-  const routed = new Set(routedSlugs);
+  const counts = new Map(categories.map((c) => [c.slug, c.count]));
+
+  /*
+    AN EMPTY TYPE IS NOT OFFERED. «گزارش» had a chip that led to «هنوز مطلبی
+    در دسته گزارش منتشر نشده» — a filter whose only result is an apology, which
+    is the same failure as rendering an empty section, and the team asked for
+    it gone. It comes back by itself the day a report is published, because
+    the count comes from the CMS rather than from this file.
+
+    The ACTIVE type is kept even when empty, so a reader who arrives on
+    `?type=report` from an old link still sees which filter they are on.
+  */
+  const offered = contentTypes.filter(
+    (c) => (counts.get(c.slug) ?? 0) > 0 || c.slug === activeSlug,
+  );
 
   const items: FilterItem[] = [
     { slug: 'all', name: 'همه', href: '/archive' },
-    ...contentTypes.map((c) => ({
+    ...offered.map((c) => ({
       slug: c.slug,
       name: c.name,
-      href: routed.has(c.slug) ? `/category/${c.slug}` : `/archive?type=${c.slug}`,
+      href: counts.has(c.slug) ? `/category/${c.slug}` : `/archive?type=${c.slug}`,
     })),
   ];
 

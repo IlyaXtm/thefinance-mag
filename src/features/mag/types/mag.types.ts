@@ -141,6 +141,16 @@ export interface ArticleSummary {
    */
   excerpt: string | null;
   /**
+   * Chosen by an editor for «پیشنهاد سردبیر» — WordPress's own «چسباندن به
+   * بالای وبلاگ» checkbox (`isSticky`), so no plugin and no new field.
+   *
+   * This is the slot the team asked to fill with «پربازدیدترین». A popularity
+   * ranking is on CLAUDE.md's never-build list, and WordPress records no view
+   * counts to rank by anyway; an editor's choice does the same navigational
+   * job with a judgement instead of a number.
+   */
+  editorsPick: boolean;
+  /**
    * The article's own H2 headings, server-derived.
    * Feeds both the featured card's «در این مقاله» block and the article ToC —
    * one source, two consumers, so they can never disagree.

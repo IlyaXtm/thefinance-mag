@@ -112,9 +112,12 @@ export function CategoryListCard({
 export function LinkListCard({
   title,
   items,
+  footer,
 }: {
   title: string;
   items: Array<{ slug: string; title: string; meta?: string }>;
+  /** A closing row under the list — the article rail's Telegram link. */
+  footer?: React.ReactNode;
 }) {
   if (items.length === 0) return null;
 
@@ -135,6 +138,7 @@ export function LinkListCard({
           </li>
         ))}
       </ul>
+      {footer && <div className="mt-3 border-t border-border-subtle pt-2">{footer}</div>}
     </SidebarCard>
   );
 }

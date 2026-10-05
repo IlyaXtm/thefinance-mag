@@ -31,6 +31,7 @@ import {
   CommentForm,
   CommentList,
   LinkListCard,
+  TelegramChannelLink,
   PostCard,
   ShareRow,
 } from '@/features/mag/components';
@@ -774,7 +775,11 @@ export default async function ArticlePage({
             component, one list, so the two placements cannot drift apart.
           */}
           <div className="hidden xl:block">
-            <LinkListCard title={onwardTitle} items={onwardCardItems} />
+            <LinkListCard
+              title={onwardTitle}
+              items={onwardCardItems}
+              footer={<TelegramChannelLink />}
+            />
           </div>
         </div>
 
@@ -798,7 +803,11 @@ export default async function ArticlePage({
             reading is the more specific offer, so it goes first.
           */}
           <div className="mt-10 xl:hidden">
-            <LinkListCard title={onwardTitle} items={onwardCardItems} />
+            <LinkListCard
+              title={onwardTitle}
+              items={onwardCardItems}
+              footer={<TelegramChannelLink />}
+            />
           </div>
 
           <div className="mt-10 flex flex-col gap-8">

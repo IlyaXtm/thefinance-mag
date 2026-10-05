@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getArticles } from '@/features/mag/api/v1/mag.service';
+import { getArticles, getCategories } from '@/features/mag/api/v1/mag.service';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { feedAlternate, magUrl, MAG_NAME } from '@/features/mag/lib/site';
 import { toPersianDigitsUngrouped } from '@/features/mag/lib/format';
@@ -50,7 +50,10 @@ export default async function PaginatedListingPage({
      duplicate-content problem. */
   if (!Number.isInteger(page) || page < 2) notFound();
 
-  const articles = await getArticles({ page, perPage: 9 });
+  const [articles, categories] = await Promise.all([
+    getArticles({ page, perPage: 9 }),
+    getCategories(),
+  ]);
 
   if (articles.items.length === 0) notFound();
 
@@ -61,7 +64,7 @@ export default async function PaginatedListingPage({
       </Section>
 
       <SectionInner className="pt-10">
-        <ContentTypeFilterBar contentTypes={CONTENT_TYPES} />
+        <ContentTypeFilterBar contentTypes={CONTENT_TYPES} categories={categories} />
       </SectionInner>
 
       <Section>

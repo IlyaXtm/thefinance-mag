@@ -1511,3 +1511,33 @@ nothing. Matches the convention used by the other products.
 **Independent of `codex/phase0-foundation`.** This branch makes its own
 structural choices. If both tracks continue, one has to win or they have to
 merge — worth deciding before the work diverges further.
+
+---
+
+## Landing round, 2026-10-05: two requests answered with something else
+
+The team sent eight landing changes as Telegram screenshots. Six were built as
+asked. Two collide with the never-build list in `CLAUDE.md`, were put to the
+team as a choice, and the team picked the replacement both times.
+
+**«پربازدیدترین مطالب» → «پیشنهاد سردبیر».** A popularity ranking is a
+trending/popular section, and its reference screenshot printed a view count on
+every card — both prohibited. It also could not be built honestly: WordPress
+records no view counts, so there is nothing to rank by. The slot keeps the
+requested layout (2 large + 4 small) and is filled by an editor's judgement
+instead: WordPress's own «چسباندن به بالای وبلاگ» flag (`isSticky`, core
+WPGraphQL, no plugin). It renders from two picks up; below that nothing shows
+and the articles stay available to the sections beneath. **It is empty until
+editors tick posts** — zero were sticky on the day it shipped.
+
+**«مهم‌ترین قیمت‌ها» strip → an InChart link card.** Live prices with
+red/green arrows anywhere in Mag are prohibited: next to analysis they read as
+a signal channel, which is what the brand book and securities law rule out,
+and market data belongs to InChart. The card names what InChart has (dollar,
+gold, coin, bitcoin charts) and shows none of it — no number, arrow, colour or
+timestamp.
+
+**One request was built in a way the reference did not show.** The Zoomit
+sections set titles over photos. This archive cannot: most featured images
+have the headline baked into the artwork — the same collision reported on the
+old hero that day — so every new card puts the title under its image.

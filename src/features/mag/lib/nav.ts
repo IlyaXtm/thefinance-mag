@@ -1,4 +1,4 @@
-import { ORGANIZATION, SITE_ORIGIN, SOCIAL_CHANNELS } from './site';
+import { ORGANIZATION, SITE_ORIGIN, SOCIAL_CHANNELS, type SocialIcon } from './site';
 
 /**
  * Navigation targets.
@@ -119,10 +119,13 @@ export const FOOTER_MAG_LINKS: NavLink[] = [
  * Channels with no confirmed URL are filtered out here rather than omitted
  * from the list, so the ones still being chased stay visible in the source.
  */
-export const SOCIAL_LINKS: NavLink[] = SOCIAL_CHANNELS.filter((c) => c.url).map((c) => ({
+export const SOCIAL_LINKS: Array<NavLink & { icon: SocialIcon | null }> = SOCIAL_CHANNELS.filter(
+  (c) => c.url,
+).map((c) => ({
   label: c.label,
   href: c.url,
   external: true,
+  icon: c.icon,
 }));
 
 /**

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MagLogo } from './MagLogo';
+import { SocialMark } from './SocialMark';
 import {
   SECTION_NAV,
   FOOTER_MAG_LINKS,
@@ -11,6 +12,7 @@ import {
   ORGANIZATION,
   ORGANIZATION_DESCRIPTION,
   SITE_ORIGIN,
+  SUPPORT_TELEGRAM_URL,
 } from '@/features/mag/lib/site';
 import { currentJalaliYear } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
@@ -133,22 +135,31 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               {ORGANIZATION_DESCRIPTION}
             </p>
 
-            {SOCIAL_LINKS.length > 0 && (
-              <ul className="mt-5 flex flex-wrap gap-2">
-                {SOCIAL_LINKS.map((link) => (
-                  <li key={link.href}>
-                    <a
-                      href={link.href}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                      className="inline-flex min-h-11 items-center rounded-full border border-border-interactive px-4 text-[13px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/*
+              Icon AND label, never icon alone. The team asked for icons; an
+              icon-only chip would need an aria-label for its name, and a
+              label kept beside a glyph is the visible text a sighted reader
+              and a screen reader both get. «پشتیبانی» sits in the same row
+              but is not a SOCIAL_LINKS entry — see SUPPORT_TELEGRAM_URL.
+            */}
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {[
+                ...SOCIAL_LINKS,
+                { label: 'پشتیبانی', href: SUPPORT_TELEGRAM_URL, icon: 'telegram' as const },
+              ].map((link) => (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-interactive px-4 text-[13px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  >
+                    {link.icon && <SocialMark icon={link.icon} className="h-4 w-4 shrink-0" />}
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/*
