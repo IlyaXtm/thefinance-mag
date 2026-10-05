@@ -39,3 +39,4 @@ export { TelegramChannelLink } from './TelegramChannelLink';
 export { CompactCard } from './CompactCard';
 export { InchartPricesCard } from './InchartPricesCard';
 export { SocialChannelsCard } from './SocialChannelsCard';
+export { KhabarchiBanner } from './KhabarchiBanner';

@@ -54,3 +54,55 @@ export function newsInMarket(
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, limit);
 }
+
+export interface DayBlock {
+  isoDate: string;
+  articles: ArticleSummary[];
+  /** The whole day's count — the heading shows it even when the day is split. */
+  dayTotal: number;
+  /** The second half of a day split by the banner: no date heading again. */
+  continued: boolean;
+}
+
+/**
+ * Where the Khabarchi banner goes in the day-grouped feed: «بعد از ۵–۶ خبر اول».
+ *
+ * At a day boundary when one falls between MIN and MAX items; otherwise the
+ * day that would overshoot MAX is split after item MAX, and its second half
+ * continues without repeating the date heading. A feed shorter than MIN gets
+ * the banner after everything — still in the feed, never above an empty one.
+ */
+export function placeBanner(
+  days: ReadonlyArray<{ isoDate: string; articles: ArticleSummary[] }>,
+  min = 5,
+  max = 6,
+): { before: DayBlock[]; after: DayBlock[] } {
+  const before: DayBlock[] = [];
+  const after: DayBlock[] = [];
+  let shown = 0;
+  let placed = false;
+
+  for (const day of days) {
+    const block: DayBlock = {
+      isoDate: day.isoDate,
+      articles: day.articles,
+      dayTotal: day.articles.length,
+      continued: false,
+    };
+
+    if (placed) {
+      after.push(block);
+    } else if (shown + day.articles.length <= max) {
+      before.push(block);
+      shown += day.articles.length;
+      placed = shown >= min;
+    } else {
+      const take = max - shown;
+      if (take > 0) before.push({ ...block, articles: day.articles.slice(0, take) });
+      after.push({ ...block, articles: day.articles.slice(take), continued: take > 0 });
+      placed = true;
+    }
+  }
+
+  return { before, after };
+}

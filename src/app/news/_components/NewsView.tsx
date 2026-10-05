@@ -1,10 +1,13 @@
 import Link from 'next/link';
 import { toPersianDigits } from '@/features/mag/lib/format';
+import { placeBanner } from '@/features/mag/lib/news';
+import { KHABARCHI } from '@/features/mag/lib/site';
 import type { ArticleSummary, Market } from '@/features/mag/types/mag.types';
 import {
   ArticleGridEmpty,
   CategoryListCard,
   groupByDay,
+  KhabarchiBanner,
   LinkListCard,
   MarketFilterBar,
   NewsDayGroup,
@@ -19,9 +22,6 @@ import {
  * [همه] [اقتصاد جهانی] … 🔍 — as real links to `/news/<market>`, because
  * filtering is navigation here, never client-side state.
  */
-
-/** Khabarchi — the product's live news stream, on the main site. */
-const KHABARCHI_URL = 'https://thefinance.ir/khabarchi';
 
 export function NewsView({
   title,
@@ -48,6 +48,8 @@ export function NewsView({
   moreHref: string | null;
 }) {
   const days = groupByDay(items);
+  /* The Khabarchi banner after the first five or six items — see placeBanner. */
+  const { before, after } = placeBanner(days);
 
   return (
     <>
@@ -68,7 +70,7 @@ export function NewsView({
             would sell the magazine's own news as stale.
           */}
           <a
-            href={KHABARCHI_URL}
+            href={KHABARCHI.url}
             className="inline-flex min-h-11 shrink-0 items-center text-[14px] text-accent transition-colors hover:text-text-primary"
           >
             مشاهده خبرهای لحظه‌ای در خبرچی
@@ -123,8 +125,25 @@ export function NewsView({
 
           {days.length > 0 ? (
             <>
-              {days.map((day) => (
-                <NewsDayGroup key={day.isoDate} isoDate={day.isoDate} articles={day.articles} />
+              {before.map((day) => (
+                <NewsDayGroup
+                  key={day.isoDate}
+                  isoDate={day.isoDate}
+                  articles={day.articles}
+                  dayTotal={day.dayTotal}
+                />
+              ))}
+
+              <KhabarchiBanner layout="feed" />
+
+              {after.map((day) => (
+                <NewsDayGroup
+                  key={`${day.isoDate}${day.continued ? '-rest' : ''}`}
+                  isoDate={day.isoDate}
+                  articles={day.articles}
+                  dayTotal={day.dayTotal}
+                  continued={day.continued}
+                />
               ))}
 
               {moreHref && (
@@ -147,7 +166,19 @@ export function NewsView({
           )}
         </section>
 
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-[76px]">
+        {/*
+          NOT STICKY since the Khabarchi card joined it: the column is now
+          taller than a laptop screen, and a sticky box that tall holds its
+          top edge and strands its lower cards out of reach for the whole of a
+          thirty-item feed. Same fix, same reason, as the landing's aside.
+        */}
+        <aside className="flex flex-col gap-6">
+          {/* Desktop only. Below lg this column stacks UNDER the feed, so the
+              reader has already passed the feed's own banner — a second one
+              further down is the same ad twice. */}
+          <div className="hidden lg:block">
+            <KhabarchiBanner layout="sidebar" />
+          </div>
           <LinkListCard
             title="پرونده‌های مرتبط"
             items={related.slice(0, 4).map((a) => ({

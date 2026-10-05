@@ -56,14 +56,17 @@ export type { SocialIcon };
 
 export const SOCIAL_CHANNELS: Array<{ label: string; url: string; icon: SocialIcon | null }> = [
   /*
-    Telegram and Aparat CONFIRMED BY THE TEAM on 2026-10-05, in the same
-    message that asked for them in the footer — not inferred. Note the handle
-    is «thefinancee», double e, exactly as supplied; the obvious-looking
+    Telegram CONFIRMED BY THE TEAM on 2026-10-05, in the same message that
+    asked for it in the footer — not inferred. Note the handle is
+    «thefinancee», double e, exactly as supplied; the obvious-looking
     `t.me/thefinance` would be someone else's channel asserted in `sameAs`.
+
+    Aparat was added the same day and REMOVED the same day at the owner's
+    request («delete these from all website»). It is gone from the footer, the
+    social card and JSON-LD `sameAs` at once, because all three read this list.
   */
   { label: 'تلگرام', url: 'https://t.me/thefinancee', icon: 'telegram' },
   { label: 'اینستاگرام', url: 'https://www.instagram.com/thefinance.ir/', icon: 'instagram' },
-  { label: 'آپارات', url: 'https://www.aparat.com/THEFINANCE', icon: 'aparat' },
   /*
     ASKED FOR AND NOT YET SUPPLIED. The SEO review named LinkedIn; the URL was
     not given and «فایننس» has several plausible shapes there. Paste the real
@@ -81,6 +84,23 @@ export const SUPPORT_TELEGRAM_URL = 'https://t.me/TheFinance_Support';
 
 /** The channel the article rail points readers to. */
 export const TELEGRAM_CHANNEL_URL = 'https://t.me/thefinancee';
+
+/**
+ * Khabarchi — the product's live news stream, on the main site. URL supplied
+ * by the owner and verified 200 on 2026-10-05.
+ *
+ * The banner is the team's own artwork, «CTA-khabarchi», uploaded to the CMS
+ * media library on 2026-10-04 («همان بنری که ساختیم»). Its dimensions are
+ * recorded so the box is sized before the image loads.
+ */
+export const KHABARCHI = {
+  url: 'https://thefinance.ir/khabarchi',
+  banner: {
+    url: 'https://thefinance.ir/mag/wp-content/uploads/2026/10/CTA-khabarchi-.webp',
+    width: 1861,
+    height: 845,
+  },
+} as const;
 
 export const ORGANIZATION = {
   name: 'فایننس',

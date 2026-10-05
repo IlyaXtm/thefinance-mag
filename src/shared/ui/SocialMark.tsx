@@ -1,6 +1,6 @@
 /** The platforms a mark exists for. Lives here, in shared, so `features/`
     depends on `shared/` and never the reverse. */
-export type SocialIcon = 'instagram' | 'telegram' | 'aparat';
+export type SocialIcon = 'instagram' | 'telegram';
 
 /**
  * Platform glyphs, drawn inline.
@@ -36,19 +36,6 @@ export function SocialMark({ icon, className = 'h-[18px] w-[18px]' }: { icon: So
           <rect x="3" y="3" width="18" height="18" rx="5" />
           <circle cx="12" cy="12" r="4.2" />
           <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case 'aparat':
-      /* The four-lobed Aparat mark, simplified to read at 18px: a ring with a
-         lobe at each corner. */
-      return (
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
-          <path d="M12 5.2a6.8 6.8 0 1 0 0 13.6 6.8 6.8 0 0 0 0-13.6Zm0 2.3a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" />
-          <circle cx="12" cy="12" r="1.6" />
-          <ellipse cx="6.2" cy="5.4" rx="2.6" ry="2.2" transform="rotate(-15 6.2 5.4)" />
-          <ellipse cx="17.8" cy="18.6" rx="2.6" ry="2.2" transform="rotate(-15 17.8 18.6)" />
-          <ellipse cx="18.6" cy="6.2" rx="2.2" ry="2.6" transform="rotate(-15 18.6 6.2)" />
-          <ellipse cx="5.4" cy="17.8" rx="2.2" ry="2.6" transform="rotate(-15 5.4 17.8)" />
         </svg>
       );
   }

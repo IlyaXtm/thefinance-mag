@@ -8,6 +8,31 @@ why it was made.
 
 ---
 
+## 2026-10-05 (khabarchi) — A Khabarchi banner in the news feed; Aparat removed
+
+**«خبرچی؛ اخبار لحظه‌ای بازارهای مالی از منابع معتبر جهانی — مشاهده خبرچی ←»**
+in the news feed after the first five or six items, as the team asked
+(«چون User Intent دقیقاً News است»), and at the top of the news sidebar. The
+artwork is their own — `CTA-khabarchi-.webp`, found in the CMS media library
+(uploaded 2026-10-04): «همان بنری که ساختیم». One component, two layouts: a
+small horizontal strip in the feed (728×134 at 1280, artwork 220×100 at its
+own 2.2 ratio) and a stacked card in the sidebar. The sidebar card is desktop
+only — below lg that column stacks under the feed and it would be the same
+banner twice. Khabarchi's own «پخش زنده» pulse was left out: on Khabarchi it is
+the product, inside Mag it is an urgency badge.
+
+**Placement is a pure function** (`placeBanner`): at a day boundary between
+five and six items when there is one, otherwise the day is split after the
+sixth and its remainder continues without repeating the date heading — which
+still shows the whole day's count. On today's data the boundary falls exactly
+at six (4 + 2). The news sidebar stopped being sticky: with the card it is
+taller than a laptop screen.
+
+**Aparat removed from the whole site** at the owner's request — footer, the
+social-channels card, JSON-LD `sameAs` (all read one list) and its icon.
+
+---
+
 ## 2026-10-05 (news + hero) — «آخرین اخبار بازارهای مالی», market chips, a shorter hero
 
 **The news page carries the team's copy.** h1 «آخرین اخبار بازارهای مالی»,
