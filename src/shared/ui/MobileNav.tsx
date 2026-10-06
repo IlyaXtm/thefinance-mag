@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SECTION_NAV, SITE_EXIT } from '@/features/mag/lib/nav';
-import { toPersianDigits } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 
 /**
@@ -17,7 +16,7 @@ import type { Market } from '@/features/mag/types/mag.types';
  * focus trap and a motion-preference case, all to hide two words." Every one
  * of those is a cost of HIDING things, and a scrollable row hid nothing.
  *
- * It hides things now. Sections, the markets group with its counts and the
+ * It hides things now. Sections, the markets group and the
  * exit to the main site all live in that row, and at 390px it is cut off
  * mid-item — the reviewer's screenshot shows it clipped mid-word. A menu that
  * is cut off communicates LESS than one that is honestly closed: the reader
@@ -237,16 +236,9 @@ export function MobileNav({ markets }: { markets: Market[] }) {
                 <li key={market.slug}>
                   <Link
                     href={`/market/${market.slug}`}
-                    className="flex min-h-11 items-center gap-2 py-1 text-[15px] text-text-secondary transition-colors hover:text-text-primary motion-reduce:transition-none"
+                    className="flex min-h-11 items-center py-1 text-[15px] text-text-secondary transition-colors hover:text-text-primary motion-reduce:transition-none"
                   >
                     {market.name}
-                    <span
-                      dir="ltr"
-                      style={{ unicodeBidi: 'isolate' }}
-                      className="text-[12px] tabular-nums text-text-muted"
-                    >
-                      {toPersianDigits(market.count ?? 0)}
-                    </span>
                   </Link>
                 </li>
               ))}

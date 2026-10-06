@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { toPersianDigits } from '../lib/format';
 import type { Market } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 
@@ -32,14 +31,13 @@ export function SidebarCard({
 }
 
 /**
- * دسته‌بندی‌ها — name and count, hairline-separated.
+ * دسته‌بندی‌ها — names only, hairline-separated.
  *
  * Only populated terms are listed. Linking to an empty archive is the same
  * failure as rendering an empty section, and `housing` currently has zero.
  *
- * The count is `dir="ltr"` and tabular: a Persian numeral run next to a
- * Persian label otherwise reorders around the label, and tabular figures stop
- * the column jittering between rows.
+ * No post counts (team, 2026-10-06: «عددا پاک بشه»). A count beside each
+ * name reads as a scoreboard and adds nothing to choosing where to go.
  */
 export function CategoryListCard({
   markets,
@@ -80,18 +78,11 @@ export function CategoryListCard({
               <Link
                 href={`/market/${market.slug}`}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-11 items-center justify-between gap-3 border-b border-border-subtle py-3 text-[14.5px] transition-colors hover:text-accent ${
+                className={`flex min-h-11 items-center border-b border-border-subtle py-3 text-[14.5px] transition-colors hover:text-accent ${
                   isActive ? 'text-accent' : 'text-text-secondary'
                 }`}
               >
-                <span>{market.name}</span>
-                <span
-                  dir="ltr"
-                  className="text-[12px] tabular-nums text-text-muted"
-                  style={{ unicodeBidi: 'isolate' }}
-                >
-                  {toPersianDigits(market.count ?? 0)}
-                </span>
+                {market.name}
               </Link>
             </li>
           );

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
-import { toPersianDigits } from '@/features/mag/lib/format';
 import type { Market } from '@/features/mag/types/mag.types';
 
 /**
@@ -18,25 +17,17 @@ import type { Market } from '@/features/mag/types/mag.types';
  * header: content types stay flat links, markets go behind a label that says
  * what they are.
  *
- * ── THE COUNTS ARE THE POINT, NOT DECORATION ───────────────────────────
+ * ── NO COUNTS (REVERSED 2026-10-06) ─────────────────────────────────────
  *
- * The distribution is lopsided: کریپتو ۵ · فارکس ۳ · اقتصاد جهانی ۳ · بورس
- * ایران ۲ · طلا و دلار ۱ · مسکن ۰. Four of six hold fewer than three articles.
- * A menu where half the entries lead to a one-article page teaches a reader
- * that the menu is not worth using.
- *
- * So every market shows its count. «کریپتو ۵» sets an honest expectation before
- * the click, and a reader who picks «طلا و دلار ۱» knows what they are getting.
- *
- * HIDING THE THIN ONES WAS THE OTHER OPTION AND IS WORSE: the menu would change
- * shape as articles are tagged, so a reader who found فارکس last week finds it
- * missing this week with nothing to explain why. A stable menu with honest
- * numbers beats a shifting one with flattering ones.
+ * Every market used to show its post count — «کریپتو ۵» — to set an honest
+ * expectation when four of six markets held fewer than three articles. The
+ * archive has since grown (15–38 a market) and the team asked for the numbers
+ * to go: «عددا پاک بشه». Names only, here and in every market list.
  *
  * EMPTY IS DIFFERENT and is suppressed. «مسکن ۰» is not a thin promise, it is a
  * promise of nothing — a link to a page that renders its own empty state. It
- * appears on its own the moment it has an article, because the counts come from
- * the same live query the sitemap floor uses.
+ * appears on its own the moment it has an article, because the (unshown)
+ * counts come from the same live query the sitemap floor uses.
  *
  * ── A real disclosure, and hover ON POINTER DEVICES ONLY ───────────────
  *
@@ -265,27 +256,9 @@ export function MarketMenu({ markets }: { markets: Market[] }) {
                 <Link
                   href={`/market/${market.slug}`}
                   onClick={() => setOpen(false)}
-                  className="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3.5 text-[14.5px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary motion-reduce:transition-none"
+                  className="flex min-h-11 items-center rounded-lg px-3.5 text-[14.5px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary motion-reduce:transition-none"
                 >
-                  <span>{market.name}</span>
-                  {/*
-                    The count is SECONDARY and now looks it: `text-muted` at
-                    12px against the name's 14.5px `text-secondary`, so the name
-                    does the work and the number qualifies it. It also sits
-                    inside the row's padding rather than against the panel edge
-                    — the reviewer's screenshot showed it hard up against the
-                    border, which reads as a table column rather than an aside.
-
-                    Isolated: a Latin-shaped numeral at the end of a Persian
-                    label reorders around the label's punctuation without it.
-                  */}
-                  <span
-                    dir="ltr"
-                    style={{ unicodeBidi: 'isolate' }}
-                    className="shrink-0 text-[12px] tabular-nums text-text-muted"
-                  >
-                    {toPersianDigits(market.count ?? 0)}
-                  </span>
+                  {market.name}
                 </Link>
               </li>
             ))}

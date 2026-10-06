@@ -8,6 +8,17 @@ why it was made.
 
 ---
 
+## 2026-10-06 — no post counts beside market names
+
+The team: «عددا پاک بشه». The counts came off the sidebar «دسته‌بندی مطالب»,
+the header «بازارها» menu and the mobile menu. They were added when four of six
+markets held fewer than three posts and a reader deserved to know a link led to
+one article; the smallest live market now holds 15, and next to each name the
+number read as a scoreboard. Empty markets are still hidden — the count is
+still fetched, just not shown. `TopicList` had no callers and was deleted.
+
+---
+
 ## 2026-10-05 (education) — «آموزش بازارهای مالی», real descriptions, quieter cards
 
 **Card summaries come from Rank Math now.** They used to fall back to the
