@@ -250,6 +250,23 @@ export function lazyLoadBodyImages(html: string): string {
   });
 }
 
+/**
+ * …and then every PUBLIC upload URL is served through `/mag/media/` instead.
+ *
+ * 2026-10-07: `/mag/wp-content/uploads/` is proxied by the host's nginx, which
+ * cannot reliably reach the CMS server (about half of new connections go
+ * unanswered — `src/app/media/[...path]/route.ts` has the measurements), so
+ * cold images 504'd. `/mag/media/` is answered by this app, which can. The
+ * host stays `thefinance.ir`. Images already on `wp.thefinance.ir` load fine
+ * in the reader's browser and are left alone.
+ *
+ * Only `src` and `srcset` inside `<img>` are touched, so a link to the
+ * full-size file in an `<a href>` is unchanged.
+ */
+const PUBLIC_UPLOADS = /(?:https:\/\/thefinance\.ir)?\/mag\/wp-content\/uploads\//g;
+const IMG_URL_ATTRS = /(<img\b[^>]*>)/gi;
+const MEDIA_PATH = '/mag/media/';
+
 export function fixBodyImageUrls(html: string): string {
   let count = 0;
 
@@ -267,6 +284,15 @@ export function fixBodyImageUrls(html: string): string {
     count += 1;
     return `${head}${fixed}${tail}`;
   });
+
+  out = out.replace(IMG_URL_ATTRS, (tag: string) =>
+    tag.replace(/(\b(?:src|srcset)=")([^"]*)(")/gi, (whole, head: string, value: string, tail: string) => {
+      const fixed = value.replace(PUBLIC_UPLOADS, MEDIA_PATH);
+      if (fixed === value) return whole;
+      count += 1;
+      return `${head}${fixed}${tail}`;
+    }),
+  );
 
   rewrittenBodyImages += count;
   return out;

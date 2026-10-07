@@ -8,6 +8,27 @@ why it was made.
 
 ---
 
+## 2026-10-07 — in-body images served by the app (`/mag/media/`)
+
+Some article photos showed as broken. Cause, measured: body images at
+`thefinance.ir/mag/wp-content/uploads/…` go CDN → host nginx → CMS server, and
+from the host about half of all NEW TCP connections to 87.247.170.20:443 get no
+answer (DNS fine, conntrack 1081/262144, raw connects fine when idle; curl
+11/15 then 4/10). nginx's 3 s connect timeout returns 504, the CDN does not
+cache it, so the same image works on reload. 88 images in 10 posts used that
+path; the other 351 point at `wp.thefinance.ir` and load in the browser.
+
+The container does not have the problem — Node reuses one open connection,
+20/20 fetches succeeded — and nginx is outside Mag's deploy scope. So
+`fixBodyImageUrls` now points `<img>` `src`/`srcset` on the public uploads path
+at `/mag/media/…`, a route handler that fetches from the CMS and returns the
+image with a 30-day cache. Same host for readers and Google; images only (no
+SVG — script risk on this origin), path traversal 404s. `media` is reserved in
+`known-routes.ts`.
+
+The real fix is still the network between the two servers (main team);
+when it lands this route can stay or go — both paths serve the same file.
+
 ## 2026-10-06 — no post counts beside market names
 
 The team: «عددا پاک بشه». The counts came off the sidebar «دسته‌بندی مطالب»,
