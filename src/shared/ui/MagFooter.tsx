@@ -145,8 +145,10 @@ export function MagFooter({ markets }: { markets: Market[] }) {
             */}
             {/* Three equal columns, not a wrapping row: in the brand column the
                 row broke after two and left «پشتیبانی» alone on a line
-                (team screenshot, 2026-10-07). */}
-            <ul className="mt-5 grid max-w-[360px] grid-cols-3 gap-2">
+                (team screenshot, 2026-10-07). From 1024 to 1279 the column is
+                ~250px — 78px a chip, too tight for «اینستاگرام» — so there
+                they stack, one per line, instead of wrapping two-and-one. */}
+            <ul className="mt-5 grid max-w-[360px] grid-cols-3 gap-2 lg:max-xl:max-w-[200px] lg:max-xl:grid-cols-1">
               {[
                 ...SOCIAL_LINKS,
                 { label: 'پشتیبانی', href: SUPPORT_TELEGRAM_URL, icon: 'telegram' as const },
