@@ -51,6 +51,7 @@ else in version control.
 | `content-team-tags.md` | The WordPress tags that switch on the education page's guides, topic chips and levels; the options-article retitle; the 10 lessons with no real description. Persian — it is sent to the content team |
 | `content-team-subcategories.md` | The three wp-admin term edits behind «بازار ایران» and the forex rename, and what changed when markets became sub-categories. Persian — it is sent to the content team |
 | `missing-images.md` | The 41 in-body images whose files are gone from the media library, per post. For the content team |
+| `implementation-status.md` | Status of the team's B01–B32 backlog (Nazanin Rad, 29 Sep – 7 Oct) for /mag: done, built this round, needs a decision, or depends on someone else. Persian |
 
 ### Design
 

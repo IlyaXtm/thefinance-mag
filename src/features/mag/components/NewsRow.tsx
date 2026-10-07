@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
 import { cardCategory } from '../lib/card';
-import { formatJalali, formatReadingTime, toDateTimeAttr, toPersianDigits } from '../lib/format';
+import { formatReadingTime, toDateTimeAttr } from '../lib/format';
+import { dayHeading } from '../lib/news';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 
@@ -70,13 +71,10 @@ export function NewsRow({ article }: { article: ArticleSummary }) {
 export function NewsDayGroup({
   isoDate,
   articles,
-  dayTotal = articles.length,
   continued = false,
 }: {
   isoDate: string;
   articles: ArticleSummary[];
-  /** The whole day's count, when this group is only part of the day. */
-  dayTotal?: number;
   /**
    * The rest of a day the Khabarchi banner split (see `placeBanner`): the
    * date heading was already shown above the banner, so it is not repeated.
@@ -89,11 +87,8 @@ export function NewsDayGroup({
     <section className="mb-8">
       {!continued && (
         <div className="mb-2.5 flex items-center gap-4">
-          <h2 className="text-h5 font-semibold text-accent">{formatJalali(isoDate)}</h2>
+          <h2 className="text-h5 font-semibold text-accent">{dayHeading(isoDate)}</h2>
           <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
-          <span className="text-[12.5px] text-text-muted">
-            {toPersianDigits(dayTotal)} خبر
-          </span>
         </div>
       )}
 

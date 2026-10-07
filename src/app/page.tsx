@@ -37,7 +37,7 @@ export const metadata: Metadata = toMetadata({
 
 export default async function MagIndexPage() {
   const archive = await getAllSummaries();
-  const { featured, heroSide, picks, picksSource, latest, news, education, markets } =
+  const { featured, heroSide, picks, picksSource, articles, news, markets } =
     buildLanding(archive);
 
   return (
@@ -87,14 +87,13 @@ export default async function MagIndexPage() {
       <div className="mt-[60px] flex flex-col gap-[60px] lg:mt-24 lg:gap-24">
         <FeaturedSection items={picks} source={picksSource} />
 
-        <LatestSection id="latest-heading" title="تازه‌ترین‌ها" href="/archive" items={latest} />
-        <LatestSection id="news-heading" title="اخبار" href="/news" items={news} />
         <LatestSection
-          id="education-heading"
-          title="آموزش"
-          href="/category/education"
-          items={education}
+          id="articles-heading"
+          title="تازه‌ترین مقالات"
+          href="/category/articles"
+          items={articles}
         />
+        <LatestSection id="news-heading" title="تازه‌ترین اخبار" href="/news" items={news} />
 
         {markets.map((block) => (
           <TopicSection key={block.key} topic={block} />

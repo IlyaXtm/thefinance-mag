@@ -50,7 +50,6 @@ export function ArchiveShell({
   activeHref = null,
   markets,
   lead,
-  showCount = true,
 }: {
   crumbs: Crumb[];
   title: string;
@@ -71,8 +70,6 @@ export function ArchiveShell({
   /** Between the header and the filter row — the education page's search box
       and featured guides. */
   lead?: ReactNode;
-  /** «۵۶ مطلب» in the header. The team asked for it off the education page. */
-  showCount?: boolean;
 }) {
   return (
     <main id="main-content" tabIndex={-1} className="mag-gutter">
@@ -85,11 +82,7 @@ export function ArchiveShell({
           title={title}
           crumbs={crumbs}
           description={description}
-          /* articles.total, not a taxonomy `count`: the number in the header
-             and the rows below it must be two readings of one array, or they
-             drift apart on screen — which is exactly what happened on
-             /market/gold-usd, «۱ مطلب» above two cards. */
-          count={showCount ? articles.total : null}
+          /* No post count in the header (team, 2026-10-06). */
           /* No taxonomy carries a cover image yet. Wired rather than removed
              because adding one is a mu-plugin change, not a template change. */
           image={null}

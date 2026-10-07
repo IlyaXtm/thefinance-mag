@@ -39,7 +39,7 @@ export async function CategoryArchiveView({
 }) {
   /*
     «آموزش» IS PRESENTED DIFFERENTLY (team review, 2026-10-05): its own title
-    and promise, a «میخواهی چه چیزی یاد بگیری؟» search, editor-tagged guides
+    and promise, a «می‌خواهی چه چیزی یاد بگیری؟» search, editor-tagged guides
     above everything, topic chips instead of the content-type row, and no
     article count. Every other category is unchanged. The chips and guides
     read the cached archive fetch; nothing extra is asked of the CMS.
@@ -72,7 +72,6 @@ export async function CategoryArchiveView({
       lead={
         isEducation && page === 1 ? <EducationLead guides={educationGuides(archive)} /> : undefined
       }
-      showCount={!isEducation}
       filterBar={
         isEducation ? (
           <ChipFilterBar

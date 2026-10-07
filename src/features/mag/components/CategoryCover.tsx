@@ -1,12 +1,15 @@
 import { CardImage } from './CardImage';
 import { Breadcrumbs, type Crumb } from './Breadcrumbs';
-import { toPersianDigits } from '../lib/format';
 import type { MagImage } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 
 /**
- * The category masthead: cover image, breadcrumb and h1 over a scrim, then a
- * hairline-separated row carrying the description and the article count.
+ * The category masthead: breadcrumb, h1 and the one-line description, as ONE
+ * compact block on every archive (team, 2026-10-05: «ارتفاع کم شود؛ همین
+ * الگو برای همه دسته‌ها»). The description used to sit in a second,
+ * hairline-separated row beside a post count; the count is gone («عددا پاک
+ * بشه») and the row with it. With a cover image the description stays under
+ * the image, since it cannot sit on the scrim legibly at any length.
  *
  * The image is OPTIONAL and the block is designed for its absence. `market`
  * descriptions are a taxonomy field that may be empty and most terms have no
@@ -21,13 +24,11 @@ export function CategoryCover({
   title,
   crumbs,
   description,
-  count,
   image = null,
 }: {
   title: string;
   crumbs: Crumb[];
   description?: string | null;
-  count?: number | null;
   image?: MagImage | null;
 }) {
   return (
@@ -51,27 +52,23 @@ export function CategoryCover({
           </div>
         </div>
       ) : (
-        <div className="px-5 pb-5 pt-6 lg:px-8">
+        <div className="px-5 py-5 lg:px-8">
           <Breadcrumbs items={crumbs} />
-          <h1 className="mt-2.5 text-h1 font-bold tracking-[-0.4px] text-text-primary">
+          <h1 className="mt-2 text-h1 font-bold tracking-[-0.4px] text-text-primary">
             {bidiTitle(title)}
           </h1>
-        </div>
-      )}
-
-      {(description || count !== null) && (
-        <div className="flex flex-col gap-3 border-t border-border-subtle px-5 py-5 sm:flex-row sm:items-center sm:gap-7 lg:px-8">
           {description && (
-            <p className="max-w-[70ch] flex-1 text-[15px] font-light leading-[1.85] text-text-secondary">
+            <p className="mt-2 max-w-[70ch] text-[15px] font-light leading-[1.85] text-text-secondary">
               {description}
             </p>
           )}
-          {count !== null && count !== undefined && (
-            <span className="shrink-0 text-[13px] text-text-muted">
-              {toPersianDigits(count)} مطلب
-            </span>
-          )}
         </div>
+      )}
+
+      {image && description && (
+        <p className="max-w-[70ch] px-5 py-4 text-[15px] font-light leading-[1.85] text-text-secondary lg:px-8">
+          {description}
+        </p>
       )}
     </section>
   );

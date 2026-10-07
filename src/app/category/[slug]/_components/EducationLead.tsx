@@ -6,7 +6,7 @@ import type { ArticleSummary } from '@/features/mag/types/mag.types';
  * What sits above the chips on «آموزش بازارهای مالی»: the team's search
  * prompt, then the featured guides.
  *
- * «میخواهی چه چیزی یاد بگیری؟» is the input's real <label>, not a heading
+ * «می‌خواهی چه چیزی یاد بگیری؟» is the input's real <label>, not a heading
  * above it — the question IS the field's name, so a screen reader announces
  * it on focus. The form is a plain GET to /search with `type=education`, so
  * it works without JavaScript and the results stay inside the lessons.
@@ -19,7 +19,7 @@ export function EducationLead({ guides }: { guides: ArticleSummary[] }) {
           htmlFor="education-search"
           className="mb-3 block text-h3 font-bold text-text-primary"
         >
-          میخواهی چه چیزی یاد بگیری؟
+          می‌خواهی چه چیزی یاد بگیری؟
         </label>
         <input type="hidden" name="type" value="education" />
         <div className="flex items-center gap-2">

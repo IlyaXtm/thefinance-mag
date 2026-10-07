@@ -9,7 +9,7 @@ import { MAG_NAME } from '@/features/mag/lib/site';
 import { ArchiveShell, ChipFilterBar } from '@/features/mag/components';
 
 /**
- * /mag/category/education/<topic> — where the chips under «میخواهی چه چیزی یاد
+ * /mag/category/education/<topic> — where the chips under «می‌خواهی چه چیزی یاد
  * بگیری؟» lead: one market's lessons, or one tagged topic's («شروع از صفر»,
  * «آپشن»).
  *
@@ -116,7 +116,6 @@ export default async function EducationTopicPage({
         total: lessons.length,
         totalPages: 1,
       }}
-      showCount={false}
       filterBar={
         <ChipFilterBar
           items={chips.map((c) => ({

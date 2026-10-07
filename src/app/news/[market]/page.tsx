@@ -88,7 +88,6 @@ export default async function NewsMarketPage({
         title={`آخرین اخبار ${market.name}`}
         subtitle={NEWS_SUBTITLE}
         items={items}
-        total={market.count ?? items.length}
         newsMarkets={withNews}
         allMarkets={markets}
         activeMarket={market.slug}

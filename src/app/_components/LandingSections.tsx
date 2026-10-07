@@ -33,11 +33,13 @@ export function LandingSectionHeader({
   href?: string;
 }) {
   return (
-    <div className="mb-6 flex items-center gap-4">
+    /* No hairline across the row (team, 2026-10-05: «به جای خط سرتاسری،
+       فاصله»). Sections are separated by the 60/96 rhythm alone; lines stay
+       in the header, the news feed and the footer. */
+    <div className="mb-6 flex items-center justify-between gap-4">
       <h2 id={id} className="text-h2 font-bold tracking-[-0.2px] text-text-primary">
         {title}
       </h2>
-      <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
       {href && (
         <Link
           href={href}
@@ -107,7 +109,12 @@ export function FeaturedSection({
   );
 }
 
-/** A two-rows-of-three block: «تازه‌ترین‌ها», «اخبار», «آموزش». */
+/**
+ * Rows of three: «تازه‌ترین مقالات» (three rows) and «تازه‌ترین اخبار» (two).
+ *
+ * An odd count leaves one card alone on the last row of the two-column grid
+ * (md–xl), so that card is hidden there — the same rule TopicSection uses.
+ */
 export function LatestSection({
   id,
   title,
@@ -125,9 +132,14 @@ export function LatestSection({
     <section aria-labelledby={id}>
       <LandingSectionHeader id={id} title={title} href={href} />
       <div className="grid gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-3">
-        {items.map((article) => (
-          <PostCard key={article.id} article={article} />
-        ))}
+        {items.map((article, i) => {
+          const orphan = items.length % 2 === 1 && i === items.length - 1;
+          return (
+            <div key={article.id} className={orphan ? 'contents md:max-xl:hidden' : 'contents'}>
+              <PostCard article={article} />
+            </div>
+          );
+        })}
       </div>
     </section>
   );

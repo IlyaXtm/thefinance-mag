@@ -1,4 +1,5 @@
 import type { ArticleSummary, Market } from '../types/mag.types';
+import { formatJalali } from './format';
 
 /**
  * News by market, for the chip row under «آخرین اخبار بازارهای مالی».
@@ -58,8 +59,6 @@ export function newsInMarket(
 export interface DayBlock {
   isoDate: string;
   articles: ArticleSummary[];
-  /** The whole day's count — the heading shows it even when the day is split. */
-  dayTotal: number;
   /** The second half of a day split by the banner: no date heading again. */
   continued: boolean;
 }
@@ -86,7 +85,6 @@ export function placeBanner(
     const block: DayBlock = {
       isoDate: day.isoDate,
       articles: day.articles,
-      dayTotal: day.articles.length,
       continued: false,
     };
 
@@ -105,4 +103,30 @@ export function placeBanner(
   }
 
   return { before, after };
+}
+
+/**
+ * Today's calendar date in Tehran, as `YYYY-MM-DD` — the same shape as the
+ * day keys `groupByDay` makes from `publishedAt`, which WordPress already
+ * returns in the site's zone (Asia/Tehran). The server runs in UTC, so a plain
+ * `new Date().toISOString()` would call it «today» until 03:30 the next day.
+ */
+export function tehranToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Tehran',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+/**
+ * The heading of one day in the news feed: «امروز، ۱۵ مهر ۱۴۰۵» for today,
+ * the date alone otherwise (team, 2026-10-05: a day heading, not a count).
+ * The date always shows — «امروز» on a page cached for five minutes either
+ * side of midnight is still checkable against it.
+ */
+export function dayHeading(isoDate: string, today: string = tehranToday()): string {
+  const date = formatJalali(isoDate);
+  return isoDate === today ? `امروز، ${date}` : date;
 }

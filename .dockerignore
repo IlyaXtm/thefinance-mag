@@ -35,3 +35,6 @@ CLAUDE.md
 # from the repo, where public/mock is present. If a mock-backed container is
 # ever wanted, this line has to come out deliberately.
 public/mock
+tests
+.test-build
+tsconfig.test.json

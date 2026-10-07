@@ -34,8 +34,10 @@ export default async function NewsPage() {
   const [news, markets, related, archive] = await Promise.all([
     getArticles({ page: 1, perPage: PER_PAGE, contentType: 'news' }),
     getMarkets(),
-    /* «پرونده‌های مرتبط» — longer pieces that give a news reader somewhere to
-       go. Editorially adjacent rather than ranked: this is the slot the design
+    /* «مطالعه بیشتر» (was «پرونده‌های مرتبط» — renamed 2026-10-05 at the
+       team's request: these are the newest lessons, not related to the news
+       on screen, and the title should not claim they are) — longer pieces
+       that give a news reader somewhere to go. Editorially adjacent rather than ranked: this is the slot the design
        gave a most-read list, which the brand rules exclude. Education since
        «تحلیل» was retired (2026-10-05); it held one post. */
     getArticles({ page: 1, perPage: 4, contentType: 'education' }),
@@ -60,7 +62,6 @@ export default async function NewsPage() {
         title={NEWS_TITLE}
         subtitle={NEWS_SUBTITLE}
         items={news.items}
-        total={news.total}
         newsMarkets={newsMarkets(archive, markets)}
         allMarkets={markets}
         activeMarket={null}

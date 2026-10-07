@@ -27,7 +27,6 @@ export function NewsView({
   title,
   subtitle,
   items,
-  total,
   newsMarkets,
   allMarkets,
   activeMarket,
@@ -37,7 +36,6 @@ export function NewsView({
   title: string;
   subtitle: string;
   items: ArticleSummary[];
-  total: number;
   /** Markets that have news — one chip each. */
   newsMarkets: Market[];
   /** Every market, for the sidebar's category card. */
@@ -114,14 +112,9 @@ export function NewsView({
 
       <div className="mt-7 grid items-start gap-10 lg:grid-cols-[1fr_320px] lg:gap-14">
         <section aria-labelledby="news-list-heading">
-          <div className="mb-2 flex items-baseline justify-between gap-4">
-            <h2 id="news-list-heading" className="sr-only">
-              فهرست خبرها
-            </h2>
-            {total > 0 && (
-              <span className="text-[13px] text-text-muted">{toPersianDigits(total)} خبر</span>
-            )}
-          </div>
+          <h2 id="news-list-heading" className="sr-only">
+            فهرست خبرها
+          </h2>
 
           {days.length > 0 ? (
             <>
@@ -130,7 +123,6 @@ export function NewsView({
                   key={day.isoDate}
                   isoDate={day.isoDate}
                   articles={day.articles}
-                  dayTotal={day.dayTotal}
                 />
               ))}
 
@@ -141,7 +133,6 @@ export function NewsView({
                   key={`${day.isoDate}${day.continued ? '-rest' : ''}`}
                   isoDate={day.isoDate}
                   articles={day.articles}
-                  dayTotal={day.dayTotal}
                   continued={day.continued}
                 />
               ))}
@@ -180,7 +171,7 @@ export function NewsView({
             <KhabarchiBanner layout="sidebar" />
           </div>
           <LinkListCard
-            title="پرونده‌های مرتبط"
+            title="مطالعه بیشتر"
             items={related.slice(0, 4).map((a) => ({
               slug: a.slug,
               title: a.title,

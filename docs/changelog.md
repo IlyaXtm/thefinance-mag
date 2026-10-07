@@ -8,6 +8,36 @@ why it was made.
 
 ---
 
+## 2026-10-07 (backlog) — the team's B01–B32 list, /mag items
+
+Nazanin Rad's compiled list (29 Sep – 7 Oct) was audited item by item against
+the code and the live site; `docs/implementation-status.md` has a row per
+item. Most were already done this week. New in this change:
+
+- **Home:** «تازه‌ترین‌ها» (everything) split into «تازه‌ترین مقالات» (non-news,
+  nine = three rows, → «مقالات») and «تازه‌ترین اخبار». The generic «آموزش»
+  block is gone — with every non-news post a lesson it was a second window on
+  the same pool — and the market blocks are titled «آموزش <market>». An odd
+  last card hides in the two-column range. No hairline beside section titles.
+- **Counts:** the archive header's «N مطلب» and the news feed's «N خبر» (total
+  and per day) are gone, finishing «عددا پاک بشه».
+- **Archive header:** one compact block (crumbs, h1, description) on every
+  archive; the separate description/count row is gone.
+- **News days:** today's heading reads «امروز، <date>», today computed in
+  Tehran (the server runs UTC). WordPress `date` is already Tehran-local, so
+  the grouping was right and is unchanged.
+- **«مطالعه بیشتر»** replaces «پرونده‌های مرتبط» and «مطالب مرتبط» — both lists
+  are picked by content type, not subject.
+- «میخواهی» → «می‌خواهی».
+- **Tests:** `npm test` — Node's built-in runner over the compiled `lib`
+  logic (12 tests: no duplicates, section membership, Tehran «today», banner
+  placement, sub-category redirects, education chips). No new dependency.
+
+Not built, recorded as decisions: a most-viewed section (no view data;
+brand rule), per-category colours (design-system tokens), the photographic
+hero (its artwork has the masthead text baked in). Paradigm and InChart items
+(B30–B32) are outside this repository.
+
 ## 2026-10-07 (structure) — markets become sub-categories of آموزش and اخبار
 
 The team asked for "market" to stop being its own section. Readers now see

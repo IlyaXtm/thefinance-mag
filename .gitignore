@@ -19,3 +19,6 @@ infra/wp/wordpress/
 .idea/
 *.tsbuildinfo
 infra/mag/.env
+
+# Compiled unit tests (npm test)
+.test-build/

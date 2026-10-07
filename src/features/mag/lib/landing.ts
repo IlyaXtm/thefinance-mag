@@ -36,9 +36,11 @@ const PICKS_MIN = 2;
 /** The 2 large + 4 small shape of the reference the team sent. */
 const FEATURED_COUNT = 6;
 
-/** Two rows of three at full width. */
-const LATEST_COUNT = 6;
-const EDUCATION_COUNT = 6;
+/** «تازه‌ترین مقالات»: three rows of three at full width — «سه ردیف مقاله»
+    (team, 2026-10-05). */
+const ARTICLES_COUNT = 9;
+/** «تازه‌ترین اخبار»: two rows of three. */
+const NEWS_COUNT = 6;
 /** One row of three per market. */
 const MARKET_COUNT = 3;
 
@@ -54,6 +56,17 @@ const MARKET_COUNT = 3;
  *   بازارها        one block per market — the only section cut by market
  *
  * and the shared `taken` set still guarantees no article twice.
+ *
+ * 2026-10-07, the team's earlier and explicit ask (4 Oct, «خبرها در تازه‌ترین
+ * اخبار و مقاله‌ها در تازه‌ترین مقالات») applied without undoing the review:
+ *
+ *   تازه‌ترین مقالات   every non-news post, by date — three rows
+ *   تازه‌ترین اخبار    news, by date
+ *   آموزش <market>    one block per market, lessons only
+ *
+ * The generic «آموزش» block is gone: with every non-news post a lesson, it
+ * and «تازه‌ترین مقالات» were the "two windows on one pool" the review
+ * objected to. Lessons keep a purpose of their own through the market blocks.
  *
  * 2026-10-07: a market block is now the sub-category «آموزش › <market>» —
  * lessons only, «مشاهده همه» to `/category/education/<market>`, and the title
@@ -81,9 +94,9 @@ export interface Landing {
    * a person chose these, and it is only made when one did.
    */
   picksSource: 'editors' | 'recent';
-  latest: ArticleSummary[];
+  /** Non-news, newest first. */
+  articles: ArticleSummary[];
   news: ArticleSummary[];
-  education: ArticleSummary[];
   markets: TopicBlock[];
 }
 
@@ -129,14 +142,13 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
           FEATURED_COUNT,
         );
 
-  const latest = take(pool, LATEST_COUNT);
+  const articles = take(
+    pool.filter((a) => a.contentType.slug !== 'news'),
+    ARTICLES_COUNT,
+  );
   const news = take(
     pool.filter((a) => a.contentType.slug === 'news'),
-    LATEST_COUNT,
-  );
-  const education = take(
-    pool.filter((a) => a.contentType.slug === 'education'),
-    EDUCATION_COUNT,
+    NEWS_COUNT,
   );
 
   const markets: TopicBlock[] = MARKET_ORDER.map((slug) => {
@@ -146,11 +158,12 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
     );
     return {
       key: slug,
-      title: items[0]?.market?.name ?? '',
+      /* «آموزش کریپتو» — the title of the page «مشاهده همه» opens. */
+      title: items[0]?.market ? `آموزش ${items[0].market.name}` : '',
       href: subcategoryHref('education', slug),
       items,
     };
   }).filter((block) => block.items.length > 0);
 
-  return { featured, heroSide, picks, picksSource, latest, news, education, markets };
+  return { featured, heroSide, picks, picksSource, articles, news, markets };
 }

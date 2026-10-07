@@ -268,7 +268,7 @@ export default async function ArticlePage({
     THE PANEL IS NAMED AFTER WHAT IT SHOWS, and the name is computed because
     the content can fall back.
 
-    «مطالب مرتبط» renders three articles of this content type further down, so
+    «مطالعه بیشتر» renders three articles of this content type further down, so
     they are removed here — two panels on one screen showing the same three
     titles is a duplicate, not a recommendation.
 
@@ -283,7 +283,7 @@ export default async function ArticlePage({
   /*
     THE DEDUPE COVERS THE FALLBACK TOO, and it did not before.
 
-    `onwardInType` was filtered against «مطالب مرتبط» from the day it was
+    `onwardInType` was filtered against «مطالعه بیشتر» from the day it was
     written. The recency fallback underneath it was not — so on a content type
     too small to fill the panel, the reader could meet the same article in both
     places, which is the exact failure the filter exists to prevent. It was
@@ -300,7 +300,7 @@ export default async function ArticlePage({
   /* THREE, NOT FOUR, and the rail's height budget is why. The panel is 446px
      at four items and 366 at three, and every pixel it takes comes off the
      contents list above it — at four, an ordinary four-heading ToC starts
-     scrolling at a 1280×800 window. Three also matches «مطالب مرتبط» below.
+     scrolling at a 1280×800 window. Three also matches «مطالعه بیشتر» below.
      The count is shared by both placements so they cannot drift. */
   const onwardInType = onward.items.filter((a) => !relatedSlugs.has(a.slug)).slice(0, 3);
   const onwardItems =
@@ -790,7 +790,7 @@ export default async function ArticlePage({
 
           {/*
             THE ONWARD PANEL'S MOBILE HOME: after the article, BEFORE
-            «مطالب مرتبط».
+            «مطالعه بیشتر».
 
             NOT inside the <details> that holds the contents below `xl`. That
             disclosure is closed by default and most readers on a phone never
@@ -798,7 +798,7 @@ export default async function ArticlePage({
             the body is the first moment the question it answers ("what now?")
             is actually live.
 
-            It sits above «مطالب مرتبط» rather than beside it because the two
+            It sits above «مطالعه بیشتر» rather than beside it because the two
             are deduped, not duplicated: this one is more of the same content
             type, that one is related articles, and `onwardCardItems` already
             removes anything appearing in the other. Order matters — same-type
@@ -828,7 +828,9 @@ export default async function ArticlePage({
               id="related-heading"
               className="text-h2 font-bold tracking-[-0.2px] text-text-primary"
             >
-              مطالب مرتبط
+              {/* «مطالعه بیشتر», not «مطالب مرتبط» (team, 2026-10-05): the
+                  list is the same content type, not the same subject. */}
+              مطالعه بیشتر
             </h2>
             <span aria-hidden="true" className="h-px flex-1 bg-border-subtle" />
           </div>
