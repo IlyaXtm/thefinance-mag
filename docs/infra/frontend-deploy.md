@@ -8,11 +8,11 @@ alongside the existing apps, and reach it at `thefinance.ir/mag-next/` while
 `new.thefinance.ir` was dropped; `/mag-next/` already serves with `noindex`.
 That removes the certbot step this document used to carry.
 
-**The commands here have not been run from the build environment.** Its network
-policy denies `thefinance.ir` and `wp.thefinance.ir` outright — the proxy
-answers 403 to CONNECT — so everything below has to be run on the server or
-from a machine that can reach it. What *was* verified here, and how, is at the
-bottom.
+**Current state (2026-10-07):** the cutover is done and the magazine runs on
+the new host `thefinance-main` (below). The Deploy section is the live
+procedure and has been run for every release since 2026-10-05; the staging and
+cutover sections further down are kept as history. A walkthrough for a newer
+developer, with the reasons behind each step, is `docs/learn/server-structure-code.md`.
 
 ---
 
@@ -31,35 +31,49 @@ could review.
 
 ---
 
-## What runs on this host — `87.247.171.97` (BEFORE the server move)
+## What runs on this host — `thefinance-main` (`78.109.203.61`)
 
-> **The frontend server moved around 2026-09/10.** On 2026-10-05 the old
-> address answered neither SSH nor HTTP, and `/mag` was serving from a new
-> host whose address and login are not recorded here yet. The layout below is
-> the old host's; replace the address when the new one is known.
+The magazine moved here from `87.247.171.97` around 2026-09/10; the first
+release on this host was `2f4ec9c`, 2026-10-05.
+
+```bash
+ssh thefinance-main          # alias in ~/.ssh/config; user `compute`, sudo
+```
 
 | What | Where |
 |---|---|
-| nginx | `/etc/nginx/conf.d/thefinance.ir.conf` |
-| Magazine | container `thefinance-mag`, port 3100 |
-| Main site | container `thefinance-front`, port 7902 |
-| Paradigm | container `thefinance-paradigm-front` |
-| GitLab Runner | `/etc/gitlab-runner/config.toml` — deploys the main site |
+| nginx | `/etc/nginx/sites-enabled/thefinance.ir` — **not ours to edit or reload** |
+| Magazine | container `thefinance-mag`, bound to `127.0.0.1:3100` |
 | Magazine rollback | container `thefinance-mag-prev`, stopped |
+| Magazine config | `/root/mag/.env`, mode 600 |
+| Main site, Paradigm, InChart | their own containers — **never touched from here** |
 
-```bash
-ssh -i ~/.ssh/sotoon-ilya compute@87.247.171.97
-```
+nginx (read, 2026-10-07): `/mag/` → `http://127.0.0.1:3100`;
+`/mag/wp-content/{uploads,plugins,themes}/` → `https://wp.thefinance.ir`.
+TLS ends at the CDN.
 
-Three products share this host. That is the single fact behind most of the
-rules below — anything heavy here is felt by all three, and anything removed
-here may be load-bearing for one of the others.
+**Scope on this host is the `thefinance-mag` container and nothing else.**
+Allowed: copy the image and `deploy.sh` to `~/`, `docker load`,
+`sudo ~/deploy.sh`, read-only checks (`docker logs`, `grep` in `/etc/nginx`).
+Not allowed: editing or reloading nginx, any other container, `docker restart`
+/ `system prune` / anything daemon-wide, `apt`, firewall, reboots, and
+**`docker build`** (one once took `/inchart` down). If something outside the
+container looks wrong, report it and stop.
 
-Safe copies of configs are kept beside the original with a
-`WORKING-<date>` suffix, so a revert is a `cp`.
+**Known network fault (2026-10-07):** from this host roughly half of NEW TCP
+connections to the CMS server (`87.247.170.20:443`) are never answered, while
+raw connects and the container's kept-alive connection succeed. nginx opens a
+new connection per upload, so `/mag/wp-content/uploads/…` returned uncached
+504s on a cold CDN. In-body images now go through `/mag/media/…`, served by
+the container (`src/app/media/[...path]/route.ts`). The fault itself — or an
+nginx `upstream { keepalive }` — belongs to the main team.
 
-There is also a `deploy` user with an SSH key, which the main site's GitLab CI
-uses. **Do not delete it.** At a server move the key is regenerated, not copied.
+### The old host — `87.247.171.97` (history)
+
+It ran nginx in `/etc/nginx/conf.d/thefinance.ir.conf`, the magazine on 3100,
+the main site (`thefinance-front`, 7902), Paradigm, and the GitLab Runner that
+deploys the main site via a `deploy` user. On 2026-10-05 it answered neither
+SSH nor HTTP.
 
 ---
 
@@ -72,20 +86,32 @@ can happen to it. The production host only ever loads and runs.
 
 ```bash
 # On the laptop
-cd ~/thefinance-mag && git checkout claude-main && git pull
+cd ~/New-Projects/thefinance-mag && git checkout claude-main && git pull
 SHA=$(git rev-parse --short HEAD) && echo $SHA
-npx tsc --noEmit && npm run lint
+npx tsc --noEmit && npm run lint && npm test
 
+# Gate: the redirect baseline must be PASS before anything ships. Re-run once
+# on a FAIL to rule out a network blip (curl 000) — then stop if it persists.
+scripts/verify-redirects.sh https://thefinance.ir > /tmp/redirects-before.txt; tail -1 /tmp/redirects-before.txt
+
+# Build from a CLEAN checkout of exactly $SHA, so nothing uncommitted is inside.
+git worktree add --detach /tmp/mag-build $SHA && cd /tmp/mag-build
 docker build --platform linux/amd64 \
   --build-arg BUILD_ID=$SHA \
   --build-arg SITE_ORIGIN=https://thefinance.ir \
   --build-arg WP_GRAPHQL_ENDPOINT=https://wp.thefinance.ir/mag/graphql \
   --build-arg USE_MOCK=false \
   -t thefinance-mag:$SHA . 2>&1 | tail -6
+cd - && git worktree remove --force /tmp/mag-build
 
 docker save thefinance-mag:$SHA | gzip > /tmp/mag-$SHA.tar.gz
-rsync -avP -e "ssh -i ~/.ssh/sotoon-ilya" /tmp/mag-$SHA.tar.gz compute@87.247.171.97:~/
+rsync -a /tmp/mag-$SHA.tar.gz infra/mag/deploy.sh thefinance-main:~/
 ```
+
+For a large change, run the image locally first and check it against
+production — health, `/mag/api/known-slugs`, the redirect script, a URL sweep,
+the sitemap, `scripts/check-invariants.mjs` — as listed in
+`docs/learn/server-structure-code.md` § 6.
 
 `--platform linux/amd64` is not optional — the build laptop is ARM and the
 server is x86. `rsync` rather than `scp` because it resumes; a dropped `scp`
@@ -114,8 +140,7 @@ before it goes anywhere near the server.
 Then on the server — **one script, in the repo: `infra/mag/deploy.sh`**:
 
 ```bash
-rsync -avP infra/mag/deploy.sh <user>@<frontend-host>:~/      # once per change to it
-ssh <user>@<frontend-host> 'sudo ~/deploy.sh <SHA>'
+ssh thefinance-main "gunzip -c ~/mag-$SHA.tar.gz | sudo docker load && sudo ~/deploy.sh $SHA"
 ```
 
 It replaced the three pasted blocks on 2026-10-05. Those blocks were separated
@@ -159,25 +184,35 @@ thing to avoid.
 the container. What it cannot see is the public path through the CDN:
 
 ```bash
-for u in "/mag/" "/mag/archive" "/mag/news" "/mag/category/education" "/mag/market/crypto"; do
-  printf "%-28s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://thefinance.ir$u?cb=$RANDOM")"
+curl -s https://thefinance.ir/mag/health      # buildId, source, archiveOverflowed: false
+for u in "/" "/mag/" "/mag/archive" "/mag/news" "/mag/category/education" "/mag/category/education/crypto"; do
+  printf "%-34s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://thefinance.ir$u?cb=$RANDOM")"
 done
-curl -s -m 5 -o /dev/null -w 'direct :3100 from outside → %{http_code} (must be 000)\n' http://<frontend-host>:3100/mag/health
+scripts/verify-redirects.sh https://thefinance.ir > /tmp/redirects-after.txt
+diff /tmp/redirects-before.txt /tmp/redirects-after.txt && echo NO_DIFF
+curl -s -m 5 -o /dev/null -w 'direct :3100 from outside → %{http_code} (must be 000)\n' http://78.109.203.61:3100/mag/health
+git push origin claude-main                     # only after production checks out
 ```
 
-The last line is run from the laptop, not the server. Anything but `000`
-means the port is published publicly again.
+`/` is the main site: it shares the host, so it is checked too. The last
+curl is run from the laptop, not the server; anything but `000` means the port
+is published publicly again.
 
 ### Rollback
 
 ```bash
-ssh <user>@<frontend-host> 'sudo ~/deploy.sh --rollback'
+ssh thefinance-main 'sudo ~/deploy.sh --rollback'
 ```
 
 The previous container is always kept as `-prev`, which is what makes this a
 rename rather than a rebuild.
 
 ### Certificate and nginx
+
+> **On `thefinance-main` this is not ours.** nginx belongs to the main team
+> and TLS ends at the CDN; the commands below are from the old host's cutover
+> and are kept as history. Changes there go to the main team as a note (e.g.
+> `docs/infra/nginx-mag-redirect-note.md`).
 
 ```bash
 
@@ -456,16 +491,17 @@ stale database row cannot resurrect a 404.
                        │
                        ▼
     ┌──────────────────────────────────┐
-    │  87.247.171.97  (frontend)       │
+    │  78.109.203.61  thefinance-main  │
     │  ┌────────────────────────────┐  │
-    │  │ nginx                      │  │
-    │  │  /          → :7902 site   │  │
-    │  │  /mag/      → :3100 mag    │  │
+    │  │ nginx (main team's)        │  │
+    │  │  /          → main site    │  │
+    │  │  /mag/      → 127.0.0.1:3100│ │
     │  │  /mag/wp-*  → CMS          │  │
     │  └────────────────────────────┘  │
     │  Next.js (:3100)   ← the magazine│
-    │  main site (:7902)               │
-    │  Paradigm                        │
+    │    /mag/media/* → CMS (in-body   │
+    │    images, kept-alive fetch)     │
+    │  main site, Paradigm, InChart    │
     └──────────────────────────────────┘
                        │ GraphQL
                        ▼
@@ -525,6 +561,13 @@ applies the first match and stops.
 | `/mag/wp-content/uploads/*` | cache | 30 days, 0 on failure |
 | `/mag/_next/static/*` | cache | 1 year, 0 on failure |
 | `/mag/*` | BYPASS | — |
+
+**Missing rule (2026-10-07):** `/mag/media/*` — in-body images served by the
+app since `7e6dadc` — falls into `/mag/*` and is not cached (`x-zrk-cs:
+BYPASS`, measured). Every view refetches from the CMS through the container;
+browsers cache it for 30 days (`immutable`). It needs a rule above `/mag/*`
+like the uploads one: cache, 30 days, 0 on failure. Whoever holds the Sotoon
+panel adds it.
 
 **A purge after deploy is not needed.** Next hashes static filenames from their
 content, so a new build has new names, and HTML is `BYPASS`. The only case that
