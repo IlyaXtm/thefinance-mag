@@ -46,6 +46,7 @@ export function CardImage({
   priority = false,
   className = '',
   rounded = 'rounded-lg',
+  fit = 'cover',
 }: {
   image: MagImage | null;
   /** Required — see above. */
@@ -53,6 +54,8 @@ export function CardImage({
   priority?: boolean;
   className?: string;
   rounded?: string;
+  /** `contain` shows a wrong-shaped image whole — see `imageFit` in lib/card. */
+  fit?: 'cover' | 'contain';
 }) {
   if (!image) {
     return (
@@ -81,13 +84,27 @@ export function CardImage({
       data-card-image=""
       className={`relative block h-full w-full overflow-hidden ${rounded} ${className} data-[image-failed]:bg-surface-hover data-[image-failed]:shadow-[inset_0_0_0_1px_var(--border-subtle)]`}
     >
+      {/* An odd-shaped image is shown whole (fit="contain"); the margin it
+          leaves is filled with the same picture, blurred, rather than a flat
+          band. Same URL and size, so the browser fetches it once. Decorative:
+          empty alt, hidden from assistive tech. */}
+      {fit === 'contain' && (
+        <Image
+          src={imageSrc(image.url)}
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes={sizes}
+          className="scale-110 object-cover opacity-70 blur-xl"
+        />
+      )}
       <Image
         src={imageSrc(image.url)}
         alt={image.alt}
         fill
         sizes={sizes}
         priority={priority}
-        className="object-cover"
+        className={fit === 'contain' ? 'object-contain' : 'object-cover'}
       />
     </span>
   );

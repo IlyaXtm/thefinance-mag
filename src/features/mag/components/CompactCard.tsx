@@ -1,5 +1,6 @@
 import { CardImage } from './CardImage';
 import { CardBody } from './CardMeta';
+import { cardAspect, imageFit } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
 
 /**
@@ -12,9 +13,11 @@ import type { ArticleSummary } from '../types/mag.types';
  * headline baked into the artwork, which is exactly the collision they
  * reported on the old hero the same day.
  *
- * The image box is a fixed aspect ratio, so a wrong-aspect upload crops rather
- * than reflowing the row. 16:10 sits between the archive's two shapes (1.79
- * and 1.50), cropping each by under 12%.
+ * The image box is a fixed aspect ratio, so nothing reflows. It was 16:10 —
+ * "between the archive's two shapes, cropping each by under 12%" — and 12% of
+ * a news image is its baked-in headline (team screenshot, 2026-10-07). It is
+ * now the artwork's own shape per content type (cardAspect), and an odd-shaped
+ * upload is shown whole (imageFit).
  *
  * The text half is CardBody — the team's badge → title → summary → meta
  * order, shared with PostCard so the two cannot drift. `lg` sets the title at
@@ -34,8 +37,13 @@ export function CompactCard({
 }) {
   return (
     <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
-      <div className="aspect-[16/10]">
-        <CardImage image={article.featuredImage} sizes={sizes} rounded="rounded-t-card" />
+      <div style={{ aspectRatio: cardAspect(article) }}>
+        <CardImage
+          image={article.featuredImage}
+          sizes={sizes}
+          rounded="rounded-t-card"
+          fit={imageFit(article.featuredImage, cardAspect(article))}
+        />
       </div>
 
       <CardBody article={article} size={size === 'lg' ? 'lg' : 'sm'} />

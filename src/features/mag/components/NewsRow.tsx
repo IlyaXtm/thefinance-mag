@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
-import { cardCategory } from '../lib/card';
+import { cardAspect, cardCategory, imageFit } from '../lib/card';
 import { formatReadingTime, toDateTimeAttr } from '../lib/format';
 import { dayHeading } from '../lib/news';
 import type { ArticleSummary } from '../types/mag.types';
@@ -41,8 +41,15 @@ export function NewsRow({ article }: { article: ArticleSummary }) {
         {clock}
       </time>
 
-      <div className="hidden h-[78px] sm:block">
-        <CardImage image={article.featuredImage} sizes="132px" rounded="rounded-lg" />
+      {/* 16:9, the news artwork's own shape (cardAspect): 78px tall in the
+          132px column was 1.69:1 and trimmed the baked-in headline's ends. */}
+      <div className="hidden sm:block" style={{ aspectRatio: cardAspect(article) }}>
+        <CardImage
+          image={article.featuredImage}
+          sizes="132px"
+          rounded="rounded-lg"
+          fit={imageFit(article.featuredImage, cardAspect(article))}
+        />
       </div>
 
       <div className="col-span-2 flex min-w-0 flex-col gap-1.5 sm:col-span-1">

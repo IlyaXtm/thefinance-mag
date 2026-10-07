@@ -18,6 +18,7 @@ import {
   subcategoriesOf,
 } from '../src/features/mag/lib/subcategories';
 import { educationChips } from '../src/features/mag/lib/education';
+import { cardAspect, imageFit } from '../src/features/mag/lib/card';
 import type {
   ArticleSummary,
   ContentTypeSlug,
@@ -197,4 +198,21 @@ test('education: chips only for topics with lessons, in the team’s order', () 
     educationChips(archive, markets).map((c) => c.key),
     ['شروع-از-صفر', 'tse', 'crypto'],
   );
+});
+
+/* ── Card images ──────────────────────────────────────────────────────── */
+
+test('cards: the image box matches the artwork, so a baked-in headline is not cropped', () => {
+  const img = (width: number, height: number) => ({ url: '/x.jpg', alt: 'x', width, height });
+  const news = article('news', null);
+  const lesson = article('education', null);
+
+  assert.equal(cardAspect(news), '16 / 9');
+  assert.equal(cardAspect(lesson), '3 / 2');
+  /* The archive's real shapes fill their box. */
+  assert.equal(imageFit(img(1280, 716), cardAspect(news)), 'cover');
+  assert.equal(imageFit(img(1200, 800), cardAspect(lesson)), 'cover');
+  /* A wrong-shaped upload is shown whole, not cut. */
+  assert.equal(imageFit(img(1000, 1000), cardAspect(lesson)), 'contain');
+  assert.equal(imageFit(img(1200, 800), cardAspect(news)), 'contain');
 });

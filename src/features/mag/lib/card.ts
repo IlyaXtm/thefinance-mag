@@ -1,4 +1,4 @@
-import type { ArticleSummary } from '../types/mag.types';
+import type { ArticleSummary, MagImage } from '../types/mag.types';
 import { parentOf, subcategoryHref } from './subcategories';
 
 /**
@@ -125,4 +125,30 @@ export function cardDek(article: ArticleSummary): string | null {
 /** Initials for the avatar fallback. Gravatar is never used — see decisions.md. */
 export function authorInitial(name: string): string {
   return name.trim().charAt(0) || '؟';
+}
+
+/**
+ * The image box of a card, as a CSS aspect-ratio — from what the team
+ * actually uploads, measured 2026-10-07 over the archive: news artwork is
+ * 16:9 (46 of 47), lesson artwork 3:2 (42 of 55).
+ *
+ * It used to be one 16:10 box for everything, and `object-cover` cut about 5%
+ * off each side of every news image — exactly where its headline is baked in
+ * («سایلر مشور…», «…ضعیف ین»). A box that matches the artwork crops nothing.
+ * A section holds one type, so its rows still line up.
+ */
+export function cardAspect(article: ArticleSummary): string {
+  return article.contentType.slug === 'news' ? '16 / 9' : '3 / 2';
+}
+
+/**
+ * `contain` for an image whose own shape is more than 4% off its box (a square,
+ * a panorama), `cover` otherwise. The artwork carries text, so a wrong-shaped
+ * upload is shown whole with a quiet margin rather than cut.
+ */
+export function imageFit(image: MagImage | null, aspect: string): 'cover' | 'contain' {
+  if (!image || !image.width || !image.height) return 'cover';
+  const [w, h] = aspect.split('/').map((n) => Number(n.trim()));
+  const box = w / h;
+  return Math.abs(image.width / image.height - box) / box > 0.04 ? 'contain' : 'cover';
 }

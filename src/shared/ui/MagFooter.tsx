@@ -143,7 +143,10 @@ export function MagFooter({ markets }: { markets: Market[] }) {
               and a screen reader both get. «پشتیبانی» sits in the same row
               but is not a SOCIAL_LINKS entry — see SUPPORT_TELEGRAM_URL.
             */}
-            <ul className="mt-5 flex flex-wrap gap-2">
+            {/* Three equal columns, not a wrapping row: in the brand column the
+                row broke after two and left «پشتیبانی» alone on a line
+                (team screenshot, 2026-10-07). */}
+            <ul className="mt-5 grid max-w-[360px] grid-cols-3 gap-2">
               {[
                 ...SOCIAL_LINKS,
                 { label: 'پشتیبانی', href: SUPPORT_TELEGRAM_URL, icon: 'telegram' as const },
@@ -153,7 +156,7 @@ export function MagFooter({ markets }: { markets: Market[] }) {
                     href={link.href}
                     rel="noopener noreferrer"
                     target="_blank"
-                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-interactive px-4 text-[13px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    className="flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-border-interactive px-2 text-[13px] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                   >
                     {link.icon && <SocialMark icon={link.icon} className="h-4 w-4 shrink-0" />}
                     {link.label}

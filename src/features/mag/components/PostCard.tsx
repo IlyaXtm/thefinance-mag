@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
 import { CardBody, CardFootMeta, CardKicker } from './CardMeta';
-import { cardDek } from '../lib/card';
+import { cardAspect, cardDek, imageFit } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 
@@ -24,13 +24,14 @@ import { bidiTitle } from '../lib/bidi-title';
 export function PostCard({ article }: { article: ArticleSummary }) {
   return (
     <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
-      {/* 16:10, like every other image-on-top card: a fixed box, so a
-          wrong-aspect upload crops instead of reflowing the row. */}
-      <div className="aspect-[16/10]">
+      {/* A fixed box, so nothing reflows — shaped like the artwork (16:9 news,
+          3:2 lessons) so its baked-in headline is not cropped. See cardAspect. */}
+      <div style={{ aspectRatio: cardAspect(article) }}>
         <CardImage
           image={article.featuredImage}
           sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
           rounded="rounded-t-card"
+          fit={imageFit(article.featuredImage, cardAspect(article))}
         />
       </div>
 
@@ -70,13 +71,17 @@ export function ArchiveCard({
 
   return (
     <article className="group relative grid gap-4 rounded-card border border-border-subtle bg-surface-raised p-[18px] transition-colors duration-150 hover:border-accent motion-reduce:transition-none sm:grid-cols-[220px_1fr] lg:grid-cols-[270px_1fr]">
-      <div className="h-[180px] sm:h-[170px]">
+      {/* Shaped like the artwork, not a fixed height: 180px across a phone
+          was a 2:1 slot and 170px in the 220px column 1.3:1, which cut up to
+          a quarter off a 16:9 news image and its headline. */}
+      <div className="self-start" style={{ aspectRatio: cardAspect(article) }}>
         <CardImage
           image={article.featuredImage}
           sizes="(max-width: 639px) 100vw, 270px"
           priority={priority}
           rounded="rounded-lg"
           className="h-full"
+          fit={imageFit(article.featuredImage, cardAspect(article))}
         />
       </div>
 
