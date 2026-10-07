@@ -96,8 +96,8 @@ to Claude; these are notes for you.** All Persian.
 | `learn/frontend.md` | The frontend from first principles: headless CMS, the four render modes, Server Components, the data layer, tokens, `basePath`, redirects, RTL, images, raw CMS content. Written to be read start to finish |
 | `learn/lessons.md` | Thirteen lessons from what actually happened — silent failure, the feeling of progress versus progress, knowing your numbers before designing |
 | `learn/working-with-ai-tools.md` | How to prompt, what to ask for, and three failures that recurred |
-| `learn/after-a-round.md` | Eleven steps from "the report arrived" to "it is live and verified". The commands live in `infra/frontend-deploy.md`; this says when and by what measure |
-| `learn/server-structure-code.md` | For a junior developer, from this week's real work: the server path (CDN → nginx → container → WordPress), the repo structure, the coding rules with examples, the deploy step by step on `thefinance-main`, the pre-deploy check, and five real bugs with their lessons. Persian |
+| `learn/after-a-round.md` | Eleven steps from "the report arrived" to "it is live and verified" — redirect gate, `deploy.sh`, checks, then push. The commands live in `infra/frontend-deploy.md`; this says when and by what measure |
+| `learn/server-structure-code.md` | For a junior developer, from this week's real work: the server path (CDN → nginx → container → WordPress), the repo structure, the coding rules with examples, the deploy step by step on `thefinance-main`, the pre-deploy check, and six real bugs with their lessons. Persian |
 
 ---
 
