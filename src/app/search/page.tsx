@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { subcategoriesOf, subcategoryHref } from '@/features/mag/lib/subcategories';
 import { CONTENT_TYPES } from '@/features/mag/lib/content-types';
 import { searchArticles } from '@/features/mag/api/v1/mag.service';
 import { getMarkets } from '@/features/mag/api/v1/mag.service';
@@ -162,7 +163,11 @@ export default async function SearchPage({
               <p className="mb-3 text-[14px] text-text-muted">
                 یا یکی از بخش‌های مجله را ببینید:
               </p>
-              <MarketFilterBar markets={markets} />
+              <MarketFilterBar
+                markets={subcategoriesOf(markets, 'education')}
+                hrefFor={(slug) => subcategoryHref('education', slug)}
+                allHref="/category/education"
+              />
             </div>
 
             <Link

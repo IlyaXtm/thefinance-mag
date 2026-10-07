@@ -23,6 +23,7 @@ import {
   type SearchResult,
 } from '../../types/mag.types';
 import type { MagSeo } from '../../types/mag-seo.types';
+import { marketCounts } from '../../lib/subcategories';
 import { DISCLAIMER_TEXT } from '../../types/mag-blocks.types';
 import {
   addHeadingIds,
@@ -80,30 +81,35 @@ const MARKETS: Record<MarketSlug, Market> = {
     name: 'بورس ایران',
     description: 'تحلیل، گزارش و آموزش درباره بازار سهام تهران.',
     count: 2,
+    byType: null,
   },
   'gold-usd': {
     slug: 'gold-usd',
     name: 'طلا و دلار',
     description: 'روند طلا، سکه و ارز و عوامل مؤثر بر آن‌ها.',
     count: 1,
+    byType: null,
   },
   crypto: {
     slug: 'crypto',
     name: 'کریپتو',
     description: null, // exercises the "description absent" archive variant
     count: 5,
+    byType: null,
   },
   forex: {
     slug: 'forex',
     name: 'فارکس',
     description: 'مفاهیم، ابزارها و ساختار بازار جهانی ارز.',
     count: 3,
+    byType: null,
   },
   global: {
     slug: 'global',
     name: 'اقتصاد جهانی',
     description: 'داده‌ها و رویدادهای کلان و اثرشان بر بازارهای داخلی.',
     count: 3,
+    byType: null,
   },
   housing: {
     slug: 'housing',
@@ -117,6 +123,7 @@ const MARKETS: Record<MarketSlug, Market> = {
       it matters most.
     */
     count: 0,
+    byType: null,
   },
 };
 
@@ -1360,21 +1367,9 @@ export async function getMarkets(): Promise<Market[]> {
   /* Counts derived from the fixtures, exactly as the real API derives them
      from the posts — otherwise the mock hides the disagreement the real one
      had. MARKETS[].count is kept only as the declared shape. */
-  const perMarket = new Map<string, number>();
-  for (const a of ALL_SUMMARIES) {
-    const slug = a.market?.slug;
-    if (slug) perMarket.set(slug, (perMarket.get(slug) ?? 0) + 1);
-  }
-
   return simulate(
-    Object.values(MARKETS).map((m) => ({ ...m, count: perMarket.get(m.slug) ?? 0 })),
+    Object.values(MARKETS).map((m) => ({ ...m, ...marketCounts(ALL_SUMMARIES, m.slug) })),
   );
-}
-
-export async function getMarket(slug: MarketSlug): Promise<Market> {
-  const market = MARKETS[slug];
-  if (!market) throw new MagNotFoundError(slug);
-  return simulate(market);
 }
 
 export async function getAuthor(slug: string): Promise<Author> {

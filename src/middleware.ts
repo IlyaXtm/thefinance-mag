@@ -3,7 +3,7 @@ import { redirectTarget, resolveRedirect } from '@/features/mag/lib/redirects';
 import { currentRedirects } from '@/features/mag/lib/redirect-source';
 import { isKnownSlug } from '@/features/mag/lib/known-slugs';
 import { RESERVED_SEGMENTS } from '@/features/mag/lib/known-routes';
-import { MARKET_SLUGS } from '@/features/mag/types/mag.types';
+import { marketRedirectTarget } from '@/features/mag/lib/subcategories';
 import { MAG_PATH } from '@/features/mag/lib/site';
 
 /**
@@ -36,7 +36,7 @@ import { MAG_PATH } from '@/features/mag/lib/site';
  * URL is already query-shaped and is noindex either way. Redirecting it would
  * break the only pagination on the site that is supposed to be a parameter.
  */
-const PAGINATED_PREFIXES = ['/archive', '/category/', '/market/', '/author/'];
+const PAGINATED_PREFIXES = ['/archive', '/category/', '/author/'];
 
 /**
  * Routes whose `?page=` is REAL and must survive untouched.
@@ -147,14 +147,22 @@ function paginationRedirect(pathname: string, search: URLSearchParams): string |
  * impressions (scripts/verify-redirects.sh lists it), and a 301 hands its
  * equity to the page that now has the content.
  *
+ * The MARKET ARCHIVES went the same way on 2026-10-07: a market is now a
+ * sub-category of آموزش or اخبار (lib/subcategories.ts), so `/market/<slug>`
+ * and its pages 301 to that market's lessons, and «تحلیل» goes there too
+ * rather than through `/market/tse` in two hops.
+ *
  * Checked BEFORE the legacy-slug map and the trailing-slash rule, so every
- * shape of the old URL — slash, paginated, the `?type=` archive form — lands
- * in one hop.
+ * shape of the old URL — slash, paginated, `?page=`, the `?type=` archive
+ * form — lands in one hop.
  */
 function retiredSectionRedirect(pathname: string, search: URLSearchParams): string | null {
   const path = pathname.replace(/\/+$/, '');
-  if (/^\/category\/analysis(\/page\/\d+)?$/.test(path)) return '/market/tse';
-  if (path === '/archive' && search.get('type') === 'analysis') return '/market/tse';
+  if (/^\/category\/analysis(\/page\/\d+)?$/.test(path)) return marketRedirectTarget('tse');
+  if (path === '/archive' && search.get('type') === 'analysis') return marketRedirectTarget('tse');
+  if (path === '/market') return '/category/education';
+  const market = /^\/market\/([^/]+)(\/page\/\d+)?$/.exec(path);
+  if (market) return marketRedirectTarget(market[1]);
   return null;
 }
 
@@ -243,11 +251,9 @@ export async function middleware(request: NextRequest) {
  * `RESERVED_SEGMENTS` would 404 in production while working in `next dev`.
  * `check-invariants` reads `src/app` and fails on exactly that.
  *
- * ── Markets do not need the network ─────────────────────────────────────
- *
- * Their six slugs are registered by the mu-plugin and compiled in, so a market
- * that is not in the constant cannot exist. Articles and authors come from the
- * CMS and go through the set.
+ * Articles and authors come from the CMS and go through the set. Markets
+ * used to be checked here too; since 2026-10-07 every `/market/…` URL is a
+ * 301 (`retiredSectionRedirect`) and never reaches this function.
  */
 async function notFoundRewrite(
   request: NextRequest,
@@ -295,11 +301,6 @@ async function notFoundRewrite(
 
   const rewrite = () =>
     NextResponse.rewrite(absolute(request, '/not-found-page'), { status: 404 });
-
-  /* /market/<slug> — answered from the compiled list, no fetch. */
-  if (segments.length === 2 && segments[0] === 'market') {
-    return (MARKET_SLUGS as readonly string[]).includes(segments[1]) ? null : rewrite();
-  }
 
   /* /author/<slug> */
   if (segments.length === 2 && segments[0] === 'author') {

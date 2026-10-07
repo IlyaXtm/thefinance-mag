@@ -28,6 +28,7 @@ import {
 import type { MagSeo } from '../../types/mag-seo.types';
 import { resolveContentType } from '../../lib/content-types';
 import { isExcludedCategory } from '../../lib/taxonomy';
+import { marketCounts } from '../../lib/subcategories';
 import {
   addHeadingIds,
   articleHasInjectedToc,
@@ -269,7 +270,13 @@ function mapAuthor(node: WpSummary['author']): Author {
 }
 
 function mapMarket(term: WpTerm): Market {
-  return { slug: term.slug as MarketSlug, name: term.name, description: null, count: null };
+  return {
+    slug: term.slug as MarketSlug,
+    name: term.name,
+    description: null,
+    count: null,
+    byType: null,
+  };
 }
 
 /** WordPress percent-encodes non-Latin slugs; a malformed one stays as is. */
@@ -864,24 +871,13 @@ export async function getMarkets(): Promise<Market[]> {
     header strip and the rows are all reading one array.
   */
   const all = await getAllSummaries();
-  const perMarket = new Map<string, number>();
-  for (const article of all) {
-    const slug = article.market?.slug;
-    if (slug) perMarket.set(slug, (perMarket.get(slug) ?? 0) + 1);
-  }
 
   return data.markets.nodes.map((node) => ({
     slug: node.slug as MarketSlug,
     name: node.name,
     description: node.marketDescription,
-    count: perMarket.get(node.slug) ?? 0,
+    ...marketCounts(all, node.slug),
   }));
-}
-
-export async function getMarket(slug: MarketSlug): Promise<Market> {
-  const market = (await getMarkets()).find((m) => m.slug === slug);
-  if (!market) throw new MagNotFoundError(slug);
-  return market;
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { ArticleSummary } from '../types/mag.types';
+import { parentOf, subcategoryHref } from './subcategories';
 
 /**
  * The one visible category label on a card.
@@ -15,10 +16,17 @@ import type { ArticleSummary } from '../types/mag.types';
  *
  * Roughly 60% of the archive has no market, so the contentType branch is the
  * common one, not the fallback.
+ *
+ * The market label links into the article's own section (2026-10-07): a
+ * lesson's «کریپتو» opens آموزش › کریپتو, a news item's opens اخبار › کریپتو.
+ * There is no market page any more — see lib/subcategories.ts.
  */
 export function cardCategory(article: ArticleSummary): { name: string; href: string } {
   if (article.market) {
-    return { name: article.market.name, href: `/market/${article.market.slug}` };
+    return {
+      name: article.market.name,
+      href: subcategoryHref(parentOf(article.contentType.slug), article.market.slug),
+    };
   }
 
   return {
@@ -45,8 +53,8 @@ export function cardCategory(article: ArticleSummary): { name: string; href: str
  *
  * They are the two axes the model already has and the card already collapses.
  * `cardCategory` picks ONE label because a card has room for one; the article
- * header has room for both, so it shows both — market first as the broader
- * axis, then content type.
+ * header has room for both, so it shows both — the section, then the market
+ * as its sub-category (it was market first until 2026-10-07).
  *
  * Roughly 60% of the archive has no market, so ONE chip is the common case,
  * not the degraded one. Nothing is reserved for the missing chip and nothing
@@ -65,16 +73,19 @@ export function articleKicker(
   routedSlugs: readonly string[],
 ): Array<{ name: string; href: string }> {
   const routed = new Set(routedSlugs);
-  const chips: Array<{ name: string; href: string }> = [];
+
+  /* Section first, then its sub-category — آموزش › کریپتو — since 2026-10-07,
+     when the market stopped being an axis of its own on the page. */
+  const chips: Array<{ name: string; href: string }> = [
+    { name: article.contentType.name, href: contentTypeHref(article.contentType.slug, routed) },
+  ];
 
   if (article.market) {
-    chips.push({ name: article.market.name, href: `/market/${article.market.slug}` });
+    chips.push({
+      name: article.market.name,
+      href: subcategoryHref(parentOf(article.contentType.slug), article.market.slug),
+    });
   }
-
-  chips.push({
-    name: article.contentType.name,
-    href: contentTypeHref(article.contentType.slug, routed),
-  });
 
   return chips;
 }

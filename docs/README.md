@@ -49,6 +49,8 @@ else in version control.
 | `cta-unlinked.md` | The 21 CTA banners with no link in WordPress, with an edit link per post and a suggested target. Persian — it is sent to the content team |
 | `rank-math-redirects.md` | Three redirects to mirror in Rank Math (already live in code). Persian — it is sent to the content team |
 | `content-team-tags.md` | The WordPress tags that switch on the education page's guides, topic chips and levels; the options-article retitle; the 10 lessons with no real description. Persian — it is sent to the content team |
+| `content-team-subcategories.md` | The three wp-admin term edits behind «بازار ایران» and the forex rename, and what changed when markets became sub-categories. Persian — it is sent to the content team |
+| `missing-images.md` | The 41 in-body images whose files are gone from the media library, per post. For the content team |
 
 ### Design
 

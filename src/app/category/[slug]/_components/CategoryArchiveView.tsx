@@ -99,6 +99,7 @@ export async function CategoryArchiveView({
       emptyMessage={`هنوز مطلبی در دسته ${category.name} منتشر نشده.`}
       emptyAction={{ href: '/archive', label: 'همه مطالب' }}
       markets={markets}
+      activeHref={`/category/${category.slug}`}
     />
   );
 }

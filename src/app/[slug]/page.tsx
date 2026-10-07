@@ -15,7 +15,7 @@ import { toMetadata } from '@/features/mag/lib/seo';
 import { articleJsonLd, breadcrumbJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { bidiTitle } from '@/features/mag/lib/bidi-title';
 import { magUrl, MAG_NAME } from '@/features/mag/lib/site';
-import { articleKicker, authorInitial, cardCategory } from '@/features/mag/lib/card';
+import { articleKicker, authorInitial } from '@/features/mag/lib/card';
 import { toPersianDigits } from '@/features/mag/lib/format';
 import { heroAspectRatios } from '@/features/mag/lib/hero-ratio';
 import Link from 'next/link';
@@ -251,7 +251,6 @@ export default async function ArticlePage({
     getCategories(),
   ]);
 
-  const category = cardCategory(article);
   const kicker = articleKicker(
     article,
     categories.map((c) => c.slug),
@@ -320,9 +319,12 @@ export default async function ArticlePage({
     meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
   }));
 
+  /* The kicker's path, so the trail reads section › sub-category › article —
+     «مجله فایننس › آموزش › کریپتو» — the tree the team asked for (2026-10-07).
+     It skipped the section while the market was its own axis. */
   const crumbs = [
     { name: MAG_NAME, href: '/' },
-    { name: category.name, href: category.href },
+    ...kicker,
     { name: article.title, href: `/${article.slug}` },
   ];
 

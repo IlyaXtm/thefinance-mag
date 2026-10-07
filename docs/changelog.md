@@ -8,6 +8,36 @@ why it was made.
 
 ---
 
+## 2026-10-07 (structure) — markets become sub-categories of آموزش and اخبار
+
+The team asked for "market" to stop being its own section. Readers now see
+two sections with sub-categories under each: آموزش › کریپتو is
+`/category/education/crypto`, اخبار › کریپتو is `/news/crypto` — both pages
+already existed as the chips under each section.
+
+- `/market/<slug>`, `/market/<slug>/page/N` and `?page=` 301 in one hop to the
+  market's lessons; `/market` to آموزش; «تحلیل» goes straight there too.
+  `gold-usd` goes to `tse` (the merged «بازار ایران»). A market with no
+  lessons forwards on (housing → آموزش) instead of 404ing.
+- A market's lessons page is indexable above the archive floor (crypto,
+  global today; tse once gold is merged in) and is in the sitemap instead of
+  `/market/*`. Tag topics stay noindex. The page uses the market's WordPress
+  description when it has one.
+- Header: the «بازارها» disclosure is gone (`MarketMenu` deleted). Mobile menu
+  nests the sub-categories under آموزش. Footer column is «آموزش» › markets.
+- Sidebar «دسته‌بندی مطالب» is the tree, with the current page marked.
+- Card labels, the article kicker and the breadcrumb read section ›
+  sub-category («مجله فایننس › آموزش › کریپتو»).
+- Home market blocks are lessons only, titled with the live WordPress name
+  (so the renames arrive without a deploy), «مشاهده همه» to the lessons page.
+- `/news/<market>` lists every news item in the market (there is no market
+  archive to send "older" to).
+- `Market` gains `byType` (counts per content type), derived from the same
+  summaries as `count`. `getMarket` had no callers left and was removed.
+
+WordPress is unchanged except three term edits for the content team
+(`docs/content-team-subcategories.md`).
+
 ## 2026-10-07 — in-body images served by the app (`/mag/media/`)
 
 Some article photos showed as broken. Cause, measured: body images at

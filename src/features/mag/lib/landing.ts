@@ -1,4 +1,5 @@
 import type { ArticleSummary, ContentTypeSlug } from '../types/mag.types';
+import { subcategoryHref } from './subcategories';
 
 /**
  * Which article goes in which slot of the home page — one pure function, so
@@ -53,13 +54,15 @@ const MARKET_COUNT = 3;
  *   بازارها        one block per market — the only section cut by market
  *
  * and the shared `taken` set still guarantees no article twice.
+ *
+ * 2026-10-07: a market block is now the sub-category «آموزش › <market>» —
+ * lessons only, «مشاهده همه» to `/category/education/<market>`, and the title
+ * is the market's name as WordPress has it, so the team's renames («بازار
+ * ایران», «بازار جهانی، فارکس و استاک امریکا») arrive without a deploy.
+ * `gold-usd` stays in the order until its posts are merged into `tse`; an
+ * empty block is dropped.
  */
-const MARKETS: ReadonlyArray<{ key: string; title: string; href: string; slug: string }> = [
-  { key: 'forex', title: 'فارکس', href: '/market/forex', slug: 'forex' },
-  { key: 'crypto', title: 'کریپتو', href: '/market/crypto', slug: 'crypto' },
-  { key: 'gold-usd', title: 'طلا و دلار', href: '/market/gold-usd', slug: 'gold-usd' },
-  { key: 'tse', title: 'بورس ایران', href: '/market/tse', slug: 'tse' },
-];
+const MARKET_ORDER: ReadonlyArray<string> = ['forex', 'crypto', 'gold-usd', 'tse'];
 
 export interface TopicBlock {
   key: string;
@@ -136,15 +139,18 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
     EDUCATION_COUNT,
   );
 
-  const markets: TopicBlock[] = MARKETS.map(({ key, title, href, slug }) => ({
-    key,
-    title,
-    href,
-    items: take(
-      pool.filter((a) => a.market?.slug === slug),
+  const markets: TopicBlock[] = MARKET_ORDER.map((slug) => {
+    const items = take(
+      pool.filter((a) => a.market?.slug === slug && a.contentType.slug === 'education'),
       MARKET_COUNT,
-    ),
-  })).filter((block) => block.items.length > 0);
+    );
+    return {
+      key: slug,
+      title: items[0]?.market?.name ?? '',
+      href: subcategoryHref('education', slug),
+      items,
+    };
+  }).filter((block) => block.items.length > 0);
 
   return { featured, heroSide, picks, picksSource, latest, news, education, markets };
 }

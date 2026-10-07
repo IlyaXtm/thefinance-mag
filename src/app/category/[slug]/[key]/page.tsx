@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { getAllSummaries, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { EDUCATION_DESCRIPTION, educationChips, educationFor } from '@/features/mag/lib/education';
 import { toMetadata } from '@/features/mag/lib/seo';
+import { isThinArchive } from '@/features/mag/lib/taxonomy';
+import { emptyLessonsFallback } from '@/features/mag/lib/subcategories';
 import { MAG_NAME } from '@/features/mag/lib/site';
 import { ArchiveShell, ChipFilterBar } from '@/features/mag/components';
 
@@ -14,9 +16,15 @@ import { ArchiveShell, ChipFilterBar } from '@/features/mag/components';
  * Only `education` has topics; any other category here is a 404, and so is a
  * topic with no lessons — a chip is only drawn for a topic that has some.
  *
- * NOINDEX, FOLLOW, like `/news/<market>`: every lesson here is also on آموزش
- * and on its market archive, so a third indexable list would compete with
- * both. Readers get a real prerendered page; crawlers follow it to the lessons.
+ * A MARKET's page here is indexable (2026-10-07). It is the sub-category
+ * «آموزش › <market>», and since the market archives were retired it is where
+ * `/market/<slug>` 301s — the page that inherits their search equity. It
+ * follows the same floor the market archives did (`isThinArchive`, also the
+ * sitemap's), and its description is the market's own when WordPress has one.
+ *
+ * A TAG topic («شروع از صفر», «آپشن») stays NOINDEX, FOLLOW: its lessons are
+ * also on آموزش and on their market's page, and a third list would compete
+ * with both. Readers get a real prerendered page; crawlers follow it.
  */
 
 export const revalidate = 300;
@@ -40,7 +48,9 @@ async function resolve(slug: string, rawKey: string) {
   const [archive, markets] = await Promise.all([getAllSummaries(), getMarkets()]);
   const chips = educationChips(archive, markets);
   const chip = chips.find((c) => c.key === key);
-  return chip ? { chip, chips, markets, lessons: educationFor(archive, key) } : null;
+  if (!chip) return null;
+  const market = markets.find((m) => m.slug === key) ?? null;
+  return { chip, chips, markets, market, lessons: educationFor(archive, key) };
 }
 
 function safeDecode(value: string): string {
@@ -64,8 +74,8 @@ export async function generateMetadata({
     seo: null,
     path: `/category/education/${found.chip.key}`,
     fallbackTitle: `آموزش ${found.chip.name}`,
-    fallbackDescription: EDUCATION_DESCRIPTION,
-    noindex: true,
+    fallbackDescription: found.market?.description || EDUCATION_DESCRIPTION,
+    noindex: !found.market || isThinArchive(found.lessons.length),
   });
 }
 
@@ -76,9 +86,17 @@ export default async function EducationTopicPage({
 }) {
   const { slug, key } = await params;
   const found = await resolve(slug, key);
-  if (!found) notFound();
+  if (!found) {
+    /* A market with no lessons is still a URL people have: `/market/<slug>`
+       301s here. Send it on rather than 404 — see emptyLessonsFallback. */
+    if (slug === 'education') {
+      const fallback = emptyLessonsFallback(await getMarkets(), safeDecode(key));
+      if (fallback) permanentRedirect(fallback);
+    }
+    notFound();
+  }
 
-  const { chip, chips, markets, lessons } = found;
+  const { chip, chips, markets, market, lessons } = found;
 
   return (
     <ArchiveShell
@@ -88,7 +106,7 @@ export default async function EducationTopicPage({
         { name: chip.name, href: `/category/education/${chip.key}` },
       ]}
       title={`آموزش ${chip.name}`}
-      description={EDUCATION_DESCRIPTION}
+      description={market?.description || EDUCATION_DESCRIPTION}
       /* One page: a topic holds tens of lessons at most, and the archive
          fetch already has every one of them. */
       articles={{
@@ -118,6 +136,7 @@ export default async function EducationTopicPage({
       emptyMessage="هنوز آموزشی در این موضوع منتشر نشده."
       emptyAction={{ href: '/category/education', label: 'همه‌ی آموزش‌ها' }}
       markets={markets}
+      activeHref={`/category/education/${chip.key}`}
     />
   );
 }

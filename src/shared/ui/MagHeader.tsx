@@ -6,7 +6,6 @@ import type { Market } from '@/features/mag/types/mag.types';
 import { MagHeaderShell } from './MagHeaderShell';
 import { MagLogo } from './MagLogo';
 import { MobileNav } from './MobileNav';
-import { MarketMenu } from './MarketMenu';
 import { ThemeToggle } from './ThemeToggle';
 
 /**
@@ -25,10 +24,11 @@ import { ThemeToggle } from './ThemeToggle';
  * masthead is. A reader three articles deep could reach the main site and could
  * not reach `/mag` except through a breadcrumb.
  *
- * TWO TAXONOMIES, TWO TREATMENTS. Content types are flat links; markets are
- * behind a labelled disclosure. The row used to mix them — «طلا و ارز · بورس
- * ایران · کریپتو · آموزش · اخبار», three markets then two types, with nothing
- * to say they are different axes. See MarketMenu.
+ * SECTIONS ONLY. Markets had a «بازارها» disclosure here until 2026-10-07,
+ * when the team asked for them to stop being a section and become
+ * sub-categories of آموزش and اخبار (lib/subcategories.ts). They are reached
+ * from each section's own chips, the «دسته‌بندی مطالب» sidebar and the mobile
+ * menu, which nests them under آموزش.
  *
  * STICKY ON MOBILE ONLY, and hiding on scroll down — see MagHeaderShell.
  *
@@ -49,9 +49,8 @@ import { ThemeToggle } from './ThemeToggle';
  * `action="/search"` posts to the main site and silently leaves the magazine.
  */
 export function MagHeader({ markets }: { markets: Market[] }) {
-  /* Markets go to both consumers unfiltered. Suppressing the empty ones —
-     «مسکن ۰» is a promise of nothing — is done inside MarketMenu and MobileNav,
-     from the same rule, so the header does not hold a copy of it. */
+  /* Markets go to MobileNav unfiltered; it decides which sub-categories have
+     posts, from the same rule as the sidebar (subcategoriesOf). */
   return (
     <MagHeaderShell>
       {/* `.mag-gutter`, the page's own container — it was max-w-1440 with a 40px
@@ -72,8 +71,8 @@ export function MagHeader({ markets }: { markets: Market[] }) {
           <MagLogo className="h-[28px] w-auto md:h-[30px]" />
         </Link>
 
-        {/* Sections at lg and up, then the markets disclosure. Below lg all of
-            it is behind the hamburger at the end of this row. */}
+        {/* Sections at lg and up. Below lg they are behind the hamburger at
+            the end of this row. */}
         <nav aria-label="بخش‌های مجله" className="hidden items-center gap-6 lg:flex">
           {SECTION_NAV.map((link) => (
             <Link
@@ -94,7 +93,6 @@ export function MagHeader({ markets }: { markets: Market[] }) {
               {link.label}
             </Link>
           ))}
-          <MarketMenu markets={markets} />
         </nav>
 
         <span className="flex-1" />

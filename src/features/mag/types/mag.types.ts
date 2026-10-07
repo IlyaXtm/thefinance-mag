@@ -36,6 +36,13 @@ export interface Market {
   description: string | null;
   /** Published article count. Null when not requested. */
   count: number | null;
+  /**
+   * The same count split by content type — how many lessons, how much news.
+   * Null when not requested. Since 2026-10-07 a market is shown to readers as
+   * a sub-category of آموزش or اخبار, and it is only offered under a parent
+   * that actually has posts in it.
+   */
+  byType: Partial<Record<ContentTypeSlug, number>> | null;
 }
 
 /**

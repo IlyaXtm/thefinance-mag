@@ -41,7 +41,7 @@ const ROUTES = [
   '/mag/archive',
   '/mag/news',
   '/mag/fundamental-analysis',
-  '/mag/market/crypto',
+  '/mag/category/education/crypto',
   '/mag/category/education',
   /* Real-shaped article bodies. See the overflow note below. */
   '/mag/stress-wide-content',
@@ -341,7 +341,7 @@ for (const route of ROUTES) {
  */
 const NOT_FOUND_URLS = [
   '/mag/this-article-does-not-exist',
-  '/mag/market/not-a-market',
+  '/mag/category/education/not-a-topic',
   '/mag/author/not-an-author',
   '/mag/category/not-a-category',
 ];

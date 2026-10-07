@@ -258,6 +258,29 @@ the position — the entire competitive category competes on exactly these.
 
 ## Content model
 
+**Markets are sub-categories on the page, not a section.** Decided 2026-10-07
+(team request, owner's go-ahead).
+
+The team: «اصلا مارکت رو نمیخوان؛ خودش و زیرمجموعه‌هاش باید زیرمجموعه‌ی کتگوری
+بشن». Three ways to do that were weighed: real WordPress child categories
+(about 12 new terms and ~150 posts re-filed by hand), flat categories (~130
+re-filed), or keeping the market taxonomy as DATA and changing only what readers
+see. The third was chosen — it is the only one with no content migration, and
+editors keep ticking one market per post.
+
+So: `/market/*` 301s to `/category/education/<market>` (the lessons — the
+evergreen, indexable half of an old market archive); the header has no
+«بازارها» menu; cards, the article kicker and breadcrumb read
+section › sub-category; the «دسته‌بندی مطالب» sidebar is the tree. `/news/<market>`
+stays noindex. `lib/subcategories.ts` holds the mapping and the merge
+(`gold-usd` → `tse`, «بازار ایران»). The two-axis data model (market ×
+contentType, "two axes, not six") is unchanged — this is the same collapse
+`cardCategory` already made for cards, applied to the whole page.
+
+---
+
+## Content model
+
 **CMS-injected navigation chrome is stripped at the mapping layer.** Decided
 2026-09-08.
 

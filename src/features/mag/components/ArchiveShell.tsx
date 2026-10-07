@@ -47,7 +47,7 @@ export function ArchiveShell({
   baseQuery,
   emptyMessage,
   emptyAction,
-  activeMarketSlug = null,
+  activeHref = null,
   markets,
   lead,
   showCount = true,
@@ -60,12 +60,13 @@ export function ArchiveShell({
   /** The visually-hidden section heading — one h2 under the masthead's h1. */
   headingId: string;
   headingText: string;
-  /** Where pagination points: '/archive', '/market/tse', '/category/news'. */
+  /** Where pagination points: '/archive', '/category/education'. */
   basePath: string;
   baseQuery?: Record<string, string | undefined>;
   emptyMessage: string;
   emptyAction?: { href: string; label: string };
-  activeMarketSlug?: string | null;
+  /** The page in the «دسته‌بندی مطالب» tree to mark as current. */
+  activeHref?: string | null;
   markets: Market[];
   /** Between the header and the filter row — the education page's search box
       and featured guides. */
@@ -129,7 +130,7 @@ export function ArchiveShell({
         </section>
 
         <aside className="flex flex-col gap-6 lg:sticky lg:top-[76px]">
-          <CategoryListCard markets={markets} activeSlug={activeMarketSlug} />
+          <CategoryListCard markets={markets} activeHref={activeHref} />
           <NewsletterCta />
         </aside>
       </div>

@@ -13,7 +13,6 @@ export {
   getArticles,
   getArticle,
   getMarkets,
-  getMarket,
   getAuthor,
   getAuthors,
   getReports,

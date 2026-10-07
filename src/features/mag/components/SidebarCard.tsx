@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Market } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
+import { SUBCATEGORY_PARENTS, subcategoriesOf, subcategoryHref } from '../lib/subcategories';
 
 /**
  * The sidebar panel shell — one border, one background, one title.
@@ -31,64 +32,91 @@ export function SidebarCard({
 }
 
 /**
- * دسته‌بندی‌ها — names only, hairline-separated.
+ * «دسته‌بندی مطالب» — the sections, each with its sub-categories under it.
  *
- * Only populated terms are listed. Linking to an empty archive is the same
- * failure as rendering an empty section, and `housing` currently has zero.
+ *   اخبار
+ *     اقتصاد جهانی · فارکس · کریپتو …
+ *   آموزش
+ *     بازار ایران · کریپتو …
  *
- * No post counts (team, 2026-10-06: «عددا پاک بشه»). A count beside each
- * name reads as a scoreboard and adds nothing to choosing where to go.
+ * Until 2026-10-07 this listed the markets on their own, linking to market
+ * archives. The team asked for markets to be sub-categories of the categories
+ * instead (lib/subcategories.ts), and this card is where that tree is drawn.
+ * A sub-category is listed under a section only if that section has posts in
+ * it — `/news/housing` would be an empty page.
+ *
+ * Names only — no post counts (team, 2026-10-06: «عددا پاک بشه»).
+ *
+ * `activeHref` marks the page the reader is on, section or sub-category.
  */
 export function CategoryListCard({
   markets,
-  activeSlug = null,
+  activeHref = null,
 }: {
   markets: Market[];
-  activeSlug?: string | null;
+  activeHref?: string | null;
 }) {
-  const populated = markets.filter((market) => (market.count ?? 0) > 0);
-  if (populated.length === 0) return null;
-
   return (
-    /*
-      «بازارها», not «دسته‌بندی‌ها». THE HEADING NAMED THE WRONG TAXONOMY.
-
-      This card lists اقتصاد جهانی, بورس ایران, طلا و دلار, فارکس, کریپتو —
-      markets, every one. The real categories are آموزش, مقالات, اخبار, تحلیل,
-      اینچارت, and none of them appears here. The label said one axis and the
-      list showed the other, on a site whose whole taxonomy decision is that
-      there are exactly two axes and they are kept apart.
-
-      Renamed rather than switching the list to categories: the counts, the
-      links and the `activeSlug` a market archive passes in are all market
-      data, so changing the list would mean changing the component's job. The
-      header now names both axes explicitly, which is what made this
-      contradiction worth fixing rather than tolerable.
-    */
-    /* Renamed again, 2026-10-05, at the team's request: «دسته‌بندی مطالب»
-       is the reader's word for where an article is filed. The note above
-       records why it once said «بازارها»; the list itself is unchanged. */
     <SidebarCard title="دسته‌بندی مطالب">
       <ul className="flex flex-col">
-        {populated.map((market) => {
-          const isActive = market.slug === activeSlug;
-
+        {SUBCATEGORY_PARENTS.map((parent) => {
+          const children = subcategoriesOf(markets, parent.key);
           return (
-            <li key={market.slug}>
-              <Link
-                href={`/market/${market.slug}`}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-11 items-center border-b border-border-subtle py-3 text-[14.5px] transition-colors hover:text-accent ${
-                  isActive ? 'text-accent' : 'text-text-secondary'
-                }`}
+            <li key={parent.key} className="border-b border-border-subtle last:border-b-0">
+              <TreeLink
+                href={parent.href}
+                active={activeHref === parent.href}
+                className="text-[14.5px] font-semibold"
               >
-                {market.name}
-              </Link>
+                {parent.name}
+              </TreeLink>
+              {children.length > 0 && (
+                <ul className="mb-2 flex flex-col border-s border-border-subtle ps-4">
+                  {children.map((market) => {
+                    const href = subcategoryHref(parent.key, market.slug);
+                    return (
+                      <li key={market.slug}>
+                        <TreeLink
+                          href={href}
+                          active={activeHref === href}
+                          className="text-[14px]"
+                        >
+                          {market.name}
+                        </TreeLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </li>
           );
         })}
       </ul>
     </SidebarCard>
+  );
+}
+
+function TreeLink({
+  href,
+  active,
+  className,
+  children,
+}: {
+  href: string;
+  active: boolean;
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? 'page' : undefined}
+      className={`flex min-h-11 items-center transition-colors hover:text-accent ${
+        active ? 'text-accent' : 'text-text-secondary'
+      } ${className}`}
+    >
+      {children}
+    </Link>
   );
 }
 

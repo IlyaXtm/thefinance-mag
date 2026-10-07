@@ -6,6 +6,7 @@ import {
   getMarkets,
 } from '@/features/mag/api/v1/mag.service';
 import { magUrl } from '@/features/mag/lib/site';
+import { subcategoryHref } from '@/features/mag/lib/subcategories';
 import { isThinArchive } from '@/features/mag/lib/taxonomy';
 
 /**
@@ -102,12 +103,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     articles carry no market at all, so those archives ARE thin, and indexing
     them would not make them less so. The fix is tagging, which is a content
     workflow, not a template: backlog B17.
+
+    2026-10-07: the market archives are retired (301). What carries a market
+    now is its lessons page, «آموزش › <market>», and the floor applies to the
+    lessons it actually lists — the news is on `/news/<market>`, noindex.
   */
   for (const market of markets) {
-    if (isThinArchive(market.count)) continue;
+    if (isThinArchive(market.byType?.education)) continue;
 
     entries.push({
-      url: magUrl(`/market/${market.slug}`),
+      url: magUrl(subcategoryHref('education', market.slug)),
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.6,

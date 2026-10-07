@@ -187,7 +187,10 @@ export function NewsView({
               meta: `${toPersianDigits(a.readingTime)} دقیقه مطالعه`,
             }))}
           />
-          <CategoryListCard markets={allMarkets} />
+          <CategoryListCard
+            markets={allMarkets}
+            activeHref={activeMarket ? `/news/${activeMarket}` : '/news'}
+          />
           <NewsletterCta />
         </aside>
       </div>

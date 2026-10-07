@@ -41,7 +41,6 @@ type MagSource = {
   getPreviewArticle: typeof mock.getPreviewArticle;
   getPreviewSlug: typeof mock.getPreviewSlug;
   getMarkets: typeof mock.getMarkets;
-  getMarket: typeof mock.getMarket;
   getCategories: typeof mock.getCategories;
   getCategory: typeof mock.getCategory;
   getAuthor: typeof mock.getAuthor;
@@ -73,9 +72,6 @@ export const getPreviewSlug: MagSource['getPreviewSlug'] = (id, secret) =>
   source.getPreviewSlug(id, secret);
 
 export const getMarkets: MagSource['getMarkets'] = () => source.getMarkets();
-
-export const getMarket: MagSource['getMarket'] = (slug) =>
-  source.getMarket(slug);
 
 /** The live category taxonomy — what `/category/<slug>` is generated from. */
 export const getCategories: MagSource['getCategories'] = () => source.getCategories();

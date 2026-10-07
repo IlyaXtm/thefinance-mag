@@ -15,6 +15,7 @@ import {
   SUPPORT_TELEGRAM_URL,
 } from '@/features/mag/lib/site';
 import { currentJalaliYear } from '@/features/mag/lib/format';
+import { subcategoriesOf, subcategoryHref } from '@/features/mag/lib/subcategories';
 import type { Market } from '@/features/mag/types/mag.types';
 
 /**
@@ -32,7 +33,7 @@ import type { Market } from '@/features/mag/types/mag.types';
  * voice. It appears here on every page and again on the post page.
  */
 export function MagFooter({ markets }: { markets: Market[] }) {
-  const populated = markets.filter((market) => (market.count ?? 0) > 0);
+  const lessonsByMarket = subcategoriesOf(markets, 'education');
   /* Was `toPersianDigits(1405)`, which rendered «۱٬۴۰۵» — a thousands
      separator inside a year — and was a literal that would have gone stale in
      Farvardin regardless. Both halves fixed at once; see lib/format.ts. */
@@ -163,24 +164,20 @@ export function MagFooter({ markets }: { markets: Market[] }) {
           </div>
 
           {/*
-            «بازارها», not «دسته‌بندی‌ها» — THIS COLUMN LISTS MARKETS.
+            آموزش and its sub-categories (2026-10-07). This column was
+            «بازارها» — a list of market archives — until the team asked for
+            markets to become sub-categories of the sections. The lesson
+            pages are the indexable ones, so this is the tree the footer
+            draws; news has its own link in «مجله» beside it.
 
-            Same mislabel the review found on the home sidebar: the heading
-            named one taxonomy and the list showed the other. It is not in the
-            review's list, and it is corrected anyway: the header now draws the
-            two axes apart explicitly, and a footer still calling markets
-            «categories» contradicts the thing the header just taught.
-
-            The title follows the content rather than being fixed, because the
-            fallback is a different axis. With no market tagged, market links
-            would be an empty column, so it falls back to the section links —
-            and then it is not «بازارها» any more and does not say so.
+            With no market holding a lesson the column falls back to the
+            section links, and its title follows, as before.
           */}
-          <FooterColumn title={populated.length > 0 ? 'بازارها' : 'بخش‌ها'}>
-            {(populated.length > 0
-              ? populated.map((market) => ({
+          <FooterColumn title={lessonsByMarket.length > 0 ? 'آموزش' : 'بخش‌ها'}>
+            {(lessonsByMarket.length > 0
+              ? lessonsByMarket.map((market) => ({
                   label: market.name,
-                  href: `/market/${market.slug}`,
+                  href: subcategoryHref('education', market.slug),
                 }))
               : SECTION_NAV
             ).map((link) => (

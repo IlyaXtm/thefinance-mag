@@ -166,7 +166,7 @@ export function ContentTypeFilterBar({
 export function MarketFilterBar({
   markets,
   activeSlug = null,
-  hrefFor = (slug) => `/market/${slug}`,
+  hrefFor,
   allHref = '/',
   label = 'دسته‌بندی مطالب',
   showLabel = true,
@@ -175,10 +175,11 @@ export function MarketFilterBar({
   markets: Market[];
   activeSlug?: string | null;
   /**
-   * Where a chip goes. Market archives by default; the news page points them
-   * at `/news/<market>` so the chips filter NEWS, not the whole archive.
+   * Where a chip goes — always a sub-category of a section (`/news/<market>`,
+   * `/category/education/<market>`). There is no market archive to default to
+   * since 2026-10-07.
    */
-  hrefFor?: (slug: string) => string;
+  hrefFor: (slug: string) => string;
   /** Where «همه» goes. */
   allHref?: string;
   label?: string;

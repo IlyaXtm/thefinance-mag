@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache';
+import { subcategoryHref } from '@/features/mag/lib/subcategories';
 import { NextResponse, type NextRequest } from 'next/server';
 import { matchesPreviewSecret } from '@/features/mag/lib/preview-secret';
 
@@ -56,8 +57,10 @@ export async function POST(request: NextRequest) {
     '/archive',
     /* The feed, which is a recent-items list by definition. */
     '/feed',
-    /* Its market archive, when the post has one. */
-    body.market ? `/market/${body.market}` : null,
+    /* Its market's sub-category pages, when the post has one — both, since
+       the webhook does not say whether the post is news or a lesson. */
+    body.market ? subcategoryHref('education', body.market) : null,
+    body.market ? subcategoryHref('news', body.market) : null,
   ].filter((path): path is string => path !== null);
 
   for (const path of paths) {

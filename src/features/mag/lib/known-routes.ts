@@ -24,7 +24,6 @@ export const RESERVED_SEGMENTS: ReadonlySet<string> = new Set([
   'category',
   'feed',
   'health',
-  'market',
   'media',
   'news',
   'not-found-page',

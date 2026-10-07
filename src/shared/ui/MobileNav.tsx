@@ -4,7 +4,10 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SECTION_NAV, SITE_EXIT } from '@/features/mag/lib/nav';
+import { subcategoriesOf, subcategoryHref } from '@/features/mag/lib/subcategories';
 import type { Market } from '@/features/mag/types/mag.types';
+
+const EDUCATION_HREF = '/category/education';
 
 /**
  * Mobile navigation — a disclosure, replacing the horizontal strip.
@@ -16,7 +19,7 @@ import type { Market } from '@/features/mag/types/mag.types';
  * focus trap and a motion-preference case, all to hide two words." Every one
  * of those is a cost of HIDING things, and a scrollable row hid nothing.
  *
- * It hides things now. Sections, the markets group and the
+ * It hides things now. Sections, آموزش's sub-categories and the
  * exit to the main site all live in that row, and at 390px it is cut off
  * mid-item — the reviewer's screenshot shows it clipped mid-word. A menu that
  * is cut off communicates LESS than one that is honestly closed: the reader
@@ -28,16 +31,14 @@ import type { Market } from '@/features/mag/types/mag.types';
  *
  * ── One source of truth ─────────────────────────────────────────────────
  *
- * `SECTION_NAV`, the same `markets` prop the desktop row receives, and
- * `SITE_EXIT`. The panel does not carry its own list. A forked mobile nav is
+ * `SECTION_NAV`, the `markets` (as آموزش's sub-categories) and `SITE_EXIT`. The panel does not carry its own list. A forked mobile nav is
  * how a section gets added in one place and not the other, and nobody notices
  * because nobody browses their own site on a phone.
  *
  * ── Touch, not hover ────────────────────────────────────────────────────
  *
- * Opens on click. `MarketMenu`'s `(hover: hover) and (pointer: fine)` gate
- * keeps hover behaviour for pointer devices, and this component is below `lg`
- * where that gate is false anyway. Nothing here opens on anything but a
+ * Opens on click. This component is below `lg`, where no menu opens on
+ * hover anyway. Nothing here opens on anything but a
  * deliberate press.
  */
 export function MobileNav({ markets }: { markets: Market[] }) {
@@ -47,10 +48,8 @@ export function MobileNav({ markets }: { markets: Market[] }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
-  /* Empty markets are suppressed everywhere they appear — «مسکن ۰» is a
-     promise of nothing. Same filter as the desktop row, applied to the same
-     data, so the two cannot disagree. */
-  const populated = markets.filter((market) => (market.count ?? 0) > 0);
+  /* Only markets that have lessons — the same rule as the sidebar tree. */
+  const lessonsByMarket = subcategoriesOf(markets, 'education');
 
   /*
     A navigation that stays open after navigating is a navigation that has
@@ -214,37 +213,28 @@ export function MobileNav({ markets }: { markets: Market[] }) {
                 >
                   {link.label}
                 </Link>
+                {/* آموزش's sub-categories, nested under it — the markets,
+                    as the team asked for them (lib/subcategories.ts). Only
+                    under آموزش: the panel is a phone screen, and the news
+                    sub-categories are the chips at the top of /news. */}
+                {link.href === EDUCATION_HREF && lessonsByMarket.length > 0 && (
+                  <ul className="mb-2 flex flex-col border-s border-border-subtle ps-4">
+                    {lessonsByMarket.map((market) => (
+                      <li key={market.slug}>
+                        <Link
+                          href={subcategoryHref('education', market.slug)}
+                          className="flex min-h-11 items-center py-1 text-[15px] text-text-secondary transition-colors hover:text-text-primary motion-reduce:transition-none"
+                        >
+                          {market.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
         </nav>
-
-        {populated.length > 0 && (
-          <nav aria-label="بازارها" className="mt-5 border-t border-border-subtle pt-4">
-            {/*
-              The axis is NAMED, exactly as the desktop row names it with the
-              «بازارها» disclosure. `aria-hidden` on the caption because the
-              nav's own label already says it and reading it twice is noise.
-              One control, one taxonomy — merging the two axes into a single
-              list is the defect this menu is not allowed to reintroduce.
-            */}
-            <span aria-hidden="true" className="text-meta text-text-muted">
-              بازارها
-            </span>
-            <ul className="mt-1 flex flex-col">
-              {populated.map((market) => (
-                <li key={market.slug}>
-                  <Link
-                    href={`/market/${market.slug}`}
-                    className="flex min-h-11 items-center py-1 text-[15px] text-text-secondary transition-colors hover:text-text-primary motion-reduce:transition-none"
-                  >
-                    {market.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
 
         {/* The exit, last and quietest — it leaves the magazine rather than
             moving within it, so it keeps the treatment the desktop row gives
