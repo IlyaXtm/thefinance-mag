@@ -19,7 +19,7 @@ import type { Crumb } from './Breadcrumbs';
  *
  * ── Why this was extracted ──────────────────────────────────────────────
  *
- * `/archive` and `/market/<slug>` had grown two copies of it — same grid, same
+ * `/archive` and `/market/<slug>` (retired 2026-10-07) had grown two copies of it — same grid, same
  * sticky offset, same sidebar, same breadcrumb JSON-LD — differing only in the
  * masthead text, which filter row appears, and where pagination points. Adding
  * `/category/<slug>` as a third copy would have made the layout a convention

@@ -4,6 +4,8 @@ import { currentRedirects } from '@/features/mag/lib/redirect-source';
 import { isKnownSlug } from '@/features/mag/lib/known-slugs';
 import { RESERVED_SEGMENTS } from '@/features/mag/lib/known-routes';
 import { marketRedirectTarget } from '@/features/mag/lib/subcategories';
+import { MARKET_SLUGS } from '@/features/mag/types/mag.types';
+import { TOPIC_TAGS } from '@/features/mag/lib/education';
 import { MAG_PATH } from '@/features/mag/lib/site';
 
 /**
@@ -161,8 +163,13 @@ function retiredSectionRedirect(pathname: string, search: URLSearchParams): stri
   if (/^\/category\/analysis(\/page\/\d+)?$/.test(path)) return marketRedirectTarget('tse');
   if (path === '/archive' && search.get('type') === 'analysis') return marketRedirectTarget('tse');
   if (path === '/market') return '/category/education';
+  /* Only the six real slugs (compiled in, registered by the mu-plugin). Any
+     other `/market/<x>` is not a retired page, it is a 404 — answered below
+     by `notFoundRewrite`, not sent on a 301 to an empty lessons URL. */
   const market = /^\/market\/([^/]+)(\/page\/\d+)?$/.exec(path);
-  if (market) return marketRedirectTarget(market[1]);
+  if (market && (MARKET_SLUGS as readonly string[]).includes(market[1])) {
+    return marketRedirectTarget(market[1]);
+  }
   return null;
 }
 
@@ -251,10 +258,27 @@ export async function middleware(request: NextRequest) {
  * `RESERVED_SEGMENTS` would 404 in production while working in `next dev`.
  * `check-invariants` reads `src/app` and fails on exactly that.
  *
- * Articles and authors come from the CMS and go through the set. Markets
- * used to be checked here too; since 2026-10-07 every `/market/…` URL is a
- * 301 (`retiredSectionRedirect`) and never reaches this function.
+ * Articles and authors come from the CMS and go through the set. A real
+ * market's `/market/…` URL is a 301 since 2026-10-07 and never reaches this
+ * function; anything else under `/market/` is a 404 from the static page.
  */
+/**
+ * Where middleware reaches this same app — for the slug list.
+ *
+ * NOT `request.nextUrl.origin`. Behind nginx that is the public host, so the
+ * request left the container, went out through the CDN and came back (or did
+ * not: the host cannot reliably reach itself that way); in a local run of the
+ * image it is the host-side port, which does not exist inside the container.
+ * Either way `isKnownSlug` got null, rejected nothing, and every unknown
+ * article and author URL got the blank streamed 404 (measured 2026-10-07).
+ * The server listens on 0.0.0.0:$PORT (Dockerfile), so loopback always works.
+ * `next dev` sets no PORT and keeps the request's own origin, which is local.
+ */
+function selfOrigin(request: NextRequest): string {
+  const port = process.env.PORT;
+  return port ? `http://127.0.0.1:${port}` : request.nextUrl.origin;
+}
+
 async function notFoundRewrite(
   request: NextRequest,
   pathname: string,
@@ -302,15 +326,29 @@ async function notFoundRewrite(
   const rewrite = () =>
     NextResponse.rewrite(absolute(request, '/not-found-page'), { status: 404 });
 
+  /* /market/<anything that is not a market> — see retiredSectionRedirect. */
+  if (segments[0] === 'market') return rewrite();
+
+  /* /category/<slug>/<key> — only آموزش has topics, and a topic is one of the
+     six markets or an agreed tag (lib/education.ts). Anything else would reach
+     the page's request-time notFound(), which streams a blank 404. A real key
+     with no lessons yet is the page's to handle (it forwards). */
+  if (segments.length === 3 && segments[0] === 'category') {
+    const key = segments[2];
+    const isTopic =
+      (MARKET_SLUGS as readonly string[]).includes(key) || TOPIC_TAGS.some((t) => t.slug === key);
+    return segments[1] === 'education' && isTopic ? null : rewrite();
+  }
+
   /* /author/<slug> */
   if (segments.length === 2 && segments[0] === 'author') {
-    const known = await isKnownSlug(request.nextUrl.origin, 'authors', segments[1]);
+    const known = await isKnownSlug(selfOrigin(request), 'authors', segments[1]);
     return known === false ? rewrite() : null;
   }
 
   /* /<slug> — an article, unless the segment is a route. */
   if (segments.length === 1 && !RESERVED_SEGMENTS.has(segments[0])) {
-    const known = await isKnownSlug(request.nextUrl.origin, 'articles', segments[0]);
+    const known = await isKnownSlug(selfOrigin(request), 'articles', segments[0]);
     return known === false ? rewrite() : null;
   }
 

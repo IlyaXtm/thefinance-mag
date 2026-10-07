@@ -32,7 +32,6 @@ const USE_MOCK = (process.env.USE_MOCK ?? process.env.NEXT_PUBLIC_USE_MOCK) === 
  */
 type MagSource = {
   getArticles: typeof mock.getArticles;
-  getMarketArticles: typeof mock.getMarketArticles;
   getAllSummaries: typeof mock.getAllSummaries;
   getRoutableSlugs: typeof mock.getRoutableSlugs;
   magArchiveOverflowed: typeof mock.magArchiveOverflowed;
@@ -92,9 +91,6 @@ export const searchArticles: MagSource['searchArticles'] = (params) =>
 
 /** Useful in dev banners and diagnostics. */
 /** A market's list, count and pagination from one source — see mag.api.ts. */
-export const getMarketArticles: MagSource['getMarketArticles'] = (slug, page, perPage) =>
-  source.getMarketArticles(slug, page, perPage);
-
 export const getAllSummaries: MagSource['getAllSummaries'] = () => source.getAllSummaries();
 
 /* Every slug that resolves to an article — not the same as every slug the

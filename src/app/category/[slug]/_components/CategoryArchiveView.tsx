@@ -17,7 +17,7 @@ import { EducationLead } from './EducationLead';
 /**
  * The category archive, shared by `/category/<slug>` and its paginated route.
  *
- * Same shell as `/archive` and `/market/<slug>`. Only the data differs — that
+ * Same shell as `/archive` and `/category/education/<topic>`. Only the data differs — that
  * is the point of the shell and it is what the brief asked for.
  *
  * The filter row is the CONTENT-TYPE row, not a row of every category. Two

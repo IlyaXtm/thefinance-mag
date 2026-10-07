@@ -3,10 +3,10 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { getAllSummaries, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { EDUCATION_DESCRIPTION, educationChips, educationFor } from '@/features/mag/lib/education';
 import { toMetadata } from '@/features/mag/lib/seo';
-import { isThinArchive } from '@/features/mag/lib/taxonomy';
 import { emptyLessonsFallback } from '@/features/mag/lib/subcategories';
 import { MAG_NAME } from '@/features/mag/lib/site';
 import { ArchiveShell, ChipFilterBar } from '@/features/mag/components';
+import type { Market } from '@/features/mag/types/mag.types';
 
 /**
  * /mag/category/education/<topic> — where the chips under «می‌خواهی چه چیزی یاد
@@ -18,9 +18,12 @@ import { ArchiveShell, ChipFilterBar } from '@/features/mag/components';
  *
  * A MARKET's page here is indexable (2026-10-07). It is the sub-category
  * «آموزش › <market>», and since the market archives were retired it is where
- * `/market/<slug>` 301s — the page that inherits their search equity. It
- * follows the same floor the market archives did (`isThinArchive`, also the
- * sitemap's), and its description is the market's own when WordPress has one.
+ * `/market/<slug>` 301s — the page that inherits their search equity. So it is
+ * indexable whenever it exists, with NO thin-archive floor: a 301 into a
+ * noindex page would drop the ranking the old archive had (review finding,
+ * /market/tse and /market/forex). Its description is the market's own when
+ * WordPress has one, else a per-market line — not the آموزش page's, which
+ * would give every market page the same snippet.
  *
  * A TAG topic («شروع از صفر», «آپشن») stays NOINDEX, FOLLOW: its lessons are
  * also on آموزش and on their market's page, and a third list would compete
@@ -53,6 +56,14 @@ async function resolve(slug: string, rawKey: string) {
   return { chip, chips, markets, market, lessons: educationFor(archive, key) };
 }
 
+/** The market's WordPress description, else a line naming the market. */
+function topicDescription(market: Market | null, name: string): string {
+  if (market?.description) return market.description;
+  return market
+    ? `آموزش ${name} از پایه تا حرفه‌ای؛ مفاهیم، ابزارها و راهنماهای کاربردی در مجله فایننس.`
+    : EDUCATION_DESCRIPTION;
+}
+
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
@@ -74,8 +85,8 @@ export async function generateMetadata({
     seo: null,
     path: `/category/education/${found.chip.key}`,
     fallbackTitle: `آموزش ${found.chip.name}`,
-    fallbackDescription: found.market?.description || EDUCATION_DESCRIPTION,
-    noindex: !found.market || isThinArchive(found.lessons.length),
+    fallbackDescription: topicDescription(found.market, found.chip.name),
+    noindex: !found.market,
   });
 }
 
@@ -106,7 +117,7 @@ export default async function EducationTopicPage({
         { name: chip.name, href: `/category/education/${chip.key}` },
       ]}
       title={`آموزش ${chip.name}`}
-      description={market?.description || EDUCATION_DESCRIPTION}
+      description={topicDescription(market, chip.name)}
       /* One page: a topic holds tens of lessons at most, and the archive
          fetch already has every one of them. */
       articles={{

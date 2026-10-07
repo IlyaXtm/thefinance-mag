@@ -342,6 +342,7 @@ for (const route of ROUTES) {
 const NOT_FOUND_URLS = [
   '/mag/this-article-does-not-exist',
   '/mag/category/education/not-a-topic',
+  '/mag/market/not-a-market',
   '/mag/author/not-an-author',
   '/mag/category/not-a-category',
 ];
@@ -396,7 +397,10 @@ async function checkReservedSegments() {
   const routeDirs = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    if (entry.name.startsWith('[') || entry.name === 'api' || entry.name === 'fonts') continue;
+    /* `_name` is a Next.js private folder (route-local components), not a
+       route segment. */
+    if (entry.name.startsWith('[') || entry.name.startsWith('_')) continue;
+    if (entry.name === 'api' || entry.name === 'fonts') continue;
     routeDirs.push(entry.name);
   }
 

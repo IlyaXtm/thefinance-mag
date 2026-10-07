@@ -27,9 +27,9 @@ import { CategoryArchiveView } from './_components/CategoryArchiveView';
  *
  * `generateStaticParams` reads the live taxonomy. A category the editors add
  * next month gets a working, prerendered, sitemap-listed archive on the next
- * revalidation — no deploy. That is deliberate and it is the difference from
- * `/market/<slug>`, whose six terms are registered by the mu-plugin and cannot
- * change without one.
+ * revalidation — no deploy. That is deliberate and it was the difference from
+ * the retired `/market/<slug>` archives, whose six terms are registered by the
+ * mu-plugin and cannot change without one.
  *
  * THE NAV DOES NOT FOLLOW. Every category getting a route does not mean every
  * category getting a link in the header: `CATEGORY_NAV` stays hand-picked, and

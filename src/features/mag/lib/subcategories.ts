@@ -62,7 +62,9 @@ export function marketCounts(
 /**
  * Markets merged by the team (2026-10-06): «بورس ایران» and «طلا و دلار»
  * become one «بازار ایران», which keeps the `tse` slug. The posts move in
- * wp-admin; the old URL goes straight to the merged home.
+ * wp-admin. Applied only once `gold-usd` HAS NO LESSONS (emptyLessonsFallback):
+ * until the content team has moved them, its lessons page is real and must
+ * stay reachable — sending it to `tse` early would hide twenty posts.
  */
 const MERGED_MARKETS: Readonly<Record<string, string>> = { 'gold-usd': 'tse' };
 
@@ -91,7 +93,11 @@ export function emptyLessonsFallback(
  * Where a retired `/market/<slug>` URL now lives: that market's lessons.
  * Lessons, not news, because they are the evergreen pages a market archive was
  * ranking with — the news for the same market stays one chip away.
+ *
+ * One hop for every market with lessons. A merged-away or lesson-less market
+ * takes a second (the lessons page forwards it, emptyLessonsFallback) because
+ * middleware cannot know a market's counts without a CMS call.
  */
 export function marketRedirectTarget(slug: string): string {
-  return subcategoryHref('education', MERGED_MARKETS[slug] ?? slug);
+  return subcategoryHref('education', slug);
 }

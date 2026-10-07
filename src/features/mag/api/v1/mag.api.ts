@@ -425,8 +425,8 @@ export async function getArticles(
   params: ArticleListParams = {},
 ): Promise<Paginated<ArticleSummary>> {
   /*
-    `market` is accepted but no longer applied here — market archives go through
-    getMarketArticles(), which derives list, count and pagination from one
+    `market` is accepted but no longer applied here — market pages derive list,
+    count and pagination from the whole-archive fetch (getAllSummaries), one
     source. Filtering it here filtered a single unfiltered page and produced a
     list that disagreed with its own count.
   */
@@ -482,13 +482,18 @@ export async function getArticles(
 }
 
 /**
- * How many posts a whole-archive fetch will take. 53 published today.
+ * How many posts a whole-archive fetch will take.
  *
- * If the archive ever exceeds this the market pages under-report rather than
- * erroring, so `magArchiveOverflowed()` below makes that visible instead of
- * silent.
+ * It was 100 in ONE query, and the archive passed it on 2026-10-07 (110
+ * published). Everything derived from the archive went quietly short — market
+ * counts, the sitemap floor, chips — and `/api/known-slugs` correctly refused
+ * to answer from a short list, so middleware rejected nothing and every
+ * unknown article URL got the blank streamed 404 again. It now pages through
+ * the archive 100 at a time (WPGraphQL's per-query maximum) up to this
+ * ceiling; `magArchiveOverflowed()` still reports reaching it.
  */
-const ARCHIVE_FETCH_MAX = 100;
+const ARCHIVE_FETCH_MAX = 2000;
+const ARCHIVE_PAGE_SIZE = 100;
 
 let archiveOverflowed = false;
 
@@ -540,44 +545,32 @@ export function magArchiveOverflowed(): boolean {
  * Revisit when the archive approaches ARCHIVE_FETCH_MAX.
  */
 export async function getAllSummaries(): Promise<ArticleSummary[]> {
-  const data = await gql<{ posts: { nodes: WpSummary[] } }>(
-    `query AllArticles($size: Int!) {
-      posts(first: $size, where: { status: PUBLISH }) {
-        nodes { ${SUMMARY_FIELDS} }
-      }
-    }`,
-    { size: ARCHIVE_FETCH_MAX },
-  );
+  const nodes: WpSummary[] = [];
+  let after: string | null = null;
 
-  const nodes = data.posts.nodes;
-  archiveOverflowed = nodes.length >= ARCHIVE_FETCH_MAX;
+  for (;;) {
+    const data: {
+      posts: { nodes: WpSummary[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } };
+    } = await gql(
+      `query AllArticles($size: Int!, $after: String) {
+        posts(first: $size, after: $after, where: { status: PUBLISH }) {
+          pageInfo { hasNextPage endCursor }
+          nodes { ${SUMMARY_FIELDS} }
+        }
+      }`,
+      { size: ARCHIVE_PAGE_SIZE, after },
+    );
+
+    nodes.push(...data.posts.nodes);
+    const { hasNextPage, endCursor } = data.posts.pageInfo;
+    if (!hasNextPage || !endCursor || nodes.length >= ARCHIVE_FETCH_MAX) {
+      archiveOverflowed = hasNextPage && nodes.length >= ARCHIVE_FETCH_MAX;
+      break;
+    }
+    after = endCursor;
+  }
 
   return nodes.map(mapSummary);
-}
-
-/**
- * A market's archive: list, count and pagination from ONE source.
- *
- * `total` here is the number of posts actually in this market, so the header
- * strip, the sidebar and the rendered rows cannot disagree — they are three
- * readings of the same array.
- */
-export async function getMarketArticles(
-  marketSlug: string,
-  page: number,
-  perPage: number,
-): Promise<Paginated<ArticleSummary>> {
-  const all = await getAllSummaries();
-  const items = all.filter((a) => a.market?.slug === marketSlug);
-  const start = (Math.max(1, page) - 1) * perPage;
-
-  return {
-    items: items.slice(start, start + perPage),
-    page: Math.max(1, page),
-    perPage,
-    total: items.length,
-    totalPages: Math.max(1, Math.ceil(items.length / perPage)),
-  };
 }
 
 /**

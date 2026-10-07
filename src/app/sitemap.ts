@@ -105,11 +105,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     workflow, not a template: backlog B17.
 
     2026-10-07: the market archives are retired (301). What carries a market
-    now is its lessons page, «آموزش › <market>», and the floor applies to the
-    lessons it actually lists — the news is on `/news/<market>`, noindex.
+    now is its lessons page, «آموزش › <market>», listed — like its noindex —
+    whenever it has a lesson, without the floor: it inherits a URL that was
+    indexed, and a 301 into a thin-excluded page would throw that away. The
+    news is on `/news/<market>`, noindex.
   */
   for (const market of markets) {
-    if (isThinArchive(market.byType?.education)) continue;
+    if ((market.byType?.education ?? 0) === 0) continue;
 
     entries.push({
       url: magUrl(subcategoryHref('education', market.slug)),

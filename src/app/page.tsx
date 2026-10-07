@@ -90,7 +90,10 @@ export default async function MagIndexPage() {
         <LatestSection
           id="articles-heading"
           title="تازه‌ترین مقالات"
-          href="/category/articles"
+          /* /archive, not «مقالات»: the block is every non-news post, and
+             some (inchart, uncategorised) are not filed under «مقالات», so
+             only the full archive is sure to contain all nine. */
+          href="/archive"
           items={articles}
         />
         <LatestSection id="news-heading" title="تازه‌ترین اخبار" href="/news" items={news} />

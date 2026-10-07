@@ -435,15 +435,19 @@ export default async function ArticlePage({
           content model grows a sixth axis. The design's own export renders
           two.
 
-          The two here are the axes the model already has — market, then
-          content type. A card shows one because a card has room for one; the
-          header has room for both. Roughly 60% of the archive carries no
-          market, so ONE chip is the common case, and the row simply holds
-          fewer items: nothing is reserved and nothing shifts.
+          The two here are the axes the model already has — section, then
+          its sub-category (the market). A card shows one because a card has
+          room for one; the header has room for both. Roughly 60% of the
+          archive carries no market, so ONE chip is the common case, and the
+          row simply holds fewer items: nothing is reserved and nothing shifts.
+
+          LABELS, NOT LINKS, since 2026-10-07: the breadcrumb directly above
+          now carries the same section › sub-category path as links, and two
+          identical link pairs in a row are four extra tab stops to the h1.
         */}
         <div className="flex flex-wrap items-center gap-2">
           {kicker.map((chip) => (
-            <CategoryChip key={chip.href} name={chip.name} href={chip.href} />
+            <CategoryChip key={chip.href} name={chip.name} />
           ))}
         </div>
 

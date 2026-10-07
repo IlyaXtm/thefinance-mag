@@ -4,10 +4,14 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SECTION_NAV, SITE_EXIT } from '@/features/mag/lib/nav';
-import { subcategoriesOf, subcategoryHref } from '@/features/mag/lib/subcategories';
+import {
+  SUBCATEGORY_PARENTS,
+  subcategoriesOf,
+  subcategoryHref,
+} from '@/features/mag/lib/subcategories';
 import type { Market } from '@/features/mag/types/mag.types';
 
-const EDUCATION_HREF = '/category/education';
+const EDUCATION_HREF = SUBCATEGORY_PARENTS.find((p) => p.key === 'education')?.href;
 
 /**
  * Mobile navigation — a disclosure, replacing the horizontal strip.

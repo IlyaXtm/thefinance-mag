@@ -1172,16 +1172,6 @@ function paginate<T>(items: T[], page: number, perPage: number): Paginated<T> {
    real listing arrives in. */
 const ALL_SUMMARIES: ArticleSummary[] = [...SUMMARIES, ...FILLER];
 
-/** Mirrors the real API: one source for a market's list, count and pages. */
-export async function getMarketArticles(
-  marketSlug: string,
-  page: number,
-  perPage: number,
-): Promise<Paginated<ArticleSummary>> {
-  const items = ALL_SUMMARIES.filter((a) => a.market?.slug === marketSlug);
-  return simulate(paginate(items, page, perPage));
-}
-
 /** Mirrors the real API. Only used by the health probe. */
 /**
  * Every slug `getArticle` will resolve — which is NOT the same as every slug

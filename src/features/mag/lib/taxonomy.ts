@@ -68,6 +68,9 @@ export const EXCLUDED_CATEGORY_SLUGS: readonly string[] = [
   'uncategorized',
   'دسته-بندی-نشده',
   'دسته‌بندی-نشده',
+  /* The live term's slug has no ZWNJ at all (2026-10-07: /category/
+     دستهبندی-نشده answered 200 in production). */
+  'دستهبندی-نشده',
 ];
 
 export function isExcludedCategory(slug: string): boolean {

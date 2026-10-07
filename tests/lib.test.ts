@@ -168,9 +168,11 @@ test('sub-categories: a market is offered under a section only when it has posts
   assert.deepEqual(subcategoriesOf(markets, 'news').map((m) => m.slug), ['forex']);
 });
 
-test('sub-categories: retired /market URLs go to the lessons page; gold-usd goes to the merged market', () => {
+test('sub-categories: retired /market URLs go to their own lessons page — the merge waits for WordPress', () => {
   assert.equal(marketRedirectTarget('crypto'), '/category/education/crypto');
-  assert.equal(marketRedirectTarget('gold-usd'), '/category/education/tse');
+  /* Not tse yet: until gold-usd's posts are moved in wp-admin its lessons
+     page is real, and only an EMPTY gold-usd forwards to tse (next test). */
+  assert.equal(marketRedirectTarget('gold-usd'), '/category/education/gold-usd');
 });
 
 test('sub-categories: a market with no lessons forwards instead of 404ing', () => {

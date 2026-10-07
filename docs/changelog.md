@@ -8,6 +8,34 @@ why it was made.
 
 ---
 
+## 2026-10-07 (pre-release) — review fixes, and why unknown URLs 404'd blank
+
+Found by checking the two unreleased commits against a local run of the
+production image and an independent review, before deploying:
+
+- **Blank 404s, two causes.** (1) `getAllSummaries` read ONE page of 100 and
+  the archive reached 110 — `/api/known-slugs` correctly refused a short list
+  (`ok: false`), so middleware rejected nothing. It now pages 100 at a time.
+  Every archive-derived number (market counts, sitemap, chips) had been short
+  too. (2) Middleware fetched that list at `request.nextUrl.origin`, which
+  inside the container is the public host or a host-side port; it now uses
+  loopback (`127.0.0.1:$PORT`). And `/category/education/<x>` with an unknown
+  key is rewritten to the static 404 instead of a request-time `notFound()`.
+- **No 301 into noindex.** `/market/tse`, `/market/forex` (and «تحلیل») would
+  have 301'd to lessons pages below the archive floor, which were noindex —
+  dropping indexed URLs. A market's lessons page is now indexable whenever it
+  has lessons.
+- **The gold merge waits for WordPress.** `/market/gold-usd` goes to gold's own
+  lessons while they exist; only an empty gold-usd forwards to tse.
+- `/market/<not-a-market>` is a plain 404 again, not a 301 to one.
+- Market lesson pages get their own description instead of sharing آموزش's.
+- Article kicker chips are labels; the breadcrumb above carries the links.
+- «مشاهده همه» under «تازه‌ترین مقالات» → `/archive` (some of those posts are
+  not filed under «مقالات»).
+- `getMarketArticles` removed (no callers). The no-ZWNJ uncategorised slug is
+  excluded. `check-invariants` skips `_private` folders and probes
+  `/market/not-a-market` again.
+
 ## 2026-10-07 (backlog) — the team's B01–B32 list, /mag items
 
 Nazanin Rad's compiled list (29 Sep – 7 Oct) was audited item by item against
@@ -46,13 +74,15 @@ two sections with sub-categories under each: آموزش › کریپتو is
 already existed as the chips under each section.
 
 - `/market/<slug>`, `/market/<slug>/page/N` and `?page=` 301 in one hop to the
-  market's lessons; `/market` to آموزش; «تحلیل» goes straight there too.
-  `gold-usd` goes to `tse` (the merged «بازار ایران»). A market with no
-  lessons forwards on (housing → آموزش) instead of 404ing.
-- A market's lessons page is indexable above the archive floor (crypto,
-  global today; tse once gold is merged in) and is in the sitemap instead of
-  `/market/*`. Tag topics stay noindex. The page uses the market's WordPress
-  description when it has one.
+  market's lessons; `/market` to آموزش; «تحلیل» goes straight to tse's.
+  A market with no lessons takes a second hop from its lessons page: a
+  merged-away gold-usd (once WordPress is merged) → tse, housing → آموزش.
+  A `/market/<x>` that is not a market is a plain 404.
+- A market's lessons page is indexable whenever it has a lesson, and is in
+  the sitemap instead of `/market/*` — no thin-archive floor, because each one
+  inherits an indexed URL (corrected before release; see the entry above).
+  Tag topics stay noindex. Description: the market's own from WordPress, else
+  a line naming the market.
 - Header: the «بازارها» disclosure is gone (`MarketMenu` deleted). Mobile menu
   nests the sub-categories under آموزش. Footer column is «آموزش» › markets.
 - Sidebar «دسته‌بندی مطالب» is the tree, with the current page marked.

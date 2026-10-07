@@ -256,7 +256,7 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
-## Content model
+## Markets as sub-categories
 
 **Markets are sub-categories on the page, not a section.** Decided 2026-10-07
 (team request, owner's go-ahead).
