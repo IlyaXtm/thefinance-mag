@@ -56,7 +56,7 @@ export function MagHeader({ markets }: { markets: Market[] }) {
       {/* `.mag-gutter`, the page's own container — it was max-w-1440 with a 40px
           inset, so at 1440 the logo sat 128px outside the content edge and the
           page read as off-centre (reported 2026-10-05). */}
-      <div className="mag-gutter flex h-16 items-center gap-4 md:h-20 md:gap-9">
+      <div className="mag-gutter flex items-center gap-4 md:gap-9">
         <Link
           href="/"
           /* min-h-11: the masthead is a control, so it gets a 44px target

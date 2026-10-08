@@ -133,9 +133,16 @@ export function LatestSection({
       <LandingSectionHeader id={id} title={title} href={href} />
       <div className="grid gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-3">
         {items.map((article, i) => {
-          const orphan = items.length % 2 === 1 && i === items.length - 1;
+          /* Hide what would sit alone on the last row: in the 2-up band (md–xl)
+             and in the 3-up band (xl+). 4 news items used to leave one card
+             alone at xl. */
+          const cls = [
+            'contents',
+            i >= items.length - (items.length % 2) ? 'md:max-xl:hidden' : '',
+            i >= items.length - (items.length % 3) ? 'xl:hidden' : '',
+          ].join(' ');
           return (
-            <div key={article.id} className={orphan ? 'contents md:max-xl:hidden' : 'contents'}>
+            <div key={article.id} className={cls}>
               <PostCard article={article} />
             </div>
           );

@@ -22,3 +22,7 @@ infra/mag/.env
 
 # Compiled unit tests (npm test)
 .test-build/
+
+# local scratch scripts and build cache
+*.tmp.mjs
+tsconfig.tsbuildinfo

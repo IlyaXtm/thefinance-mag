@@ -73,7 +73,7 @@ export default async function MagIndexPage() {
             <HeroFeature article={featured} />
 
             {heroSide.length > 0 && (
-              <div className="flex flex-col gap-4 lg:gap-6 [&>*]:lg:flex-1">
+              <div className="flex flex-col gap-4 lg:justify-between lg:gap-6">
                 {heroSide.map((article) => (
                   <HeroSideCard key={article.id} article={article} />
                 ))}

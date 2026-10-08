@@ -108,11 +108,11 @@
    * grime rather than as elevation.
    */
   --shadow-panel: 0 16px 40px -12px rgba(0, 0, 0, 0.75);
-  --border-interactive: #6b7fa3; /* 4.82 vs surface · 4.23 vs raised · 3.81 vs hover */
+  --border-interactive: #6b7fa3; /* 4.82 vs surface · 4.23 vs raised · 3.54 vs hover */
 
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7); /* 9.61 vs surface · 8.82 vs raised */
-  --text-muted: rgba(255, 255, 255, 0.5); /* 5.31 vs surface · 5.10 vs raised */
+  --text-muted: rgba(255, 255, 255, 0.5); /* 5.34 vs surface · 5.13 vs raised */
 
   /*
    * THE ACCENT IS THE LOGO'S MID BLUE, exactly — #10A5F5 is lifted from the
@@ -235,7 +235,7 @@
 
   --text-primary: #101219;
   --text-secondary: #3a4359;
-  --text-muted: #4d5874; /* 6.43 on raised */
+  --text-muted: #4d5874; /* 7.09 on raised · 5.93 on hover */
 
   /*
    * The logo's deep blue, taken down one step — and the step is measured.
@@ -383,8 +383,8 @@ html {
  * Do not set font-style: italic anywhere — Persian faces have no true italic
  * and browsers synthesise a broken slant.
  *
- * Do not set text-align: justify — without kashida support it produces rivers
- * of whitespace.
+ * Justify only .article-body paragraphs at md and up (see CLAUDE.md,
+ * Persian typography §2). Everything else stays text-align: start.
  */
 body {
   background: var(--surface);
@@ -402,10 +402,7 @@ body {
    */
   line-height: 1.9;
 
-  /*
-   * Never justify. Without kashida support, justified Persian produces rivers
-   * of whitespace down the column.
-   */
+  /* Start by default; .article-body justifies at md+ (CLAUDE.md §2). */
   text-align: start;
 
   -webkit-font-smoothing: antialiased;

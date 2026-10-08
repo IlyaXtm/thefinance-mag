@@ -120,7 +120,12 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
     pool.slice(0, LEAD_WINDOW).find((a) => LEAD_TYPES.includes(a.contentType.slug)) ?? null;
   if (featured) taken.add(featured.slug);
 
-  const heroSide = take(pool, HERO_SIDE_COUNT);
+  /* Same rule as the lead: no news beside it. Taking from the whole pool put
+     three RSS items next to the lead on every live render (QA, 1405-07-16). */
+  const heroSide = take(
+    pool.filter((a) => LEAD_TYPES.includes(a.contentType.slug)),
+    HERO_SIDE_COUNT,
+  );
 
   /*
     EDITORS FIRST, A STAND-IN UNTIL THEY PICK (decided 2026-10-05).
@@ -163,7 +168,8 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
       href: subcategoryHref('education', slug),
       items,
     };
-  }).filter((block) => block.items.length > 0);
+  /* One card is a half-empty row at every width — drop the block instead. */
+  }).filter((block) => block.items.length >= 2);
 
   return { featured, heroSide, picks, picksSource, articles, news, markets };
 }

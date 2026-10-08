@@ -84,7 +84,7 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         </h2>
 
         {dek && (
-          <p className="line-clamp-1 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary">
+          <p className="line-clamp-2 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary">
             {dek}
           </p>
         )}
@@ -120,10 +120,10 @@ export function HeroSideCard({ article }: { article: ArticleSummary }) {
     <article className="group relative flex items-center gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
       {image && (
         <div
-          className="w-[120px] shrink-0 sm:w-[168px]"
+          className="w-[120px] shrink-0 sm:w-[200px] lg:w-[220px]"
           style={{ aspectRatio: heroAspectRatios(image).mobile }}
         >
-          <CardImage image={image} sizes="168px" rounded="rounded-lg" />
+          <CardImage image={image} sizes="220px" rounded="rounded-lg" />
         </div>
       )}
 

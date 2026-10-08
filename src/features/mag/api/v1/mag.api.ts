@@ -228,8 +228,11 @@ function mapImage(node: WpSummary['featuredImage']): MagImage | null {
        is worse than none — it misdescribes the image to the people who rely
        on it. */
     alt: image.altText ?? '',
-    width: image.mediaDetails?.width ?? 1200,
-    height: image.mediaDetails?.height ?? 675,
+    /* 0 = unknown. A guessed 1200×675 sent every 3:2 lesson without
+       mediaDetails down imageFit's contain + blur branch. imageFit and
+       heroAspectRatios both treat 0 as unknown; schema omits it. */
+    width: image.mediaDetails?.width ?? 0,
+    height: image.mediaDetails?.height ?? 0,
   };
 }
 

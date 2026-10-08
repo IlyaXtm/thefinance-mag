@@ -334,7 +334,7 @@ function FooterLink({
   return (
     <li>
       {external ? (
-        <a href={href} rel="noopener noreferrer" className={className}>
+        <a href={href} rel="noopener noreferrer" target="_blank" className={className}>
           {children}
         </a>
       ) : (

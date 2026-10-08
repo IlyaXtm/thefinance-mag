@@ -87,8 +87,9 @@ export function articleJsonLd(article: Article): JsonLd {
           image: {
             '@type': 'ImageObject',
             url: article.featuredImage.url,
-            width: article.featuredImage.width,
-            height: article.featuredImage.height,
+            ...(article.featuredImage.width && article.featuredImage.height
+              ? { width: article.featuredImage.width, height: article.featuredImage.height }
+              : {}),
           },
         }
       : {}),

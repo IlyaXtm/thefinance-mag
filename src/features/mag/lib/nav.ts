@@ -15,28 +15,6 @@ export interface NavLink {
 }
 
 /**
- * Header links.
- *
- * Deliberately short. Three considerations decided this:
- *
- *   - InChart and Academy are the two products a reader of technical-analysis
- *     education would actually want next. They continue the reader's intent
- *     rather than interrupting it.
- *
- *   - Paradigm is NOT here. It is the paid VIP channel, and leading an
- *     editorial page with a paid subscription is precisely what the
- *     competitive category does and what the brand book rules out. It belongs
- *     in the footer, where it reads as "this exists" rather than "buy this".
- *
- *   - «درباره ما» is in the footer too. It is a trust link people look for
- *     deliberately, not something to spend header space on.
- */
-export const HEADER_LINKS: NavLink[] = [
-  { label: 'اینچارت', href: 'https://inchart.thefinance.ir', external: true },
-  { label: 'آکادمی', href: `${SITE_ORIGIN}/academy`, external: true },
-];
-
-/**
  * Footer.
  *
  * Carries more than the header on purpose. With roughly thirty pages, the
@@ -60,7 +38,7 @@ export const HEADER_LINKS: NavLink[] = [
  * So the flat links are one axis now, and markets move behind a labelled
  * disclosure that says «بازارها» on it.
  *
- * ── Why these three and not four ───────────────────────────────────────
+ * ── Why these two ─────────────────────────────────────────────────────
  *
  * «گزارش» is a content type with no category behind it in the taxonomy, so a
  * nav link would point at an archive that does not exist. It appears the moment

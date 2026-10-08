@@ -212,6 +212,8 @@ test('cards: the image box matches the artwork, so a baked-in headline is not cr
   /* The archive's real shapes fill their box. */
   assert.equal(imageFit(img(1280, 716), cardAspect(news)), 'cover');
   assert.equal(imageFit(img(1200, 800), cardAspect(lesson)), 'cover');
+  /* An unknown size (mapImage reports 0×0) is a normal card, not letterboxed. */
+  assert.equal(imageFit(img(0, 0), cardAspect(lesson)), 'cover');
   /* A wrong-shaped upload is shown whole, not cut. */
   assert.equal(imageFit(img(1000, 1000), cardAspect(lesson)), 'contain');
   assert.equal(imageFit(img(1200, 800), cardAspect(news)), 'contain');

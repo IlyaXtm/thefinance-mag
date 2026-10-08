@@ -26,25 +26,25 @@ Three rules follow from that split, and breaking any of them is silent:
 
 ## Current state
 
-**WordPress side — done and running.**
+**Live.** `thefinance.ir/mag` is served by this app in production, as the
+Docker container `thefinance-mag` on the shared host `thefinance-main`,
+behind the CDN and that host's nginx. Releases are tagged `mag-prod-*`;
+`/mag/health` reports the running build. How a release goes out:
+`docs/infra/frontend-deploy.md` (reference) and `docs/learn/after-a-round.md`
+(checklist).
 
-- CMS VPS provisioned, WordPress migrated (32 published posts, 133 MB media)
-- TLS via certbot; `noindex` verified on `/`, `/mag/`, and article paths
-- Rate limiting on `/wp-login.php` and `/graphql`; `xmlrpc.php` returns 403
-- WordPress bound to `127.0.0.1` — reachable only through nginx
-- `wp-graphql-rank-math` installed; `seo.robots` confirmed as `[String]`,
-  `seo.__typename` is `RankMathPostObjectSeo`
-- `mu-plugins/thefinance-mag.php` deployed: `market` taxonomy, `readingTime`,
-  `modifiedAtIso`, `marketDescription`
-- Six markets seeded; 14 of 32 posts tagged
+**WordPress — the content layer.** `wp.thefinance.ir`, fully de-indexed,
+WPGraphQL + `wp-graphql-rank-math`, and `wordpress/mu-plugins/` (`market`
+taxonomy, `readingTime`, `marketDescription`, the redirect map, preview and
+revalidation). About 110 published posts; an RSS automation adds news daily.
 
-**Frontend — data layer only.**
+**Frontend — built.** Every route renders: home, article, archive, category
+and education topics, news and news by market, author, search, feed and
+sitemap. Components in `src/features/mag/components`, shared chrome in
+`src/shared/ui`. Behaviour tests: `npm test`. Status and open items:
+`docs/implementation-status.md` and `docs/backlog.md`.
 
-`src/features/mag/` has types, mock, service and SWR hooks. No components or
-pages yet. The design is complete (six audited artifacts) but not yet code.
-
-**The live site is untouched.** `thefinance.ir/mag` still renders from the old
-WordPress on the frontend server, and will until the cutover.
+**New here?** Start at `docs/learn/README.md`.
 
 ---
 
@@ -104,6 +104,7 @@ Quality gates:
 ```bash
 npx tsc --noEmit
 npm run lint
+npm test
 npm run build
 ```
 
@@ -111,29 +112,20 @@ npm run build
 
 ## What's next
 
-1. Design tokens — three themes, plus the two new system tokens
-   (`--border-interactive`, `--danger`) and the light-theme `--focus-ring` fix
-2. Listing page components
-3. Article page
-4. Archive, author, search, reports
-5. SEO layer — canonical rewriting, JSON-LD, sitemap
-6. Gutenberg blocks (Callout, Disclaimer, CTA) and preview/revalidation
-7. Content-team enablement
-8. Staging parallel run, then cutover
-
-See `docs/` for the decisions behind each.
+The build-out list (tokens, listing, article, archives, SEO layer, blocks,
+content-team enablement, staging and cutover) is done. Open work lives in
+`docs/backlog.md`, the team's requests in `docs/implementation-status.md`.
 
 ---
 
-## Cutover, in one line
+## Rollback, in one line
 
-```nginx
-location /mag {
-    proxy_pass http://next_upstream;   # cutover
-    # proxy_pass http://wp_upstream;   # rollback
-}
+```bash
+ssh thefinance-main 'sudo ~/deploy.sh --rollback'
 ```
 
-The old WordPress theme is never deleted. That makes rollback an `nginx -s
-reload` rather than a redeploy — seconds, not minutes. It is the single most
-important protection in this migration.
+`deploy.sh` keeps the previous container as `thefinance-mag-prev`, so going
+back one release is a rename, seconds not minutes. Further back: every release
+is tagged `mag-prod-*`, and `sudo ~/deploy.sh <sha>` redeploys any image still
+on the host. The old WordPress theme was never deleted; the nginx switch to it
+belongs to the main team.

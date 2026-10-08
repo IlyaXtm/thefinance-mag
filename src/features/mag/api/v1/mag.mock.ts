@@ -198,8 +198,13 @@ const AUTHOR_NO_AVATAR: Author = {
   articleCount: 5,
 };
 
-function img(seed: string, alt: string): ArticleSummary['featuredImage'] {
-  return { url: `/mock/covers/${seed}.jpg`, alt, width: 1200, height: 675 };
+function img(seed: string, alt: string, shape: 'news' | 'lesson' = 'news'): ArticleSummary['featuredImage'] {
+  /* Shaped like production: news 16:9, lessons 3:2 (lib/card.ts cardAspect).
+     One 16:9 size for everything made every lesson card take the
+     contain + blur branch, so dev never showed a normal lesson card. */
+  return shape === 'lesson'
+    ? { url: `/mock/covers/${seed}.jpg`, alt, width: 1200, height: 800 }
+    : { url: `/mock/covers/${seed}.jpg`, alt, width: 1200, height: 675 };
 }
 
 /**
@@ -353,7 +358,7 @@ const SUMMARIES: ArticleSummary[] = [
     id: 'a2',
     slug: 'us-rates-and-domestic-gold',
     title: 'هج فاند (Hedge Fund) چیست؟ ساختار، کارمزد و ریسک',
-    featuredImage: img('gold', 'شمش طلا روی سطح تیره'),
+    featuredImage: img('gold', 'شمش طلا روی سطح تیره', 'lesson'),
     market: MARKETS['gold-usd'],
     contentType: TYPES.education,
     readingTime: 7,
@@ -363,14 +368,14 @@ const SUMMARIES: ArticleSummary[] = [
     seoDescription: null,
     tags: [],
     editorsPick: true,
-    excerpt: 'رابطه‌ی نرخ بهره آمریکا با قیمت طلای داخلی مستقیم نیست؛ از مسیر دلار و انتظارات تورمی می‌گذرد.',
+    excerpt: 'هج فاند صندوقی خصوصی با راهبردهای آزادتر از صندوق‌های عادی است؛ ساختار کارمزد و ریسک آن را بشناسید.',
     outline: ['کانال اثرگذاری نرخ بهره', 'نقش نرخ ارز', 'محدودیت‌های این رابطه'],
   },
   {
     id: 'a3',
     slug: 'notcoin-guide',
     title: 'نات کوین (Notcoin) چیست؟ راهنمای کامل پروژه و مکانیزم توزیع توکن',
-    featuredImage: img('notcoin', 'نماد پروژه نات کوین'),
+    featuredImage: img('notcoin', 'نماد پروژه نات کوین', 'lesson'),
     market: MARKETS.crypto,
     contentType: TYPES.education,
     readingTime: 10,
@@ -389,7 +394,7 @@ const SUMMARIES: ArticleSummary[] = [
     /* One of the titles the bidi bracket defect was reported on — kept
        verbatim so the fix stays regression-testable at 390px. */
     title: 'اندیکاتور زیگ زاگ (Zig Zag) چیست؟',
-    featuredImage: img('zigzag', 'نمودار با نوسانات پی‌درپی'),
+    featuredImage: img('zigzag', 'نمودار با نوسانات پی‌درپی', 'lesson'),
     market: MARKETS.forex,
     contentType: TYPES.education,
     readingTime: 6,
@@ -406,7 +411,7 @@ const SUMMARIES: ArticleSummary[] = [
     id: 'a5',
     slug: 'dxy-and-emerging-markets',
     title: 'میکر و تیکر (Maker & Taker) چه تفاوتی دارند',
-    featuredImage: img('dxy', 'نمودار شاخص دلار'),
+    featuredImage: img('dxy', 'نمودار شاخص دلار', 'lesson'),
     market: MARKETS.global,
     contentType: TYPES.education,
     readingTime: 8,
@@ -427,7 +432,7 @@ const SUMMARIES: ArticleSummary[] = [
     seoDescription: null,
     tags: [],
     editorsPick: true,
-    excerpt: 'دلار قوی‌تر پول را از بازارهای نوظهور بیرون می‌کشد. این گزارش سه دوره‌ی تاریخی را کنار هم می‌گذارد.',
+    excerpt: 'میکر به دفتر سفارش نقدشوندگی می‌دهد و تیکر آن را برمی‌دارد؛ همین تفاوت کارمزد معامله را تعیین می‌کند.',
     outline: [
       'شاخص دلار چه چیزی را می‌سنجد',
       'کانال انتقال به بازارهای نوظهور',
@@ -525,7 +530,7 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
       requirement. The filler articles are the right place: they carry no
       meaning a broken cover could distort.
     */
-    featuredImage: img(n % 3 === 1 ? 'filler-missing' : 'filler', 'تصویر نمونه'),
+    featuredImage: img(n % 3 === 1 ? 'filler-missing' : 'filler', 'تصویر نمونه', 'lesson'),
     market: n % 2 === 0 ? MARKETS.crypto : null,
     contentType: TYPES.education,
     readingTime: 4 + (n % 7),
@@ -536,7 +541,9 @@ const FILLER: ArticleSummary[] = Array.from({ length: 14 }, (_, i) => {
     author: n % 2 === 0 ? AUTHOR : AUTHOR_NO_AVATAR,
     seoDescription: null,
     tags: n % 4 === 0 ? ['آپشن'] : [],
-    editorsPick: n <= 2,
+    /* Never on a filler: f1 is also the broken-image case, which put an
+       empty slot in «پیشنهاد سردبیر». */
+    editorsPick: false,
     excerpt: null,
     outline: ['بخش نخست', 'بخش دوم'],
   };
@@ -555,7 +562,7 @@ const FULL_ARTICLE: Article = {
   id: 'a7',
   slug: 'fundamental-analysis',
   title: 'تحلیل فاندامنتال (Fundamental Analysis) چیست؟',
-  featuredImage: img('fundamental', 'صورت مالی روی میز کار'),
+  featuredImage: img('fundamental', 'صورت مالی روی میز کار', 'lesson'),
   market: MARKETS.tse,
   contentType: TYPES.education,
   readingTime: 14,
@@ -675,7 +682,7 @@ const STRESS: Article[] = [
     id: 'o1',
     slug: 'stress-wide-content',
     title: 'محتوای پهن — بررسی سرریز افقی',
-    featuredImage: img('chart', 'نمودار'),
+    featuredImage: img('chart', 'نمودار', 'lesson'),
     market: null,
     contentType: TYPES.education,
     readingTime: 5,
@@ -782,7 +789,7 @@ const STRESS: Article[] = [
     id: 'w1',
     slug: 'stress-headline-clause-break',
     title: 'خرید بیت کوین در ایران؛ آموزش کامل خرید، انتقال و نگهداری BTC',
-    featuredImage: img('notcoin', 'نمودار قیمت بیت کوین'),
+    featuredImage: img('notcoin', 'نمودار قیمت بیت کوین', 'lesson'),
     market: MARKETS.crypto,
     contentType: TYPES.education,
     readingTime: 9,
@@ -873,7 +880,7 @@ const STRESS: Article[] = [
     id: 'x1',
     slug: 'stress-long-technical-analysis',
     title: 'تحلیل تکنیکال (Technical Analysis) چیست؟ راهنمای جامع ابزارها، الگوها و مدیریت ریسک برای بازارهای مالی',
-    featuredImage: img('technical', 'نمودار تحلیل تکنیکال روی نمایشگر'),
+    featuredImage: img('technical', 'نمودار تحلیل تکنیکال روی نمایشگر', 'lesson'),
     market: null,
     contentType: TYPES.education,
     readingTime: 41,
@@ -923,7 +930,7 @@ const STRESS: Article[] = [
     id: 'x9',
     slug: 'stress-rich-article',
     title: 'چهار ابزار رسم نمودار برای بازار ایران؛ بدون داده‌ی ناقص',
-    featuredImage: img('chart', 'میز کار یک تحلیل‌گر با چند نمودار باز'),
+    featuredImage: img('chart', 'میز کار یک تحلیل‌گر با چند نمودار باز', 'lesson'),
     market: MARKETS.tse,
     contentType: TYPES.education,
     readingTime: 14,
@@ -993,7 +1000,7 @@ const STRESS: Article[] = [
     id: 'x4',
     slug: 'تحلیل-تکنیکال-چیست',
     title: 'تحلیل تکنیکال چیست؟',
-    featuredImage: img('technical', 'نمودار تحلیل تکنیکال'),
+    featuredImage: img('technical', 'نمودار تحلیل تکنیکال', 'lesson'),
     market: null,
     contentType: TYPES.education,
     readingTime: 12,
@@ -1014,7 +1021,7 @@ const STRESS: Article[] = [
     id: 'x2',
     slug: 'stress-one-heading',
     title: 'یک تیتر، بدون فهرست',
-    featuredImage: img('single', 'تصویر شاهد'),
+    featuredImage: img('single', 'تصویر شاهد', 'lesson'),
     market: MARKETS.forex,
     contentType: TYPES.education,
     readingTime: 4,

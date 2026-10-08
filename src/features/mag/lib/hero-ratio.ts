@@ -83,9 +83,9 @@ export interface HeroRatios {
 export function heroAspectRatios(image: Pick<MagImage, 'width' | 'height'>): HeroRatios {
   const raw = image.width && image.height ? image.width / image.height : 0;
 
-  /* `mapImage` defaults to 1200×675 when `mediaDetails` is absent, so this
-     should never fire — but a 0 height would give `aspect-ratio: Infinity` and
-     a zero-height hero, which is worth one branch. */
+  /* `mapImage` reports an unknown size as 0×0 (since 2026-10-08 — it used to
+     guess 1200×675). Unknown falls back to the desktop minimum here rather
+     than giving `aspect-ratio: Infinity` and a zero-height hero. */
   const ratio = Number.isFinite(raw) && raw > 0 ? raw : MIN_RATIO_DESKTOP;
 
   const clamp = (min: number) => Math.min(MAX_RATIO, Math.max(min, ratio));

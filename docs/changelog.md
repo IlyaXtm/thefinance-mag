@@ -8,6 +8,34 @@ why it was made.
 
 ---
 
+## 2026-10-08 (QA) — the 16 Mehr review's code fixes
+
+From the design handoff's QA report (`design_handoff_mag_home_v2/fixes`),
+applied by hand onto current code after diffing each file:
+
+- **Beside the lead: lessons only.** `heroSide` took from the whole pool, so on
+  every live render the three cards beside a lesson were RSS news.
+- **Orphans in both bands.** A last card alone is hidden at md–xl (2-up) AND
+  at xl+ (3-up); a market block with one lesson is dropped.
+- **Unknown image size is 0, not a guessed 1200×675.** The guess sent every
+  lesson without `mediaDetails` down `imageFit`'s contain + blur branch.
+  JSON-LD omits width/height when unknown; `heroAspectRatios` already handled 0.
+- **Mock matches production shapes** (lessons 3:2), excerpts match titles,
+  no filler is an editors' pick (one had the broken-image case).
+- Hero dek `line-clamp-2` (one line cut a Persian sentence mid-clause); side
+  thumbnails 200/220px; side cards keep their own height.
+- Dead `h-16 md:h-20` on the header row (globals.css wins) removed; unused
+  `HEADER_LINKS` removed; footer external links open in a new tab like the
+  rest; contrast numbers in `tokens.css` comments corrected from
+  `check:contrast`; the stale "never justify" comment fixed.
+- Repo hygiene: five `*.tmp.mjs` scratch scripts removed and ignored;
+  `reports/screens/` (90 baselines still showing «بازارها» and «تحلیل»)
+  removed — history and tag `mag-docs-2026-10-08` keep them; README's
+  current state, next and rollback sections describe the live site.
+
+Content-team item (two posts' market tags) added to
+`docs/content-team-subcategories.md`.
+
 ## 2026-10-07 (pre-release) — review fixes, and why unknown URLs 404'd blank
 
 Found by checking the two unreleased commits against a local run of the
