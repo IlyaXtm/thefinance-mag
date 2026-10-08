@@ -127,5 +127,6 @@ ssh thefinance-main 'sudo ~/deploy.sh --rollback'
 `deploy.sh` keeps the previous container as `thefinance-mag-prev`, so going
 back one release is a rename, seconds not minutes. Further back: every release
 is tagged `mag-prod-*`, and `sudo ~/deploy.sh <sha>` redeploys any image still
-on the host. The old WordPress theme was never deleted; the nginx switch to it
-belongs to the main team.
+on the host. The full release list and every rollback path: `docs/releases.md`.
+The old WordPress theme was never deleted; the nginx switch to it belongs to the
+main team.

@@ -93,6 +93,7 @@ to Claude; these are notes for you.** All Persian.
 
 | File | What it is |
 |---|---|
+| `releases.md` | **Every production release** — tag, build, what changed — and the rollback commands: one step back, back to any kept build, revert in git, rebuild from a tag |
 | `learn/README.md` | **Start here.** The learning path in reading order, linking every doc a new developer needs — inside `learn/` and outside it (CLAUDE.md, decisions, changelog, the deploy reference, the content-team docs). Persian |
 | `learn/frontend.md` | The frontend from first principles: headless CMS, the four render modes, Server Components, the data layer, tokens, `basePath`, redirects, RTL, images, raw CMS content. Written to be read start to finish |
 | `learn/lessons.md` | Thirteen lessons from what actually happened — silent failure, the feeling of progress versus progress, knowing your numbers before designing |
