@@ -5,7 +5,7 @@ export { ArchiveShell } from './ArchiveShell';
 export { CardImage } from './CardImage';
 export { CardBody, CardFootMeta, CardKicker } from './CardMeta';
 export { CategoryChip } from './CategoryChip';
-export { HeroFeature, HeroSideCard } from './HeroFeature';
+export { HeroFeature, HeroQuadCard } from './HeroFeature';
 export { PostCard, ArchiveCard } from './PostCard';
 export { NewsRow, NewsDayGroup, groupByDay } from './NewsRow';
 export { SidebarCard, CategoryListCard, LinkListCard } from './SidebarCard';

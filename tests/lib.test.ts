@@ -9,7 +9,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildLanding } from '../src/features/mag/lib/landing';
+import { buildLanding, mastheadMarkets } from '../src/features/mag/lib/landing';
 import { dayHeading, placeBanner, tehranToday } from '../src/features/mag/lib/news';
 import {
   emptyLessonsFallback,
@@ -93,9 +93,9 @@ test('home: no article appears in two sections', () => {
   assert.equal(new Set(shown.map((a) => a.id)).size, shown.length);
 });
 
-test('home: «تازه‌ترین مقالات» has no news, three rows; «تازه‌ترین اخبار» only news', () => {
+test('home: «تازه‌ترین مقالات» has no news, two rows; «تازه‌ترین اخبار» only news', () => {
   const landing = buildLanding(archiveFixture());
-  assert.equal(landing.articles.length, 9);
+  assert.equal(landing.articles.length, 6);
   assert.ok(landing.articles.every((a) => a.contentType.slug !== 'news'));
   assert.ok(landing.news.length > 0);
   assert.ok(landing.news.every((a) => a.contentType.slug === 'news'));
@@ -107,13 +107,14 @@ test('home: articles are newest first', () => {
   assert.deepEqual([...times].sort().reverse(), times);
 });
 
-test('home: market blocks are lessons of that market, titled «آموزش …», linked to the lessons page', () => {
+test('home: market columns are lessons of that market, named live, linked to the lessons page', () => {
   const { markets } = buildLanding(archiveFixture());
   assert.ok(markets.length > 0);
   for (const block of markets) {
     assert.ok(block.items.every((a) => a.contentType.slug === 'education'));
     assert.ok(block.items.every((a) => a.market?.slug === block.key));
-    assert.equal(block.title, `آموزش ${block.key}`);
+    assert.equal(block.name, block.key);
+    assert.ok(block.items.length >= 2 && block.items.length <= 3);
     assert.equal(block.href, `/category/education/${block.key}`);
   }
 });
@@ -217,4 +218,22 @@ test('cards: the image box matches the artwork, so a baked-in headline is not cr
   /* A wrong-shaped upload is shown whole, not cut. */
   assert.equal(imageFit(img(1000, 1000), cardAspect(lesson)), 'contain');
   assert.equal(imageFit(img(1200, 800), cardAspect(news)), 'contain');
+});
+
+test('home v2: four beside the lead, all lessons — no RSS news next to it', () => {
+  const landing = buildLanding(archiveFixture());
+  assert.equal(landing.heroSide.length, 4);
+  assert.ok(landing.heroSide.every((a) => a.contentType.slug !== 'news'));
+  assert.notEqual(landing.featured?.contentType.slug, 'news');
+});
+
+test('home v2: «بازارها:» lists markets with lessons, in the handoff order', () => {
+  const archive = [
+    article('education', 'global'),
+    article('education', 'crypto'),
+    article('education', 'tse'),
+    article('news', 'forex'),
+  ];
+  const markets = (['global', 'forex', 'crypto', 'tse'] as MarketSlug[]).map((m) => market(m, archive));
+  assert.deepEqual(mastheadMarkets(markets).map((m) => m.slug), ['tse', 'crypto', 'global']);
 });

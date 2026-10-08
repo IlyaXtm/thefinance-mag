@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { CompactCard, PostCard } from '@/features/mag/components';
+import { cardCategory } from '@/features/mag/lib/card';
+import { bidiTitle } from '@/features/mag/lib/bidi-title';
+import { formatJalaliShort, formatReadingTime, toDateTimeAttr } from '@/features/mag/lib/format';
 import type { TopicBlock } from '@/features/mag/lib/landing';
 import type { ArticleSummary } from '@/features/mag/types/mag.types';
 
@@ -13,6 +16,9 @@ import type { ArticleSummary } from '@/features/mag/types/mag.types';
  * (1 / 2 / 3 columns at <768 / 768 / 1280), and what the sidebar carried
  * moved into the page — the markets as their own blocks, InChart and the
  * social channels into a closing row.
+ *
+ * Home v2 (2026-10-08): news became a text list and the market blocks one
+ * row of columns — NewsListSection and MarketColumnsSection below.
  */
 
 /**
@@ -153,27 +159,101 @@ export function LatestSection({
 }
 
 /**
- * One topic: three cards, three across. The third hides between md and xl,
- * where the grid is two-up and it would sit alone on a row.
+ * «تازه‌ترین اخبار» as a TEXT LIST — home v2 (handoff 2026-10-08).
  *
- * A topic left with two — اینچارت has three articles in all, and one may
- * already be on the page above — stays two-up at every width rather than
- * leaving an empty third column, which is the whitespace the team objected to.
+ * No images. News artwork has the headline baked into it, so an image card
+ * prints every title twice; a list is also the shape readers scan news in.
+ * Date, then the title, then «market · reading time». Two columns at lg; each
+ * row is one link, 44px at least, hover is a colour shift only.
  */
-export function TopicSection({ topic }: { topic: TopicBlock }) {
-  const id = `topic-${topic.key}-heading`;
-  const threeUp = topic.items.length >= 3;
+export function NewsListSection({ items }: { items: ArticleSummary[] }) {
+  if (items.length === 0) return null;
 
   return (
-    <section aria-labelledby={id}>
-      <LandingSectionHeader id={id} title={topic.title} href={topic.href} />
-      <div className={`grid gap-4 md:grid-cols-2 lg:gap-6 ${threeUp ? 'xl:grid-cols-3' : ''}`}>
-        {topic.items.map((article, i) => (
-          <div key={article.id} className={i === 2 ? 'contents md:max-xl:hidden' : 'contents'}>
-            <CompactCard
-              article={article}
-              sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
-            />
+    <section aria-labelledby="news-heading">
+      <LandingSectionHeader id="news-heading" title="تازه‌ترین اخبار" href="/news" />
+      <ul className="grid border-t border-border-subtle lg:grid-cols-2 lg:gap-x-12">
+        {items.map((article) => (
+          <li key={article.id} className="border-b border-border-subtle">
+            <Link
+              href={`/${article.slug}`}
+              className="group grid min-h-11 grid-cols-[72px_1fr] items-baseline gap-4 py-4"
+            >
+              <time
+                dateTime={toDateTimeAttr(article.publishedAt)}
+                className="whitespace-nowrap text-[13px] text-text-muted"
+              >
+                {formatJalaliShort(article.publishedAt)}
+              </time>
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="text-[16px] font-semibold leading-[1.7] text-text-primary transition-colors duration-150 [text-wrap:pretty] group-hover:text-accent motion-reduce:transition-none">
+                  {bidiTitle(article.title)}
+                </span>
+                <span className="text-[12.5px] text-text-muted">
+                  {cardCategory(article).name} · {formatReadingTime(article.readingTime)} مطالعه
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * «آموزش بر اساس بازار» — one column per market, home v2 (handoff 2026-10-08).
+ *
+ * Replaces the stacked «آموزش <market>» card blocks: four markets as four
+ * panels side by side at xl, two at md, each a short list of lessons and a
+ * link to that market's lessons page. Titles only — the cards above already
+ * show the artwork. `mt-auto` on the footer link keeps the links level when a
+ * column holds two lessons and its neighbour three.
+ */
+export function MarketColumnsSection({ blocks }: { blocks: TopicBlock[] }) {
+  if (blocks.length === 0) return null;
+
+  return (
+    <section aria-labelledby="markets-heading">
+      <h2
+        id="markets-heading"
+        className="mb-6 text-h2 font-bold tracking-[-0.2px] text-text-primary"
+      >
+        آموزش بر اساس بازار
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-4">
+        {blocks.map((block) => (
+          <div
+            key={block.key}
+            className="flex flex-col rounded-card border border-border-subtle bg-surface-raised p-5 lg:px-[22px]"
+          >
+            <h3 className="mb-2 text-h5 font-bold text-accent">{block.name}</h3>
+            <ul className="flex flex-col">
+              {block.items.map((article) => (
+                <li key={article.id} className="border-t border-border-subtle">
+                  <Link
+                    href={`/${article.slug}`}
+                    className="group flex min-h-11 flex-col gap-0.5 py-2.5"
+                  >
+                    <span className="text-[14.5px] font-semibold leading-[1.65] text-text-primary transition-colors duration-150 [text-wrap:pretty] group-hover:text-accent motion-reduce:transition-none">
+                      {bidiTitle(article.title)}
+                    </span>
+                    <span className="text-[12.5px] text-text-muted">
+                      {formatReadingTime(article.readingTime)} مطالعه
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={block.href}
+              className="mt-auto inline-flex min-h-11 items-center pt-2 text-[14px] text-accent transition-colors hover:text-text-primary"
+            >
+              همه‌ی آموزش‌های {block.name}
+              <span aria-hidden="true" className="ms-1">
+                ←
+              </span>
+            </Link>
           </div>
         ))}
       </div>

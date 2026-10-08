@@ -8,6 +8,29 @@ why it was made.
 
 ---
 
+## 2026-10-08 (home v2) — lead | 2×2, news as a list, market columns
+
+From the design handoff `design_handoff_mag_home_v2` (rollback: tag
+`mag-prod-2026-10-07`; this change is one commit on `mag/home-v2`):
+
+- **Masthead + «بازارها:»** — the market links beside the name, markets with
+  lessons only, never sections. 44px pills (the handoff's 40px is under the
+  floor for a control).
+- **Lead | 2×2.** `1.25fr | 1fr`; four lessons beside the lead
+  (`HERO_SIDE_COUNT = 4`) as `HeroQuadCard`s — plain category label, three-line
+  title, meta, `auto-rows-fr`. The lead lost its summary line. The quad image
+  box is the artwork's shape (lessons 3:2), not the handoff's 16:9, which
+  would have sent every one down `imageFit`'s blurred-margin branch.
+  `HeroSideCard` removed.
+- **«تازه‌ترین مقالات» 9 → 6.** The handoff's number; it reverses the team's
+  «سه ردیف» (B05) now that the hero and market columns carry more lessons.
+- **«تازه‌ترین اخبار» is a text list** (`NewsListSection`): date, title,
+  market · reading time, two columns at lg, no images — news artwork has the
+  headline baked in, so image cards printed every title twice.
+- **«آموزش بر اساس بازار»** (`MarketColumnsSection`) replaces the stacked
+  per-market card blocks: one panel per market, up to three lessons, «همه‌ی
+  آموزش‌های <market> ←». `TopicSection` removed; `TopicBlock.title` → `name`.
+
 ## 2026-10-08 (QA) — the 16 Mehr review's code fixes
 
 From the design handoff's QA report (`design_handoff_mag_home_v2/fixes`),

@@ -1,18 +1,25 @@
 import type { Metadata } from 'next';
-import { getAllSummaries } from '@/features/mag/api/v1/mag.service';
+import Link from 'next/link';
+import { getAllSummaries, getMarkets } from '@/features/mag/api/v1/mag.service';
 import { magBlogJsonLd, organizationJsonLd, JsonLdScript } from '@/features/mag/lib/schema';
 import { toMetadata } from '@/features/mag/lib/seo';
 import { MAG_DESCRIPTION, MAG_NAME } from '@/features/mag/lib/site';
-import { buildLanding } from '@/features/mag/lib/landing';
+import { buildLanding, mastheadMarkets } from '@/features/mag/lib/landing';
+import { subcategoryHref } from '@/features/mag/lib/subcategories';
 import { NEWSLETTER_ENABLED } from '@/features/mag/lib/newsletter';
 import {
   HeroFeature,
-  HeroSideCard,
+  HeroQuadCard,
   InchartPricesCard,
   NewsletterCta,
   SocialChannelsCard,
 } from '@/features/mag/components';
-import { FeaturedSection, LatestSection, TopicSection } from './_components/LandingSections';
+import {
+  FeaturedSection,
+  LatestSection,
+  MarketColumnsSection,
+  NewsListSection,
+} from './_components/LandingSections';
 
 /**
  * thefinance.ir/mag — the home page.
@@ -36,9 +43,10 @@ export const metadata: Metadata = toMetadata({
 });
 
 export default async function MagIndexPage() {
-  const archive = await getAllSummaries();
+  const [archive, allMarkets] = await Promise.all([getAllSummaries(), getMarkets()]);
   const { featured, heroSide, picks, picksSource, articles, news, markets } =
     buildLanding(archive);
+  const mastheadLinks = mastheadMarkets(allMarkets);
 
   return (
     <main id="main-content" tabIndex={-1} className="mag-gutter">
@@ -50,9 +58,31 @@ export default async function MagIndexPage() {
         the team's review: «بالای صفحه نقطه تمرکز ندارد». Now the h1 is the
         visible name, with the one-line description the metadata already uses.
       */}
-      <header className="mt-8 lg:mt-12">
-        <h1 className="text-display font-bold tracking-[-0.4px] text-text-primary">{MAG_NAME}</h1>
-        <p className="mt-2 text-[15px] text-text-secondary md:text-[17px]">{MAG_DESCRIPTION}</p>
+      {/* Home v2 (2026-10-08): the market links sit beside the name — markets
+          only, never sections (team comment on the handoff). 44px pills: the
+          handoff's 40px is under this project's floor for a control. */}
+      <header className="mt-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 lg:mt-12">
+        <div>
+          <h1 className="text-display font-bold tracking-[-0.4px] text-text-primary">{MAG_NAME}</h1>
+          <p className="mt-2 text-[15px] text-text-secondary md:text-[17px]">{MAG_DESCRIPTION}</p>
+        </div>
+
+        {mastheadLinks.length > 0 && (
+          <nav aria-labelledby="markets-label" className="flex flex-wrap items-center gap-2">
+            <span id="markets-label" className="me-1 text-[13px] font-semibold text-text-muted">
+              بازارها:
+            </span>
+            {mastheadLinks.map((market) => (
+              <Link
+                key={market.slug}
+                href={subcategoryHref('education', market.slug)}
+                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full border border-border-interactive bg-surface-raised px-4 text-[14px] text-text-secondary transition-colors duration-150 hover:border-accent hover:text-accent motion-reduce:transition-none"
+              >
+                {market.name}
+              </Link>
+            ))}
+          </nav>
+        )}
       </header>
 
       {featured && (
@@ -62,20 +92,18 @@ export default async function MagIndexPage() {
           </h2>
 
           {/*
-            Featured | three beside it. 1.45fr | 1fr: the side cards are rows
-            (thumbnail + title), so they need width for the title more than
-            height, and at this split three of them land at about the lead's
-            height. They are flex-1 in their column and centre their contents,
-            so any difference becomes space around a thumbnail, never a
-            stretched one.
+            Lead | 2×2 — home v2 (handoff 2026-10-08), the team's faraz.io/blog
+            structure. 1.25fr | 1fr; `auto-rows-fr` gives the four cards one
+            row height, and every card carries badge, title and meta so a
+            stretched card has no empty band.
           */}
-          <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
+          <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
             <HeroFeature article={featured} />
 
             {heroSide.length > 0 && (
-              <div className="flex flex-col gap-4 lg:justify-between lg:gap-6">
+              <div className="grid auto-rows-fr gap-4 sm:grid-cols-2">
                 {heroSide.map((article) => (
-                  <HeroSideCard key={article.id} article={article} />
+                  <HeroQuadCard key={article.id} article={article} />
                 ))}
               </div>
             )}
@@ -92,15 +120,13 @@ export default async function MagIndexPage() {
           title="تازه‌ترین مقالات"
           /* /archive, not «مقالات»: the block is every non-news post, and
              some (inchart, uncategorised) are not filed under «مقالات», so
-             only the full archive is sure to contain all nine. */
+             only the full archive is sure to contain all six. */
           href="/archive"
           items={articles}
         />
-        <LatestSection id="news-heading" title="تازه‌ترین اخبار" href="/news" items={news} />
+        <NewsListSection items={news} />
 
-        {markets.map((block) => (
-          <TopicSection key={block.key} topic={block} />
-        ))}
+        <MarketColumnsSection blocks={markets} />
 
         {/* Three-up only with the newsletter on: it renders nothing while
             NEWSLETTER_ENABLED is false, and two cards in a three-column row

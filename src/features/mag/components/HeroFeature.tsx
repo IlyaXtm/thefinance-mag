@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CardImage } from './CardImage';
 import { CardFootMeta, CardKicker } from './CardMeta';
-import { cardDek } from '../lib/card';
+import { cardAspect, cardCategory, imageFit } from '../lib/card';
 import type { ArticleSummary } from '../types/mag.types';
 import { bidiTitle } from '../lib/bidi-title';
 import { heroAspectRatios } from '../lib/hero-ratio';
@@ -36,7 +36,6 @@ import { heroAspectRatios } from '../lib/hero-ratio';
  * `aria-label` duplicating it, and the chip is a plain span, not a nested link.
  */
 export function HeroFeature({ article }: { article: ArticleSummary }) {
-  const dek = cardDek(article);
   const image = article.featuredImage;
 
   return (
@@ -55,8 +54,8 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         >
           <CardImage
             image={image}
-            /* The 1.45fr column of the 1224px container is ~650px. */
-            sizes="(max-width: 1023px) 100vw, 660px"
+            /* The 1.25fr column of the 1224px container is ~600px. */
+            sizes="(max-width: 1023px) 100vw, 620px"
             priority
             rounded="rounded-t-card"
           />
@@ -73,8 +72,11 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
         32px padding. Now 24px (the h1 step, still the card's largest text),
         one summary line, 24px padding: about 130px shorter, and the side
         cards, which stretch to the lead, come down with it.
+
+        Home v2 (2026-10-08): no summary at all — badge, title, meta — and
+        tighter padding, so the lead and the 2×2 beside it end level.
       */}
-      <div className="flex flex-1 flex-col gap-2.5 p-5 md:p-6">
+      <div className="flex flex-1 flex-col gap-2 px-6 py-5">
         <CardKicker article={article} variant="solid" />
 
         <h2 className="text-h1 font-bold tracking-[-0.3px] text-text-primary [text-wrap:pretty]">
@@ -83,12 +85,6 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
           </Link>
         </h2>
 
-        {dek && (
-          <p className="line-clamp-2 max-w-[60ch] text-[15px] font-light leading-[1.85] text-text-secondary">
-            {dek}
-          </p>
-        )}
-
         <CardFootMeta article={article} className="mt-auto pt-1" />
       </div>
     </article>
@@ -96,47 +92,42 @@ export function HeroFeature({ article }: { article: ArticleSummary }) {
 }
 
 /**
- * The three cards beside the lead: a thumbnail and the title, as a row.
+ * One of the four beside the lead — home v2's 2×2 (handoff 2026-10-08).
  *
- * Three, per the team's masthead brief (2026-10-05): «یک مقاله Featured بزرگ و
- * ۲ یا ۳ مطلب مهم کنار آن».
+ * Image on top, then a plain category label (not a pill: four pills beside
+ * the lead's solid one read as a row of buttons), a three-line title and the
+ * meta. EVERY card carries all three: a title-only card stretched by
+ * `auto-rows-fr` left ~60px of empty space under it (the handoff's verified
+ * defect).
  *
- * ── A ROW AGAIN, AND NOT THE ROW THAT BROKE ─────────────────────────────────
- *
- * The first row version cropped the artwork into a sliver: its thumbnail was
- * a fixed WIDTH stretched to the card's full HEIGHT, so a 150px-wide box went
- * 330px tall and `object-cover` cut the landscape image to a strip. Here the
- * thumbnail has a fixed width and the ARTWORK'S OWN RATIO for its height
- * (`heroAspectRatios`), and it is centred in the card rather than stretched
- * by it. A taller card gains space around the thumbnail, never inside it, so
- * the baked-in headline is never cut.
+ * The image box is the artwork's own shape (`cardAspect`), not the handoff's
+ * 16:9: these are lessons, which are 3:2, and a 16:9 box would put every one of
+ * them on the blurred-margin branch of `imageFit`.
  */
-export function HeroSideCard({ article }: { article: ArticleSummary }) {
-  const image = article.featuredImage;
+export function HeroQuadCard({ article }: { article: ArticleSummary }) {
+  const aspect = cardAspect(article);
 
   return (
-    /* No overflow-hidden: the image clips itself, so the title link's focus
-       ring is never cut by the card's corner radius. */
-    <article className="group relative flex items-center gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
-      {image && (
-        <div
-          className="w-[120px] shrink-0 sm:w-[200px] lg:w-[220px]"
-          style={{ aspectRatio: heroAspectRatios(image).mobile }}
-        >
-          <CardImage image={image} sizes="220px" rounded="rounded-lg" />
-        </div>
-      )}
+    <article className="group relative flex flex-col rounded-card border border-border-subtle bg-surface-raised transition-colors duration-150 hover:border-accent motion-reduce:transition-none">
+      <div style={{ aspectRatio: aspect }}>
+        <CardImage
+          image={article.featuredImage}
+          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 270px"
+          rounded="rounded-t-card"
+          fit={imageFit(article.featuredImage, aspect)}
+        />
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <CardKicker article={article} />
+      <div className="flex flex-1 flex-col gap-1.5 px-3.5 py-3">
+        <span className="text-[12px] font-medium text-accent">{cardCategory(article).name}</span>
 
-        <h3 className="text-[16px] font-bold leading-[1.65] text-text-primary [text-wrap:pretty]">
+        <h3 className="line-clamp-3 text-[14.5px] font-bold leading-[1.65] text-text-primary [text-wrap:pretty]">
           <Link href={`/${article.slug}`} className="before:absolute before:inset-0">
             {bidiTitle(article.title)}
           </Link>
         </h3>
 
-        <CardFootMeta article={article} />
+        <CardFootMeta article={article} className="mt-auto pt-1" />
       </div>
     </article>
   );

@@ -256,6 +256,18 @@ the position — the entire competitive category competes on exactly these.
 
 ---
 
+## Home page v2
+
+**Lead | 2×2, news as a text list, market columns.** Decided 2026-10-08 (design
+handoff, owner's go-ahead). Three departures from the handoff, each from a rule
+the handoff itself cites: 44px market pills (not 40), the quad cards' image box
+follows the artwork (3:2 lessons, not 16:9 + blur), and the lessons-only rule
+for the cards beside the lead is enforced in `buildLanding`, not left to data.
+Reverses B05's nine-card «تازه‌ترین مقالات» to six. Rollback point:
+`mag-prod-2026-10-07`.
+
+---
+
 ## Markets as sub-categories
 
 **Markets are sub-categories on the page, not a section.** Decided 2026-10-07

@@ -1,5 +1,5 @@
-import type { ArticleSummary, ContentTypeSlug } from '../types/mag.types';
-import { subcategoryHref } from './subcategories';
+import type { ArticleSummary, ContentTypeSlug, Market } from '../types/mag.types';
+import { subcategoriesOf, subcategoryHref } from './subcategories';
 
 /**
  * Which article goes in which slot of the home page — one pure function, so
@@ -25,8 +25,12 @@ const LEAD_TYPES: ReadonlyArray<ContentTypeSlug> = ['education', 'report'];
 /** Wide enough to outrun the automation — about ten days of it. */
 const LEAD_WINDOW = 20;
 
-/** Three beside the lead — «یک مقاله Featured بزرگ و ۲ یا ۳ مطلب مهم کنار آن». */
-const HERO_SIDE_COUNT = 3;
+/**
+ * Four beside the lead, as a 2×2 — home v2 (handoff 2026-10-08), the team's
+ * faraz.io/blog structure. It was three stacked rows. Lessons only (see
+ * `heroSide` below).
+ */
+const HERO_SIDE_COUNT = 4;
 
 /**
  * Editors' picks lead the featured section from this many. One pick is not a
@@ -36,12 +40,16 @@ const PICKS_MIN = 2;
 /** The 2 large + 4 small shape of the reference the team sent. */
 const FEATURED_COUNT = 6;
 
-/** «تازه‌ترین مقالات»: three rows of three at full width — «سه ردیف مقاله»
-    (team, 2026-10-05). */
-const ARTICLES_COUNT = 9;
-/** «تازه‌ترین اخبار»: two rows of three. */
+/**
+ * «تازه‌ترین مقالات»: two rows of three at full width. It was nine — the
+ * team's «سه ردیف مقاله» (2026-10-05, B05) — and home v2 (2026-10-08) set it
+ * back to six now that the 2×2 hero and the market columns carry more
+ * lessons above and below it.
+ */
+const ARTICLES_COUNT = 6;
+/** «تازه‌ترین اخبار»: a text list, three rows of two at lg. */
 const NEWS_COUNT = 6;
-/** One row of three per market. */
+/** Up to three lessons per market column. */
 const MARKET_COUNT = 3;
 
 /**
@@ -77,9 +85,11 @@ const MARKET_COUNT = 3;
  */
 const MARKET_ORDER: ReadonlyArray<string> = ['forex', 'crypto', 'gold-usd', 'tse'];
 
+/** One market column of «آموزش بر اساس بازار». */
 export interface TopicBlock {
   key: string;
-  title: string;
+  /** The market's name as WordPress has it — the team's renames arrive live. */
+  name: string;
   href: string;
   items: ArticleSummary[];
 }
@@ -163,8 +173,7 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
     );
     return {
       key: slug,
-      /* «آموزش کریپتو» — the title of the page «مشاهده همه» opens. */
-      title: items[0]?.market ? `آموزش ${items[0].market.name}` : '',
+      name: items[0]?.market?.name ?? '',
       href: subcategoryHref('education', slug),
       items,
     };
@@ -172,4 +181,19 @@ export function buildLanding(archive: ReadonlyArray<ArticleSummary>): Landing {
   }).filter((block) => block.items.length >= 2);
 
   return { featured, heroSide, picks, picksSource, articles, news, markets };
+}
+
+/**
+ * The «بازارها:» row beside the masthead (home v2): markets only — never
+ * sections, a team comment on the handoff — and only those with lessons, in
+ * the handoff's order. A market WordPress adds later goes at the end.
+ */
+const MASTHEAD_MARKET_ORDER: ReadonlyArray<string> = ['tse', 'crypto', 'forex', 'gold-usd', 'global'];
+
+export function mastheadMarkets(markets: ReadonlyArray<Market>): Market[] {
+  const rank = (slug: string) => {
+    const i = MASTHEAD_MARKET_ORDER.indexOf(slug);
+    return i === -1 ? MASTHEAD_MARKET_ORDER.length : i;
+  };
+  return subcategoriesOf(markets, 'education').sort((a, b) => rank(a.slug) - rank(b.slug));
 }
